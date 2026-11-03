@@ -1,0 +1,15 @@
+# dependencies / build output
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# demo database written by the running app (regenerate with `npm run seed:reset`)
+.data/
+
+# local env & logs
+.env
+.env*.local
+*.log
+.DS_Store
