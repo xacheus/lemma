@@ -221,7 +221,7 @@ export const publicBookingSchema = z
     checkOut: dateStr,
     guestCount: z.coerce.number().int().min(1).max(12),
     notes: z.string().max(800).optional(),
-    agreedPolicy: z.literal(true, { errorMap: () => ({ message: 'Please accept the booking conditions.' }) }),
+    agreedPolicy: z.literal(true, { error: 'Please accept the booking conditions.' }),
     /** Honeypot — humans never see this field. */
     company_url: z.string().max(0).optional(),
   })
