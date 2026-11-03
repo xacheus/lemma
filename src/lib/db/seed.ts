@@ -1,21 +1,30 @@
 import { addDays, format, parseISO } from 'date-fns';
 import type {
   Apartment,
+  ApartmentPhoto,
+  AuditLogRecord,
   BookingSource,
   BookingStatus,
   Database,
   Guest,
   HousekeepingTask,
+  Invoice,
+  MaintenanceRecord,
+  MediaRecord,
   NotificationRecord,
   Payment,
   PaymentMethod,
+  Quotation,
+  ReceiptRecord,
   Reservation,
   StaffUser,
+  UserRecord,
 } from '../domain/types';
 import { nightsBetween, stayTotal } from '../domain/availability';
 import { addISO, dayDiff, eachISO } from '../domain/dates';
 import { recomputeReservation } from '../domain/selectors';
 import { DEFAULT_SETTINGS } from './default-settings';
+import { computeDashboardSummary } from './summary';
 import { hashPassword, DEMO_PASSWORD } from '../auth/passwords';
 
 /** Deterministic PRNG so the demo looks the same on every machine, day to day. */
@@ -303,8 +312,8 @@ const STAFF_SPECS: Array<Omit<StaffUser, 'id' | 'lastSeenAt' | 'permissions'> & 
     username: 'alice',
     email: 'alice@lemmaheights.zm',
     phone: '+260 977 220 001',
-    role: 'admin',
-    jobTitle: 'Owner / General Manager',
+    role: 'super_admin',
+    jobTitle: 'Owner / Managing Director',
     active: true,
     hiredOn: '2019-04-01',
     shift: null,
@@ -485,15 +494,93 @@ function slugify(name: string, number: number) {
   return `apt-${number}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 }
 
-function photoPaths(number: number) {
-  const folder = `apartment-${String(number).padStart(2, '0')}`;
-  return [
-    `/images/apartments/${folder}/01.jpg`,
-    `/images/apartments/${folder}/02.jpg`,
-    `/images/apartments/${folder}/03.jpg`,
-    `/images/apartments/${folder}/04.jpg`,
-    `/images/apartments/${folder}/05.jpg`,
+function galleryForTier(tier: Apartment['tier'], aptNumber: number, aptName: string): ApartmentPhoto[] {
+  const leadByTier: Record<Apartment['tier'], { url: string; title: string; desc: string }> = {
+    standard: {
+      url: '/images/rooms/standard-bedroom.jpg',
+      title: `${aptName} — Primary Bedroom`,
+      desc: 'Queen bedroom with dedicated work desk, blackout drapes and courtyard garden aspect.',
+    },
+    deluxe: {
+      url: '/images/rooms/living-room.jpg',
+      title: `${aptName} — Open-Plan Lounge & Dining`,
+      desc: 'Bright living and dining space opening onto private balcony overlooking jacaranda canopy.',
+    },
+    executive: {
+      url: '/images/rooms/executive-suite.jpg',
+      title: `${aptName} — Executive Suite & Meeting Room`,
+      desc: 'King suite with adjoining six-seat executive boardroom table and presentation setup.',
+    },
+    family: {
+      url: '/images/rooms/family-apartment.jpg',
+      title: `${aptName} — Family Bedroom Suite`,
+      desc: 'Spacious family bedroom with direct access to the enclosed courtyard lawn.',
+    },
+    premium: {
+      url: '/images/rooms/luxury-bedroom.jpg',
+      title: `${aptName} — Master Suite & Terrace`,
+      desc: 'Top-floor super-king bedroom with private timber terrace and panoramic views.',
+    },
+    studio: {
+      url: '/images/rooms/standard-bedroom.jpg',
+      title: `${aptName} — Studio Sleeping & Work Zone`,
+      desc: 'Well-proportioned studio layout with ergonomic desk and 200Mbps fibre connectivity.',
+    },
+    suite: {
+      url: '/images/rooms/luxury-bedroom.jpg',
+      title: `${aptName} — King Suite Bedroom`,
+      desc: 'Separate bedroom and lounge suite with dressing area and luxury linen.',
+    },
+    penthouse: {
+      url: '/images/rooms/executive-suite.jpg',
+      title: `${aptName} — Penthouse Master Suite`,
+      desc: 'Top-floor penthouse residence with private panoramic terrace and boardroom dining.',
+    },
+  };
+
+  const secondaryBedroom =
+    tier === 'executive'
+      ? '/images/rooms/luxury-bedroom.jpg'
+      : tier === 'deluxe'
+        ? '/images/rooms/standard-bedroom.jpg'
+        : '/images/rooms/living-room.jpg';
+
+  const lead = leadByTier[tier];
+  const entries = [
+    lead,
+    {
+      url: secondaryBedroom,
+      title: `${aptName} — Living & Rest Space`,
+      desc: 'Quiet, air-conditioned interior finished in neutral timber and slate tones.',
+    },
+    {
+      url: '/images/rooms/kitchen.jpg',
+      title: `${aptName} — Self-Catering Kitchen`,
+      desc: 'Equipped with induction hob, oven, full-height refrigerator and espresso maker.',
+    },
+    {
+      url: '/images/rooms/bathroom.jpg',
+      title: `${aptName} — Ensuite Bathroom`,
+      desc: 'Walk-in rain shower, backlit vanity mirror and fresh hotel cotton towels.',
+    },
+    {
+      url: aptNumber % 2 === 0 ? '/images/hero/exterior-building.jpg' : '/images/property/amenities.jpg',
+      title: `${aptName} — Building & Courtyard`,
+      desc: 'Secure gated compound on Great East Road with solar backup and private parking.',
+    },
   ];
+
+  return entries.map((item, idx) => ({
+    id: `med-apt-${aptNumber}-${idx + 1}`,
+    url: item.url,
+    publicId: `lemma_apartments/seed/apt-${aptNumber}-${idx + 1}`,
+    title: item.title,
+    description: item.desc,
+    order: idx,
+    isCover: idx === 0,
+    mediaType: 'image',
+    uploadedAt: '2026-10-01T08:00:00.000Z',
+  }));
 }
 
 function referenceFor(year: string, seq: number) {
@@ -511,28 +598,68 @@ export function createSeedDatabase(today: string): Database {
   const rnd = makeRandom(20261103);
   const year = today.slice(0, 4);
 
-  const apartments: Apartment[] = APARTMENT_SPECS.map((spec) => ({
-    id: `apt-${spec.number}`,
-    number: spec.number,
-    code: `LHA-${100 + spec.number}`,
-    name: spec.name,
-    slug: slugify(spec.name, spec.number),
-    tier: spec.tier,
-    tagline: spec.tagline,
-    description: spec.description,
-    maxGuests: spec.maxGuests,
-    bedrooms: spec.bedrooms,
-    bathrooms: spec.bathrooms,
-    sizeSqm: spec.sizeSqm,
-    floor: spec.floor,
-    bedConfiguration: spec.bed,
-    nightlyRate: spec.rate,
-    amenities: spec.amenities,
-    photos: photoPaths(spec.number),
-    active: true,
-    outOfService: false,
-    houseNotes: spec.notes,
-  }));
+  const apartments: Apartment[] = APARTMENT_SPECS.map((spec) => {
+    const gallery = galleryForTier(spec.tier, spec.number, spec.name);
+    return {
+      id: `apt-${spec.number}`,
+      number: spec.number,
+      code: `LHA-${100 + spec.number}`,
+      name: spec.name,
+      slug: slugify(spec.name, spec.number),
+      tier: spec.tier,
+      category: spec.tier,
+      tagline: spec.tagline,
+      description: spec.description,
+      maxGuests: spec.maxGuests,
+      bedrooms: spec.bedrooms,
+      bathrooms: spec.bathrooms,
+      sizeSqm: spec.sizeSqm,
+      floor: spec.floor,
+      bedConfiguration: spec.bed,
+      nightlyRate: spec.rate,
+      weekendRate: null,
+      includedGuests: Math.max(1, spec.maxGuests - 1),
+      extraGuestFee: 0,
+      seasonalRates: [],
+      specialOffers: [
+        {
+          id: `off-${spec.number}-weekly`,
+          name: 'Extended Stay (14+ Nights)',
+          minNights: 14,
+          discountPercent: 10,
+          active: false,
+        },
+      ],
+      optionalServices: [
+        {
+          id: 'svc-airport',
+          name: 'Kenneth Kaunda International Airport Transfer',
+          price: 450,
+          priceType: 'per_stay',
+          description: 'Private driver meet-and-greet at KKIA arrivals.',
+          active: true,
+        },
+        {
+          id: 'svc-laundry',
+          name: 'Express Laundry & Pressing Bundle',
+          price: 220,
+          priceType: 'per_stay',
+          description: 'Same-day wash, dry and press up to 6kg.',
+          active: true,
+        },
+      ],
+      amenities: spec.amenities,
+      facilities: ['24h Security Gate', 'Solar & Generator Backup', 'Borehole Water Supply', 'Secure Covered Parking'],
+      coverPhoto: gallery[0].url,
+      photos: gallery.map((g) => g.url),
+      gallery,
+      publicationStatus: 'published',
+      active: true,
+      outOfService: false,
+      houseNotes: spec.notes,
+      updatedAt: ISO_DATE(today, '06:00'),
+    };
+  });
 
   const staff: StaffUser[] = STAFF_SPECS.map((s) => ({
     ...s,
@@ -1274,28 +1401,385 @@ export function createSeedDatabase(today: string): Database {
 
   if (notifications[0]) notifications[0].readAt = ISO_DATE(today, '08:30');
 
+  /* ---------------------------------------------- users, media, docs, maintenance */
+
+  const sharedDemoHash = hashPassword(DEMO_PASSWORD);
+  for (const s of staff) {
+    s.passwordHash = sharedDemoHash;
+    s.uid = s.id;
+    s.fullName = s.name;
+    s.phoneNumber = s.phone;
+    s.accountStatus = s.active ? 'active' : 'deactivated';
+    s.emailVerified = true;
+    s.createdAt = `${s.hiredOn}T08:00:00.000Z`;
+    s.updatedAt = ISO_DATE(today, '06:00');
+    s.lastLoginAt = s.lastSeenAt;
+  }
+
+  const users: UserRecord[] = [
+    ...staff.map<UserRecord>((s) => ({
+      uid: s.id,
+      fullName: s.name,
+      email: s.email.toLowerCase(),
+      phoneNumber: s.phone,
+      profilePhoto: '',
+      role: s.role,
+      accountStatus: s.active ? 'active' : 'deactivated',
+      emailVerified: true,
+      createdAt: `${s.hiredOn}T08:00:00.000Z`,
+      updatedAt: ISO_DATE(today, '06:00'),
+      lastLoginAt: s.lastSeenAt,
+      username: s.username,
+      jobTitle: s.jobTitle,
+      shift: s.shift,
+      hiredOn: s.hiredOn,
+      permissions: s.permissions,
+      passwordHash: sharedDemoHash,
+      sessionVersion: 1,
+    })),
+    {
+      uid: 'usr-john-banda',
+      fullName: 'John Banda',
+      email: 'john.banda@copperstonetraders.co.zm',
+      phoneNumber: '+260 977 415 208',
+      profilePhoto: '',
+      role: 'guest',
+      accountStatus: 'active',
+      emailVerified: true,
+      createdAt: ISO_DATE(iso(today, -60), '09:15'),
+      updatedAt: ISO_DATE(today, '06:00'),
+      lastLoginAt: ISO_DATE(iso(today, -1), '18:20'),
+      passwordHash: sharedDemoHash,
+      sessionVersion: 1,
+    },
+  ];
+
+  if (guests[0]) guests[0].userId = 'usr-john-banda';
+  for (const r of reservations) {
+    if (r.guestId === 'gu-001') {
+      r.userId = 'usr-john-banda';
+    }
+  }
+  for (const p of payments) {
+    const r = reservations.find((x) => x.id === p.reservationId);
+    if (r) {
+      p.bookingId = r.id;
+      p.guestId = r.guestId;
+      p.userId = r.userId ?? null;
+    }
+  }
+
+  const maintenance: MaintenanceRecord[] = [
+    {
+      id: 'mnt-1001',
+      apartmentId: 'apt-12',
+      apartmentNumber: 12,
+      apartmentName: 'Penthouse Suite',
+      faultDescription: 'Master bedroom split-unit A/C compressor trips after 40 minutes of cooling.',
+      priority: 'high',
+      assignedTo: 'st-5',
+      assignedToName: 'Peter Chisala',
+      status: 'in_progress',
+      blocksReadiness: true,
+      photos: [],
+      resolutionNotes: 'Refrigeration Solutions technician booked; portable cooling unit supplied to current guest.',
+      reportedBy: 'st-4',
+      reportedByName: 'Mary Gondwe',
+      createdAt: ISO_DATE(today, '07:35'),
+      updatedAt: ISO_DATE(today, '07:35'),
+      resolvedAt: null,
+      resolvedBy: null,
+    },
+  ];
+
+  const media: MediaRecord[] = [
+    {
+      id: 'med-prop-hero',
+      url: '/images/hero/exterior-building.jpg',
+      thumbnailUrl: '/images/hero/exterior-building.jpg',
+      detailUrl: '/images/hero/exterior-building.jpg',
+      publicId: 'lemma_apartments/property/exterior-building',
+      storageProvider: 'local',
+      mediaType: 'image',
+      category: 'property',
+      title: 'Lemma Heights Exterior & Courtyard',
+      description: 'Main facade, covered resident parking bays and landscaped courtyard at dusk.',
+      apartmentId: null,
+      apartmentName: null,
+      order: 0,
+      isCover: true,
+      mimeType: 'image/jpeg',
+      sizeBytes: 251904,
+      visibility: 'public',
+      uploadedBy: 'st-1',
+      uploadedByName: 'Alice Chanda',
+      createdAt: ISO_DATE(iso(today, -30), '09:00'),
+      updatedAt: ISO_DATE(iso(today, -30), '09:00'),
+    },
+    {
+      id: 'med-prop-reception',
+      url: '/images/property/reception.jpg',
+      thumbnailUrl: '/images/property/reception.jpg',
+      detailUrl: '/images/property/reception.jpg',
+      publicId: 'lemma_apartments/property/reception',
+      storageProvider: 'local',
+      mediaType: 'image',
+      category: 'property',
+      title: 'Front Office & Guest Reception',
+      description: 'Ground-floor guest check-in desk and waiting lounge.',
+      apartmentId: null,
+      apartmentName: null,
+      order: 1,
+      isCover: false,
+      mimeType: 'image/jpeg',
+      sizeBytes: 200704,
+      visibility: 'public',
+      uploadedBy: 'st-1',
+      uploadedByName: 'Alice Chanda',
+      createdAt: ISO_DATE(iso(today, -30), '09:05'),
+      updatedAt: ISO_DATE(iso(today, -30), '09:05'),
+    },
+    ...apartments.flatMap((apt) =>
+      (apt.gallery ?? []).slice(0, 2).map<MediaRecord>((photo) => ({
+        id: photo.id,
+        url: photo.url,
+        thumbnailUrl: photo.url,
+        detailUrl: photo.url,
+        publicId: photo.publicId,
+        storageProvider: 'local',
+        mediaType: 'image',
+        category: 'apartment',
+        title: photo.title,
+        description: photo.description,
+        apartmentId: apt.id,
+        apartmentName: `Apt ${apt.number} · ${apt.name}`,
+        order: photo.order,
+        isCover: photo.isCover,
+        mimeType: 'image/jpeg',
+        sizeBytes: 188416,
+        visibility: 'public',
+        uploadedBy: 'st-1',
+        uploadedByName: 'Alice Chanda',
+        createdAt: ISO_DATE(iso(today, -28), '10:00'),
+        updatedAt: ISO_DATE(iso(today, -28), '10:00'),
+      })),
+    ),
+  ];
+
+  const johnStay = reservations.find((r) => r.guestId === 'gu-001' && r.checkIn === today);
+  const quotations: Quotation[] = johnStay
+    ? [
+        {
+          id: 'quo-1001',
+          quotationNumber: `QUO-${year}-0001`,
+          shareToken: 'qtok-john-banda-1001',
+          status: 'converted',
+          issueDate: iso(today, -2),
+          expiryDate: iso(today, 5),
+          userId: 'usr-john-banda',
+          guestId: 'gu-001',
+          customerName: 'John Banda',
+          customerEmail: 'john.banda@copperstonetraders.co.zm',
+          customerPhone: '+260 977 415 208',
+          customerCompany: 'Copperstone Traders Limited',
+          customerAddress: 'Kitwe, Copperbelt Province, Zambia',
+          apartmentId: johnStay.apartmentId,
+          apartmentNumber: 2,
+          apartmentName: 'Deluxe Suite',
+          checkIn: johnStay.checkIn,
+          checkOut: johnStay.checkOut,
+          nights: 3,
+          guestCount: johnStay.guestCount,
+          nightlyRate: 1200,
+          lineItems: [
+            {
+              description: 'Accommodation — Apt 2 (Deluxe Suite)',
+              quantity: 3,
+              unitLabel: 'nights',
+              unitPrice: 1200,
+              amount: 3600,
+            },
+          ],
+          additionalServices: [],
+          subtotal: 3600,
+          discount: 0,
+          taxName: 'VAT',
+          taxRatePercent: 0,
+          taxInclusive: true,
+          taxAmount: 0,
+          totalAmount: 3600,
+          depositPercent: 50,
+          depositRequired: 1800,
+          outstandingBalance: 1800,
+          notes: 'Corporate stay quotation accepted and converted to Reservation ' + johnStay.reference,
+          termsAndConditions: DEFAULT_SETTINGS.documents!.termsAndConditions,
+          paymentInstructions:
+            'Airtel Money Merchant 4522108 · MTN MoMo Merchant 8224471 · Zanaco Acc 3011044827110 (Lemma Heights Pvt Ltd)',
+          reservationId: johnStay.id,
+          invoiceId: 'inv-1001',
+          emailedAt: ISO_DATE(iso(today, -2), '10:30'),
+          createdBy: 'st-2',
+          createdByName: 'Joseph Mwanza',
+          createdAt: ISO_DATE(iso(today, -2), '10:15'),
+          updatedAt: ISO_DATE(iso(today, -1), '12:10'),
+        },
+      ]
+    : [];
+
+  const invoices: Invoice[] = johnStay
+    ? [
+        {
+          id: 'inv-1001',
+          invoiceNumber: `INV-${year}-0001`,
+          status: 'partially_paid',
+          issueDate: iso(today, -1),
+          dueDate: johnStay.checkIn,
+          quotationId: 'quo-1001',
+          reservationId: johnStay.id,
+          userId: 'usr-john-banda',
+          guestId: 'gu-001',
+          customerName: 'John Banda',
+          customerEmail: 'john.banda@copperstonetraders.co.zm',
+          customerPhone: '+260 977 415 208',
+          customerCompany: 'Copperstone Traders Limited',
+          customerTpin: '1002849102',
+          apartmentId: johnStay.apartmentId,
+          apartmentNumber: 2,
+          apartmentName: 'Deluxe Suite',
+          checkIn: johnStay.checkIn,
+          checkOut: johnStay.checkOut,
+          nights: 3,
+          guestCount: johnStay.guestCount,
+          lineItems: [
+            {
+              description: 'Accommodation — Apt 2 (Deluxe Suite)',
+              quantity: 3,
+              unitLabel: 'nights',
+              unitPrice: 1200,
+              amount: 3600,
+            },
+          ],
+          subtotal: 3600,
+          discount: 0,
+          taxName: 'VAT',
+          taxRatePercent: 0,
+          taxInclusive: true,
+          taxAmount: 0,
+          totalAmount: 3600,
+          verifiedPaid: 1800,
+          balanceDue: 1800,
+          notes: '50% deposit verified via Airtel Money. Remaining balance K1,800 payable on check-in.',
+          paymentInstructions:
+            'Airtel Money Merchant 4522108 · MTN MoMo Merchant 8224471 · Zanaco Acc 3011044827110',
+          termsAndConditions: DEFAULT_SETTINGS.documents!.termsAndConditions,
+          createdBy: 'st-2',
+          createdByName: 'Joseph Mwanza',
+          createdAt: ISO_DATE(iso(today, -1), '12:10'),
+          updatedAt: ISO_DATE(iso(today, -1), '12:10'),
+        },
+      ]
+    : [];
+
+  const johnDeposit = johnStay
+    ? payments.find((p) => p.reservationId === johnStay.id && p.verificationStatus === 'verified')
+    : undefined;
+
+  const receipts: ReceiptRecord[] =
+    johnStay && johnDeposit
+      ? [
+          {
+            id: 'rcp-1001',
+            receiptNumber: `RCP-${year}-0001`,
+            paymentId: johnDeposit.id,
+            reservationId: johnStay.id,
+            invoiceId: 'inv-1001',
+            userId: 'usr-john-banda',
+            guestId: 'gu-001',
+            customerName: 'John Banda',
+            customerEmail: 'john.banda@copperstonetraders.co.zm',
+            customerPhone: '+260 977 415 208',
+            apartmentName: 'Deluxe Suite',
+            apartmentNumber: 2,
+            bookingReference: johnStay.reference,
+            amount: 1800,
+            method: johnDeposit.method,
+            transactionReference: johnDeposit.reference,
+            paidAt: johnDeposit.paidAt,
+            verifiedBy: 'Alice Chanda',
+            verifiedAt: johnDeposit.verifiedAt ?? ISO_DATE(today, '08:00'),
+            totalBookingAmount: 3600,
+            totalVerifiedPaid: 1800,
+            remainingBalance: 1800,
+            createdAt: johnDeposit.verifiedAt ?? ISO_DATE(today, '08:00'),
+          },
+        ]
+      : [];
+  if (johnDeposit && receipts[0]) {
+    johnDeposit.receiptId = receipts[0].id;
+    johnDeposit.receiptNumber = receipts[0].receiptNumber;
+  }
+
+  const auditLogs: AuditLogRecord[] = [
+    {
+      id: 'aud-1001',
+      category: 'payment',
+      action: 'payment.verified',
+      actorUid: 'st-1',
+      actorName: 'Alice Chanda',
+      actorRole: 'super_admin',
+      targetType: 'payment',
+      targetId: johnDeposit?.id ?? 'pay-0001',
+      summary: 'Verified K1,800 Airtel Money deposit for John Banda (Apt 2 Deluxe Suite) and issued receipt.',
+      createdAt: ISO_DATE(iso(today, -1), '12:05'),
+    },
+    {
+      id: 'aud-1002',
+      category: 'staff',
+      action: 'user.status_changed',
+      actorUid: 'st-1',
+      actorName: 'Alice Chanda',
+      actorRole: 'super_admin',
+      targetType: 'user',
+      targetId: 'st-7',
+      summary: 'Deactivated staff account for Emmanuel Daka (Reservations Agent).',
+      createdAt: ISO_DATE(iso(today, -30), '16:00'),
+    },
+  ];
+
   /* --------------------------------------------------------------------------- assemble */
 
   const db: Database = {
-    version: 1,
+    version: 2,
     seededOn: today,
     createdAt: ISO_DATE(today, '06:00'),
     updatedAt: ISO_DATE(today, '06:00'),
+    users,
     apartments,
     housekeeping,
+    maintenance,
     cleaningState,
     guests,
     staff,
     reservations,
     payments,
+    quotations,
+    invoices,
+    receipts,
+    media,
+    auditLogs,
     notifications,
     settings: DEFAULT_SETTINGS,
-    sequences: { reservation: reservationSeq, receipt: receiptSeq },
+    sequences: {
+      reservation: reservationSeq,
+      receipt: receiptSeq,
+      quotation: 2,
+      invoice: 2,
+    },
     __today: today,
   };
 
-  // Recompute every derived field so the ledger, folios and statuses agree exactly.
   for (const r of db.reservations) recomputeReservation(db, r.id);
+  computeDashboardSummary(db);
 
   db.notifications.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 

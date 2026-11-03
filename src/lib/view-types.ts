@@ -1,22 +1,24 @@
 import type {
   Apartment,
+  AuditLogRecord,
   CleaningStatus,
+  DashboardSummaryDoc,
   Guest,
   HousekeepingTask,
+  Invoice,
+  MaintenanceRecord,
+  MediaRecord,
   NotificationRecord,
   Payment,
   PermissionKey,
+  Quotation,
+  ReceiptRecord,
   ReservationView,
   Settings,
   StaffUser,
+  UserRecord,
 } from './domain/types';
 import type { DashboardMetrics } from './domain/selectors';
-
-/**
- * Shapes the browser is allowed to see. Kept in its own module (rather than reusing
- * the server snapshot file) because the server module imports `next/headers`, which
- * must not be pulled into a client bundle.
- */
 
 export interface ApartmentView extends Apartment {
   tonightStatus: 'occupied' | 'available' | 'cleaning' | 'maintenance' | 'out_of_service';
@@ -50,22 +52,47 @@ export type StaffView = Pick<
   'id' | 'name' | 'role' | 'jobTitle' | 'active' | 'shift' | 'username' | 'phone' | 'email' | 'lastSeenAt' | 'permissions' | 'hiredOn'
 >;
 
+export type PublicUserView = Omit<
+  UserRecord,
+  'passwordHash' | 'emailVerificationToken' | 'passwordResetToken' | 'passwordResetExpiresAt'
+>;
+
+export interface IntegrationStatusView {
+  firebaseClientConfigured: boolean;
+  firebaseAdminConfigured: boolean;
+  cloudinaryCloudName: string;
+  cloudinaryUploadPreset: string;
+  cloudinarySignedReady: boolean;
+  whatsappProviderConfigured: boolean;
+  smsProviderConfigured: boolean;
+  emailProviderConfigured: boolean;
+}
+
 export interface SnapshotView {
   user: Omit<StaffUser, 'passwordHash'>;
+  account: PublicUserView | null;
   permissions: PermissionKey[];
   today: string;
   settings: Settings;
   apartments: ApartmentView[];
   cleaningState: Record<string, { status: CleaningStatus; updatedAt: string; note: string }>;
-  /** Null when the role has no right to the guest register. */
   guests: Guest[] | null;
   staff: StaffView[];
+  users: PublicUserView[];
   reservations: ReservationView[] | null;
   payments: Payment[] | null;
+  quotations: Quotation[];
+  invoices: Invoice[];
+  receipts: ReceiptRecord[];
   housekeeping: HousekeepingTaskView[];
+  maintenance: MaintenanceRecord[];
+  media: MediaRecord[];
+  auditLogs: AuditLogRecord[];
+  dashboardSummary: DashboardSummaryDoc | null;
   notifications: NotificationRecord[] | null;
   metrics: DashboardMetrics | null;
   guestTotals: Record<string, GuestTotals> | null;
+  integrations: IntegrationStatusView;
 }
 
 export interface LoginResult {
@@ -74,3 +101,13 @@ export interface LoginResult {
   role: StaffUser['role'];
   jobTitle: string;
 }
+
+export type PublicSearchUnit = {
+  apartment: Apartment;
+  available: boolean;
+  nights: number;
+  total: number;
+  deposit: number;
+};
+
+export type GuestLookupHit = Pick<Guest, 'id' | 'fullName' | 'phone' | 'email' | 'nationality' | 'idType' | 'nationalId'>;

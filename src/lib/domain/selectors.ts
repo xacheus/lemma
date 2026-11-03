@@ -35,12 +35,17 @@ export function financialsFor(db: Database, reservation: Reservation): Financial
   let refunds = 0;
 
   for (const p of rows) {
-    if (p.verificationStatus !== 'verified') {
-      if (p.kind !== 'refund') pendingVerification += p.amount;
+    if (p.kind === 'refund' || p.verificationStatus === 'refunded') {
+      if (p.verificationStatus === 'verified' || p.verificationStatus === 'refunded') {
+        refunds += p.amount;
+      }
       continue;
     }
-    if (p.kind === 'refund') refunds += p.amount;
-    else verifiedPaid += p.amount;
+    if (p.verificationStatus === 'verified') {
+      verifiedPaid += p.amount;
+    } else if (p.verificationStatus === 'pending' || p.verificationStatus === 'pending_verification') {
+      pendingVerification += p.amount;
+    }
   }
 
   const net = verifiedPaid - refunds;
@@ -54,13 +59,13 @@ export function financialsFor(db: Database, reservation: Reservation): Financial
   else paymentStatus = 'partially_paid';
 
   return {
-    verifiedPaid: net,
+    verifiedPaid: Math.max(0, net),
     pendingVerification,
     refunds,
-    balanceDue: Math.max(0, Math.round((reservation.totalAmount - net) * 100) / 100),
+    balanceDue: Math.max(0, Math.round((reservation.totalAmount - Math.max(0, net)) * 100) / 100),
     depositDue,
     paymentStatus,
-    receiptCount: rows.filter((p) => p.kind !== 'refund').length,
+    receiptCount: rows.filter((p) => p.kind !== 'refund' && p.verificationStatus !== 'rejected').length,
   };
 }
 
@@ -72,13 +77,34 @@ export function recomputeReservation(db: Database, reservationId: ID): Reservati
   const r = db.reservations.find((x) => x.id === reservationId);
   if (!r) return null;
   r.nights = nightsBetween(r.checkIn, r.checkOut);
-  r.totalAmount = Math.max(0, r.nights * r.nightlyRate - (r.discount || 0));
+  if (
+    (r.servicesTotal ?? 0) === 0 &&
+    (r.extraGuestTotal ?? 0) === 0 &&
+    (r.taxAmount ?? 0) === 0
+  ) {
+    r.totalAmount = Math.max(0, r.nights * r.nightlyRate - (r.discount || 0));
+  }
   const f = financialsFor(db, r);
   r.paymentStatus = f.paymentStatus;
   if (r.status === 'reserved' && f.paymentStatus === 'fully_paid') r.status = 'fully_paid';
   else if (r.status === 'fully_paid' && f.paymentStatus !== 'fully_paid' && !r.checkedInAt) {
     r.status = 'reserved';
   }
+
+  // Keep any linked invoice balance synchronized with verified payments
+  for (const inv of db.invoices ?? []) {
+    if (inv.reservationId === r.id && inv.status !== 'void') {
+      inv.verifiedPaid = f.verifiedPaid;
+      inv.balanceDue = Math.max(0, inv.totalAmount - f.verifiedPaid);
+      inv.status =
+        inv.balanceDue <= 0
+          ? 'paid'
+          : f.verifiedPaid > 0
+            ? 'partially_paid'
+            : 'unpaid';
+    }
+  }
+
   r.updatedAt = new Date().toISOString();
   return r;
 }
@@ -88,20 +114,30 @@ export function decorate(db: Database, r: Reservation): ReservationView {
   const today = db.__today;
   const guest = db.guests.find((g) => g.id === r.guestId) ?? null;
   const apartment = db.apartments.find((a) => a.id === r.apartmentId) ?? null;
+  const readiness = apartment
+    ? (db.cleaningState[apartment.id]?.status ?? 'clean')
+    : 'clean';
+  const unitReady =
+    (readiness === 'clean' || readiness === 'completed') &&
+    !(db.maintenance ?? []).some(
+      (m) => m.apartmentId === r.apartmentId && m.status !== 'resolved' && m.blocksReadiness,
+    );
   return {
     ...r,
     guest,
     apartment,
     verifiedPaid: f.verifiedPaid,
     pendingVerification: f.pendingVerification,
+    refundsTotal: f.refunds,
     balanceDue: f.balanceDue,
     balanceIsSettled: f.balanceDue <= 0,
     depositDue: f.depositDue,
+    depositPercent: db.settings.booking.depositPercent,
     isTodayCheckIn: r.checkIn === today && (r.status === 'reserved' || r.status === 'fully_paid'),
     isTodayCheckOut: r.checkOut === today && (r.status === 'checked_in' || r.status === 'checked_out'),
     isConfirmed: isConfirmed(r.status),
     canCheckIn:
-      ['reserved', 'fully_paid'].includes(r.status) && dayDiff(today, r.checkIn) >= 0,
+      ['reserved', 'fully_paid'].includes(r.status) && dayDiff(today, r.checkIn) <= 0 && unitReady,
     canCheckOut: r.status === 'checked_in',
     receiptCount: f.receiptCount,
   };
@@ -241,7 +277,11 @@ export function dashboard(db: Database): DashboardMetrics {
   const monthRevenue = verifiedThisMonth.reduce((sum, p) => sum + p.amount, 0) - refundsThisMonth;
 
   const pendingVerification = db.payments
-    .filter((p) => p.verificationStatus === 'pending' && p.kind !== 'refund')
+    .filter(
+      (p) =>
+        (p.verificationStatus === 'pending' || p.verificationStatus === 'pending_verification') &&
+        p.kind !== 'refund',
+    )
     .reduce((s, p) => s + p.amount, 0);
 
   let outstandingTotal = 0;
@@ -297,11 +337,14 @@ export function dashboard(db: Database): DashboardMetrics {
   const needsCleaning = db.apartments
     .filter((a) => {
       const s = db.cleaningState[a.id];
-      return s && (s.status === 'needs_cleaning' || s.status === 'in_progress' || s.status === 'maintenance');
+      return (
+        s &&
+        ['needs_cleaning', 'assigned', 'in_progress', 'inspection_required', 'maintenance'].includes(s.status)
+      );
     })
     .map((a) => {
       const task = db.housekeeping
-        .filter((t) => t.apartmentId === a.id && t.status !== 'clean')
+        .filter((t) => t.apartmentId === a.id && t.status !== 'clean' && t.status !== 'completed')
         .sort((x, y) => (x.date < y.date ? 1 : -1))[0];
       const cleaner = task?.assignedTo ? db.staff.find((s) => s.id === task.assignedTo) : null;
       const departing = db.reservations.find((r) => r.apartmentId === a.id && r.checkOut === today && r.status === 'checked_in');
@@ -319,7 +362,10 @@ export function dashboard(db: Database): DashboardMetrics {
     });
 
   const unreadNotifications = db.notifications.filter((n) => !n.readAt).length;
-  const openMaintenance = db.housekeeping.filter((t) => t.status === 'maintenance').length;
+  const openMaintenance = Math.max(
+    db.housekeeping.filter((t) => t.status === 'maintenance').length,
+    (db.maintenance ?? []).filter((m) => m.status !== 'resolved').length,
+  );
 
   const arrivalsThisMonth = db.reservations.filter((r) => inMonth(r.checkIn) && r.status !== 'cancelled').length;
   const cancellationsThisMonth = db.reservations.filter(

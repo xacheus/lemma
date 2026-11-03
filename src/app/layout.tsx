@@ -3,29 +3,56 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://lemmaheights.zm'),
+  applicationName: 'Lemma Heights Apartments',
   title: {
-    default: 'Lemma Heights Apartments — Serviced apartments in Lusaka',
+    default: 'Lemma Heights Apartments — Serviced Apartments in Lusaka, Zambia',
     template: '%s · Lemma Heights Apartments',
   },
   description:
-    'Twelve serviced apartments on the Great East Road, Lusaka. Check live availability, book in minutes and pay by Airtel Money, MTN Mobile Money, bank transfer or cash.',
+    'Upscale serviced apartments on Great East Road, Chainama Lands, Lusaka. Live availability, instant ZMW pricing, corporate quotations, and Airtel Money, MTN MoMo & bank transfer payments.',
+  keywords: [
+    'Lemma Heights Apartments',
+    'Serviced apartments Lusaka',
+    'Apartments Great East Road Lusaka',
+    'Executive suites Zambia',
+    'Corporate accommodation Lusaka',
+  ],
+  manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'Lemma Heights Apartments',
-    description: 'Serviced apartments in Lusaka with live availability and instant booking requests.',
+    title: 'Lemma Heights Apartments — Serviced Apartments in Lusaka',
+    description:
+      'Modern serviced apartments in Lusaka with solar backup, high-speed fibre, live availability and online booking.',
     type: 'website',
+    locale: 'en_ZM',
+    siteName: 'Lemma Heights Apartments',
+    images: [{ url: '/images/og-cover.jpg', width: 1200, height: 630, alt: 'Lemma Heights Apartments exterior' }],
   },
-  icons: { icon: '/brand/logo.jpg' },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '64x64' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0f1f35',
+  themeColor: '#1E2530',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-ZM">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

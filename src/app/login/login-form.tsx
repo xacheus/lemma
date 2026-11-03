@@ -3,20 +3,40 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { AlertCircle, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight, Eye, EyeOff, KeyRound, UserPlus } from 'lucide-react';
 import { PhotoFrame } from '@/components/ui/photo';
+import type { Role } from '@/lib/domain/types';
 
-interface Account {
+interface QuickAccount {
   name: string;
-  username: string;
-  role: 'admin' | 'receptionist' | 'cleaner';
+  identifier: string;
+  role: Role;
   jobTitle: string;
 }
 
-export function LoginPage({ accounts, propertyName }: { accounts: Account[]; propertyName: string }) {
+function destinationForRole(role: Role, nextPath: string | null): string {
+  if (nextPath && nextPath.startsWith('/')) {
+    if (role === 'guest' && nextPath.startsWith('/admin')) return '/account';
+    if (role === 'cleaner' && nextPath.startsWith('/admin')) return '/portal/cleaning';
+    return nextPath;
+  }
+  if (role === 'cleaner') return '/portal/cleaning';
+  if (role === 'guest') return '/account';
+  return '/admin';
+}
+
+export function LoginPage({
+  accounts,
+  propertyName,
+  nextPath,
+}: {
+  accounts: QuickAccount[];
+  propertyName: string;
+  nextPath: string | null;
+}) {
   const router = useRouter();
-  const [username, setUsername] = useState('alice');
-  const [password, setPassword] = useState('lemma2026');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,57 +57,87 @@ export function LoginPage({ accounts, propertyName }: { accounts: Account[]; pro
         setBusy(false);
         return;
       }
-      router.push(payload.data.role === 'cleaner' ? '/portal/cleaning' : '/admin');
+      router.push(destinationForRole(payload.data.role, nextPath));
       router.refresh();
     } catch {
-      setError('The server could not be reached. Nothing was saved.');
+      setError('The server could not be reached. Please try again.');
       setBusy(false);
     }
   }
 
   return (
-    <main className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+    <main className="grid min-h-screen lg:grid-cols-[1.08fr_1fr]">
       <div className="relative hidden flex-col justify-between bg-navy-900 px-10 py-10 text-white lg:flex">
-        <div className="flex items-center gap-3">
-          <img src="/brand/logo.jpg" alt="" className="h-11 w-11 rounded-lg object-cover shadow-card ring-1 ring-navy-900/10" />
+        <Link href="/" className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo.jpg"
+            alt={propertyName}
+            className="h-11 w-11 rounded-md object-cover ring-1 ring-white/20"
+          />
           <div>
-            <p className="font-display text-[1.05rem] leading-none tracking-[0.16em]">LEMMA HEIGHTS</p>
-            <p className="mt-1 text-[0.68rem] uppercase tracking-[0.24em] text-navy-200">Apartments · Lusaka</p>
+            <p className="font-display text-[1rem] font-semibold leading-none tracking-[0.14em]">
+              LEMMA HEIGHTS
+            </p>
+            <p className="mt-1 text-[0.68rem] uppercase tracking-[0.2em] text-navy-200">
+              Serviced Apartments · Lusaka
+            </p>
           </div>
-        </div>
+        </Link>
 
-        <div className="max-w-md">
-          <h1 className="font-display text-[2.1rem] leading-[1.15]">
-            The front desk, the ledger and the cleaning rota in one place.
+        <div className="max-w-lg">
+          <h1 className="text-[2rem] font-semibold leading-[1.18] tracking-tight text-white">
+            Guest reservations, verified payments, quotations, and property operations.
           </h1>
-          <p className="mt-4 text-[0.92rem] leading-relaxed text-navy-100/85">
-            Sign in as the owner to see revenue and occupancy, as reception to work arrivals and payments, or as a cleaner to
-            see only your rooms. Availability is enforced at the server, so two guests can never be sold the same night.
+          <p className="mt-4 text-[0.92rem] leading-relaxed text-navy-200">
+            Sign in with your guest account to manage bookings and download official ZMW receipts,
+            or sign in with an authorised staff account to operate reservations, housekeeping, and
+            property administration.
           </p>
-          <div className="mt-8 overflow-hidden rounded-xl ring-1 ring-white/15">
-            <PhotoFrame src="/images/lobby.jpg" alt="Lemma Heights lobby" ratio="16 / 7" caption="Property photograph — to be supplied" />
+          <div className="mt-8 overflow-hidden rounded-md ring-1 ring-white/15">
+            <PhotoFrame
+              src="/images/property/reception.jpg"
+              alt="Lemma Heights Reception Desk"
+              ratio="16 / 8"
+              variant="detail"
+            />
           </div>
         </div>
 
-        <p className="text-[0.72rem] leading-relaxed text-navy-200">
-          Demonstration environment. Guest records, payments and messages are simulated sample data held in this project — no live
-          payment provider or messaging account is connected.
+        <p className="text-[0.74rem] leading-relaxed text-navy-300">
+          {propertyName} · Plot 2144B, Chainama Lands, Great East Road, Lusaka, Zambia
         </p>
       </div>
 
       <div className="flex flex-col justify-center bg-sand-50 px-5 py-10 sm:px-10">
-        <div className="mx-auto w-full max-w-[26rem]">
-          <div className="mb-7 flex items-center gap-3 lg:hidden">
-            <img src="/brand/logo.jpg" alt={`${propertyName} logo`} className="h-10 w-10 rounded-lg object-cover ring-1 ring-navy-900/10" />
-            <p className="font-display text-[1rem] tracking-[0.14em] text-navy-800">LEMMA HEIGHTS</p>
-          </div>
+        <div className="mx-auto w-full max-w-[27rem]">
+          <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo.jpg"
+              alt={`${propertyName} logo`}
+              className="h-10 w-10 rounded-md object-cover ring-1 ring-sand-300"
+            />
+            <div>
+              <p className="text-[0.95rem] font-semibold tracking-[0.12em] text-navy-900">
+                LEMMA HEIGHTS
+              </p>
+              <p className="text-[0.65rem] uppercase tracking-[0.16em] text-navy-500">
+                Apartments · Lusaka
+              </p>
+            </div>
+          </Link>
 
-          <h2 className="font-display text-[1.5rem] text-navy-800">Staff sign in</h2>
-          <p className="mt-1 text-[0.85rem] text-navy-500">Use one of the demonstration accounts below.</p>
+          <h2 className="text-[1.45rem] font-semibold tracking-tight text-navy-900">
+            Sign in to your account
+          </h2>
+          <p className="mt-1 text-[0.85rem] text-navy-500">
+            Enter your email address or staff handle to continue.
+          </p>
 
-          <form onSubmit={submit} className="card mt-6 p-5">
-            <label className="label mb-1 block" htmlFor="username">
-              Login handle
+          <form onSubmit={submit} className="card mt-6 p-6">
+            <label className="label mb-1.5 block" htmlFor="username">
+              Email address or staff handle
             </label>
             <input
               id="username"
@@ -95,14 +145,22 @@ export function LoginPage({ accounts, propertyName }: { accounts: Account[]; pro
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="field"
-              placeholder="alice"
+              placeholder="name@company.co.zm"
               required
             />
 
-            <label className="label mb-1 mt-4 block" htmlFor="password">
-              Password
-            </label>
-            <div className="relative">
+            <div className="mt-4 flex items-center justify-between">
+              <label className="label block" htmlFor="password">
+                Password
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-[0.76rem] font-medium text-lemma-dark hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <div className="relative mt-1.5">
               <input
                 id="password"
                 type={reveal ? 'text' : 'password'}
@@ -110,13 +168,13 @@ export function LoginPage({ accounts, propertyName }: { accounts: Account[]; pro
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="field pr-10"
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 required
               />
               <button
                 type="button"
                 onClick={() => setReveal((v) => !v)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-2 text-navy-400 hover:bg-sand-100 hover:text-navy-700"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-navy-400 hover:bg-sand-100 hover:text-navy-700"
                 aria-label={reveal ? 'Hide password' : 'Show password'}
               >
                 {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -124,57 +182,65 @@ export function LoginPage({ accounts, propertyName }: { accounts: Account[]; pro
             </div>
 
             {error ? (
-              <p className="mt-3 flex items-start gap-1.5 rounded-lg border border-st-cancelled/30 bg-st-cancelledBg px-2.5 py-2 text-[0.78rem] font-medium text-st-cancelled">
-                <AlertCircle size={14} className="mt-px shrink-0" /> {error}
+              <p className="mt-3 flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] font-medium text-st-cancelled">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" /> {error}
               </p>
             ) : null}
 
-            <button type="submit" className="btn-primary btn-md mt-4 w-full" disabled={busy}>
-              {busy ? 'Signing in…' : 'Sign in'}
-              {!busy ? <ArrowRight size={15} /> : null}
+            <button
+              type="submit"
+              disabled={busy}
+              className="btn btn-primary mt-5 w-full justify-center py-2.5"
+            >
+              {busy ? 'Signing in...' : 'Sign in'} <ArrowRight size={15} />
             </button>
 
-            <p className="mt-3 flex items-start gap-1.5 text-[0.72rem] leading-snug text-navy-400">
-              <ShieldCheck size={13} className="mt-px shrink-0 text-teal-500" />
-              Demo password for every account: <span className="font-semibold text-navy-600">lemma2026</span>. Sessions last one shift and are stored in an
-              httpOnly cookie.
-            </p>
+            <div className="mt-5 flex items-center justify-between border-t border-sand-200 pt-4 text-[0.8rem] text-navy-600">
+              <span>New guest booking with us?</span>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-1.5 font-semibold text-navy-900 hover:text-lemma-dark"
+              >
+                <UserPlus size={14} /> Create account
+              </Link>
+            </div>
           </form>
 
-          <div className="mt-5">
-            <p className="label mb-2">Accounts to try</p>
-            <ul className="space-y-1.5">
-              {accounts.map((account) => (
-                <li key={account.username}>
+          {accounts.length > 0 ? (
+            <div className="mt-6 rounded-md border border-sand-200 bg-white p-4">
+              <div className="flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-navy-500">
+                <KeyRound size={12} /> Role Verification Accounts (Password: lemma2026)
+              </div>
+              <div className="mt-2.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {accounts.map((acc) => (
                   <button
+                    key={acc.identifier}
                     type="button"
                     onClick={() => {
-                      setUsername(account.username);
+                      setUsername(acc.identifier);
                       setPassword('lemma2026');
                       setError(null);
                     }}
-                    className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition ${
-                      username === account.username ? 'border-gold-300 bg-gold-50' : 'border-sand-200 bg-white hover:border-sand-300'
-                    }`}
+                    className="flex flex-col items-start rounded border border-sand-200 px-2.5 py-2 text-left transition hover:border-lemma hover:bg-sand-50"
                   >
-                    <span className="min-w-0">
-                      <span className="block truncate text-[0.84rem] font-semibold text-navy-800">{account.name}</span>
-                      <span className="block truncate text-[0.74rem] text-navy-400">{account.jobTitle}</span>
+                    <span className="text-[0.8rem] font-semibold text-navy-900">{acc.name}</span>
+                    <span className="text-[0.68rem] uppercase tracking-[0.1em] text-navy-500">
+                      {acc.role.replace(/_/g, ' ')} · {acc.identifier}
                     </span>
-                    <span className="chip shrink-0 bg-navy-50 text-navy-600">{account.role}</span>
                   </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
-          <p className="mt-6 text-[0.74rem] leading-relaxed text-navy-400">
-            Looking for the guest-facing site?{' '}
-            <Link href="/" className="link">
-              Search availability and request a stay
+          <div className="mt-5 flex items-center justify-between text-[0.76rem] text-navy-500">
+            <Link href="/" className="hover:text-navy-900">
+              Return to public website
             </Link>
-            .
-          </p>
+            <Link href="/setup-admin" className="hover:text-navy-900">
+              Initial admin bootstrap
+            </Link>
+          </div>
         </div>
       </div>
     </main>

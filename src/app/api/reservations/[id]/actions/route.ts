@@ -1,6 +1,6 @@
-import { apiRoute, HttpError, readBody } from '@/lib/api/http';
+import { apiRoute, HttpError } from '@/lib/api/http';
 import { actionSchema, cancelSchema, statusSchema } from '@/lib/api/schemas';
-import { mutate } from '@/lib/db/store';
+import { runAtomicTransaction } from '@/lib/db/store';
 import { buildSnapshot } from '@/lib/api/snapshot';
 import {
   cancelReservation,
@@ -18,23 +18,20 @@ function require_(session: { permissions: Set<PermissionKey> }, key: PermissionK
 
 const STATUS_PERMISSION: Record<string, PermissionKey> = {
   inquiry: 'reservations.edit',
+  pending_confirmation: 'reservations.edit',
   reserved: 'reservations.edit',
   fully_paid: 'reservations.edit',
   checked_in: 'reservations.checkin',
   checked_out: 'reservations.checkin',
+  cancellation_requested: 'reservations.edit',
   cancelled: 'reservations.cancel',
 };
 
-/**
- * Every state transition the desk can perform on a booking, behind one endpoint.
- * Permissions are re-checked per transition rather than per route, because a
- * receptionist may amend a folio but must not authorise a refund on cancellation.
- */
 export const POST = apiRoute({
   permission: 'reservations.edit',
   handler: async ({ req, session, params }) => {
     const body = (await req.json()) as { kind?: string };
-    return mutate((db) => {
+    return runAtomicTransaction((db) => {
       switch (body?.kind) {
         case 'cancel': {
           require_(session, 'reservations.cancel', 'Your role cannot cancel bookings — an administrator must do it.');

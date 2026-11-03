@@ -16,10 +16,12 @@ import type {
   ReservationEvent,
   StaffUser,
 } from './types';
-import { checkAvailability, nightsBetween, stayTotal } from './availability';
+import { checkAvailability, checkApartmentReadiness, nightsBetween, stayTotal } from './availability';
+import { calculateStayPricing } from './pricing';
 import { recomputeReservation } from './selectors';
 import { addISO, dayDiff, formatMediumDate, businessToday, timeNow } from './dates';
 import { hashPassword } from '../auth/passwords';
+import { appendAuditLog, issueOfficialReceipt } from './production-ops';
 
 /**
  * Business operations. Every write in the product — admin desk, cleaner portal,
@@ -47,6 +49,8 @@ function nextId(prefix: string) {
 }
 
 function actorName(db: Database, actorId: ID): string {
+  const user = (db.users ?? []).find((u) => u.uid === actorId);
+  if (user) return user.fullName;
   return db.staff.find((s) => s.id === actorId)?.name ?? 'System';
 }
 
@@ -198,6 +202,7 @@ export function updateGuest(db: Database, guestId: ID, patch: Partial<Guest>, ac
 
 export interface ReservationInput {
   guestId?: ID;
+  userId?: ID | null;
   guest?: Parameters<typeof findOrCreateGuest>[1];
   apartmentId: ID;
   checkIn: string;
@@ -205,6 +210,7 @@ export interface ReservationInput {
   guestCount: number;
   nightlyRate?: number;
   discount?: number;
+  selectedServiceIds?: string[];
   status?: BookingStatus;
   source: BookingSource;
   notes?: string;
@@ -248,6 +254,13 @@ function assertAvailability(
   if (result.reason === 'out_of_service') {
     throw new OperationError('That apartment is not available for sale.', 409, 'out_of_service');
   }
+  if (result.reason === 'lead_time') {
+    throw new OperationError(
+      'Same-day arrival is blocked because housekeeping turnover or inspection is still in progress on this unit.',
+      409,
+      'readiness_blocked',
+    );
+  }
   if (result.reason === 'maintenance') {
     throw new OperationError(
       'An open maintenance job holds this apartment. Clear it in Housekeeping or pick another unit.',
@@ -286,17 +299,40 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
     source: input.source,
   });
 
-  const nightlyRate = input.nightlyRate ?? apartment.nightlyRate;
-  const discount = Math.max(0, input.discount ?? 0);
-  const total = stayTotal(nights, nightlyRate, discount);
+  const pricing = calculateStayPricing({
+    apartment,
+    settings: db.settings,
+    checkIn: input.checkIn,
+    checkOut: input.checkOut,
+    guestCount: input.guestCount,
+    overrideNightlyRate: input.nightlyRate ?? null,
+    manualDiscount: input.discount ?? 0,
+    selectedServiceIds: input.selectedServiceIds,
+  });
+
+  const nightlyRate = input.nightlyRate ?? pricing.effectiveAverageRate;
+  const discount = Math.max(0, pricing.totalDiscount);
+  const total =
+    input.nightlyRate !== undefined && !(input.selectedServiceIds?.length)
+      ? stayTotal(nights, nightlyRate, Math.max(0, input.discount ?? 0))
+      : pricing.totalAmount;
+
   const seq = db.sequences.reservation++;
   const reference = `LHA-${input.checkIn.slice(0, 4)}-${String(seq).padStart(4, '0')}`;
   const autoConfirm = db.settings.booking.autoConfirmPublicRequests;
   const status: BookingStatus = input.asInquiry && !autoConfirm ? 'inquiry' : (input.status ?? 'reserved');
+  const holdMins = db.settings.booking.holdDurationMinutes ?? 240;
+  const linkedUserId =
+    input.userId ??
+    guest.userId ??
+    (guest.email
+      ? (db.users ?? []).find((u) => u.email.toLowerCase() === guest.email.toLowerCase())?.uid ?? null
+      : null);
 
   const reservation: Reservation = {
     id: nextId('rv'),
     reference,
+    userId: linkedUserId,
     guestId: guest.id,
     apartmentId: apartment.id,
     checkIn: input.checkIn,
@@ -304,13 +340,22 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
     guestCount: input.guestCount,
     nightlyRate,
     nights,
+    extraGuestTotal: input.nightlyRate !== undefined ? 0 : pricing.extraGuestTotal,
+    selectedServices: pricing.selectedServices,
+    servicesTotal: pricing.servicesTotal,
+    taxRatePercent: pricing.taxRatePercent,
+    taxAmount: pricing.taxAmount,
     totalAmount: total,
-    discount,
+    discount: input.nightlyRate !== undefined ? Math.max(0, input.discount ?? 0) : discount,
     status,
     paymentStatus: 'unpaid',
     source: input.source,
     arrivalTime: input.arrivalTime || db.settings.booking.checkInTime,
     notes: input.notes ?? '',
+    holdExpiresAt:
+      status === 'pending_confirmation'
+        ? new Date(Date.now() + holdMins * 60 * 1000).toISOString()
+        : null,
     createdAt: nowISO(),
     updatedAt: nowISO(),
     createdBy: actorId,
@@ -328,6 +373,15 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
     ],
   };
   db.reservations.unshift(reservation);
+
+  appendAuditLog(db, {
+    category: 'booking',
+    action: 'booking.created',
+    actorUid: actorId,
+    targetType: 'booking',
+    targetId: reservation.id,
+    summary: `Created booking ${reference} for ${guest.fullName} (Apt ${apartment.number}, ${input.checkIn} to ${input.checkOut}, K${total.toLocaleString('en-US')}).`,
+  });
 
   if (input.initialDeposit && input.initialDeposit.amount > 0) {
     recordPayment(db, actorId, {
@@ -484,23 +538,36 @@ export function setReservationStatus(
   const r = db.reservations.find((x) => x.id === reservationId);
   if (!r) throw new OperationError('Reservation not found.', 404, 'not_found');
   const allowed: Record<BookingStatus, BookingStatus[]> = {
-    inquiry: ['reserved', 'cancelled'],
-    reserved: ['fully_paid', 'checked_in', 'cancelled'],
-    fully_paid: ['checked_in', 'reserved', 'cancelled'],
+    inquiry: ['pending_confirmation', 'reserved', 'cancelled'],
+    pending_confirmation: ['reserved', 'fully_paid', 'cancelled'],
+    reserved: ['fully_paid', 'checked_in', 'cancellation_requested', 'cancelled'],
+    fully_paid: ['checked_in', 'reserved', 'cancellation_requested', 'cancelled'],
     checked_in: ['checked_out'],
     checked_out: [],
+    cancellation_requested: ['reserved', 'fully_paid', 'cancelled'],
     cancelled: ['reserved'],
   };
-  if (!allowed[r.status].includes(status)) {
+  if (!(allowed[r.status] ?? []).includes(status)) {
     throw new OperationError(
-      `Cannot move a ${r.status.replace(/_/g, ' ')} booking to ${status.replace(/_/g, ' ')} — reception would never do that.`,
+      `Cannot move a ${r.status.replace(/_/g, ' ')} booking to ${status.replace(/_/g, ' ')}.`,
       409,
       'bad_transition',
     );
   }
+  const beforeStatus = r.status;
   r.status = status;
   log(db, r.id, actorId, `Status → ${status.replace(/_/g, ' ')}`, note);
   recomputeReservation(db, r.id);
+  appendAuditLog(db, {
+    category: 'booking',
+    action: 'booking.status_changed',
+    actorUid: actorId,
+    targetType: 'booking',
+    targetId: r.id,
+    summary: `Booking ${r.reference} status changed from ${beforeStatus} to ${status}.`,
+    before: { status: beforeStatus },
+    after: { status },
+  });
   return r;
 }
 
@@ -513,6 +580,14 @@ export function checkInReservation(db: Database, actorId: ID, reservationId: ID,
   if (r.checkIn > today(db)) {
     throw new OperationError(`Arrival is ${formatMediumDate(r.checkIn)} — check-in opens on the day of arrival.`, 409, 'too_early');
   }
+  const readiness = checkApartmentReadiness(db, r.apartmentId);
+  if (!readiness.ready) {
+    throw new OperationError(
+      readiness.reason || 'Apartment is not yet marked clean and ready for check-in.',
+      409,
+      'readiness_blocked',
+    );
+  }
   r.status = 'checked_in';
   r.checkedInAt = nowISO();
   r.arrivalTime = arrivalTime || timeNow();
@@ -521,6 +596,14 @@ export function checkInReservation(db: Database, actorId: ID, reservationId: ID,
     ensureStayoverTask(db, r, actorId);
   }
   recomputeReservation(db, r.id);
+  appendAuditLog(db, {
+    category: 'booking',
+    action: 'booking.checked_in',
+    actorUid: actorId,
+    targetType: 'booking',
+    targetId: r.id,
+    summary: `Checked in ${r.reference} at ${r.arrivalTime}.`,
+  });
   return r;
 }
 
@@ -689,22 +772,31 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
    * verify their own entry stays `pending` until an authorised user signs it off.
    * A screenshot alone never changes the balance.
    */
-  const actor = db.staff.find((s) => s.id === actorId);
-  const canSelfVerify = actor?.role === 'admin';
-  const autoVerify = canSelfVerify && !db.settings.payments.requireVerification ? true : canSelfVerify && input.method === 'cash';
+  const actorUser = (db.users ?? []).find((u) => u.uid === actorId);
+  const actorStaff = db.staff.find((s) => s.id === actorId);
+  const resolvedRole = actorUser?.role ?? actorStaff?.role;
+  const resolvedName = actorUser?.fullName ?? actorStaff?.name ?? 'System';
+  const canSelfVerify = resolvedRole === 'super_admin' || resolvedRole === 'admin';
+  const autoVerify =
+    canSelfVerify && !db.settings.payments.requireVerification
+      ? true
+      : canSelfVerify && input.method === 'cash';
 
   const payment: Payment = {
     id: nextId('pay'),
     reservationId: r.id,
+    bookingId: r.id,
+    guestId: r.guestId,
+    userId: r.userId ?? null,
     amount,
     method: input.method,
     kind: input.kind,
     reference: (input.reference ?? '').trim() || (input.method === 'cash' ? `CASH-${r.reference.slice(-4)}` : ''),
     paidAt: input.paidAt || today(db),
     recordedBy: actorId,
-    recordedByName: actor?.name ?? 'System',
+    recordedByName: resolvedName,
     verificationStatus: autoVerify ? 'verified' : 'pending',
-    verifiedBy: autoVerify ? actor?.name ?? 'System' : null,
+    verifiedBy: autoVerify ? resolvedName : null,
     verifiedAt: autoVerify ? nowISO() : null,
     verificationNote: autoVerify
       ? input.method === 'cash'
@@ -712,9 +804,18 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
         : 'Entered and verified by the manager on duty.'
       : '',
     proof: input.proof
-      ? { ...input.proof, uploadedAt: nowISO(), uploadedBy: actor?.name ?? 'System' }
+      ? { ...input.proof, uploadedAt: nowISO(), uploadedBy: resolvedName }
       : null,
     note: input.note ?? '',
+    auditTrail: [
+      {
+        at: nowISO(),
+        by: resolvedName,
+        action: autoVerify ? 'payment.recorded_and_verified' : 'payment.recorded_pending',
+        status: autoVerify ? 'verified' : 'pending',
+        note: input.note ?? '',
+      },
+    ],
     createdAt: nowISO(),
   };
   if (!payment.reference) payment.reference = `REC-${String(db.sequences.receipt++).padStart(5, '0')}`;
@@ -722,11 +823,26 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
 
   r.history.unshift({
     at: nowISO(),
-    by: actor?.name ?? 'System',
+    by: resolvedName,
     label: payment.verificationStatus === 'verified' ? 'Payment banked' : 'Payment recorded — awaiting verification',
     detail: `K${amount.toLocaleString('en-US')} · ${methodSetting.label}${payment.reference ? ` · ref ${payment.reference}` : ''}`,
   });
   r.updatedAt = nowISO();
+
+  recomputeReservation(db, r.id);
+  if (payment.verificationStatus === 'verified') {
+    issueOfficialReceipt(db, payment, resolvedName);
+  }
+
+  appendAuditLog(db, {
+    category: 'payment',
+    action: autoVerify ? 'payment.recorded_verified' : 'payment.recorded_pending',
+    actorUid: actorId,
+    targetType: 'payment',
+    targetId: payment.id,
+    summary: `Recorded K${amount.toLocaleString('en-US')} (${methodSetting.label}) for ${r.reference} — status: ${payment.verificationStatus}.`,
+    after: { amount, method: input.method, verificationStatus: payment.verificationStatus },
+  });
 
   if (payment.verificationStatus === 'pending' && db.settings.notifications.sendPaymentConfirmation) {
     const guest = db.guests.find((g) => g.id === r.guestId);
@@ -735,7 +851,7 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
         event: 'payment_received',
         channel: 'in_app',
         title: `Payment awaiting verification · ${r.reference}`,
-        body: `${actor?.name ?? 'Reception'} recorded K${amount.toLocaleString('en-US')} by ${methodSetting.label}${
+        body: `${resolvedName} recorded K${amount.toLocaleString('en-US')} by ${methodSetting.label}${
           payment.proof ? ' with a screenshot attached' : ''
         }. An administrator must verify it before the folio moves to paid.`,
         recipientName: 'Authorised verifier',
@@ -749,10 +865,10 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
     const guest = db.guests.find((g) => g.id === r.guestId);
     if (guest) {
       draftNotification(db, {
-        event: 'payment_received',
+        event: 'payment_verified',
         channel: 'whatsapp',
         title: `Receipt confirmed · ${r.reference}`,
-        body: `Thank you ${guestFirstName(guest)}, we have received K${amount.toLocaleString('en-US')} by ${methodSetting.label}${
+        body: `Thank you ${guestFirstName(guest)}, we have verified K${amount.toLocaleString('en-US')} by ${methodSetting.label}${
           payment.reference ? ` (ref ${payment.reference})` : ''
         }. ${r.totalAmount - existingVerified - amount > 0 ? `The balance of K${(r.totalAmount - existingVerified - amount).toLocaleString('en-US')} remains due` : 'Your stay is paid in full'}.`,
         recipientName: guest.fullName,
@@ -764,7 +880,6 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
     }
   }
 
-  recomputeReservation(db, r.id);
   return payment;
 }
 
@@ -778,10 +893,21 @@ export function setPaymentVerification(
   const p = db.payments.find((x) => x.id === paymentId);
   if (!p) throw new OperationError('Payment not found.', 404, 'not_found');
   if (p.verificationStatus === status) throw new OperationError(`That receipt is already ${status}.`, 409, 'already_state');
+  const verifierName = actorName(db, actorId);
+  const beforeStatus = p.verificationStatus;
   p.verificationStatus = status;
-  p.verifiedBy = actorName(db, actorId);
+  p.verifiedBy = verifierName;
   p.verifiedAt = nowISO();
   p.verificationNote = note || (status === 'verified' ? 'Reference matched against the provider statement.' : 'Rejected by the verifier.');
+  p.auditTrail = p.auditTrail ?? [];
+  p.auditTrail.unshift({
+    at: nowISO(),
+    by: verifierName,
+    action: status === 'verified' ? 'payment.verified' : 'payment.rejected',
+    status,
+    note: p.verificationNote,
+  });
+
   const r = db.reservations.find((x) => x.id === p.reservationId);
   if (r) {
     r.history.unshift({
@@ -791,7 +917,42 @@ export function setPaymentVerification(
       detail: `K${p.amount.toLocaleString('en-US')} · ${p.method.replace(/_/g, ' ')}${note ? ` · ${note}` : ''}`,
     });
     recomputeReservation(db, r.id);
+    if (status === 'verified') {
+      issueOfficialReceipt(db, p, verifierName);
+    }
+    const guest = db.guests.find((g) => g.id === r.guestId);
+    if (guest && db.settings.notifications.sendPaymentConfirmation) {
+      draftNotification(db, {
+        event: status === 'verified' ? 'payment_verified' : 'payment_rejected',
+        channel: 'in_app',
+        title:
+          status === 'verified'
+            ? `Payment verified · ${r.reference} (${p.receiptNumber ?? p.reference})`
+            : `Payment rejected · ${r.reference}`,
+        body:
+          status === 'verified'
+            ? `Payment of K${p.amount.toLocaleString('en-US')} (${p.method.replace(/_/g, ' ')}) verified by ${verifierName}. Official receipt ${p.receiptNumber ?? ''} issued.`
+            : `Payment of K${p.amount.toLocaleString('en-US')} (${p.method.replace(/_/g, ' ')}) was rejected: ${p.verificationNote}`,
+        recipientName: guest.fullName,
+        recipientContact: guest.phone,
+        guestId: guest.id,
+        reservationId: r.id,
+        apartmentId: r.apartmentId,
+      });
+    }
   }
+
+  appendAuditLog(db, {
+    category: 'payment',
+    action: status === 'verified' ? 'payment.verified' : 'payment.rejected',
+    actorUid: actorId,
+    targetType: 'payment',
+    targetId: p.id,
+    summary: `Payment ${p.reference} (K${p.amount.toLocaleString('en-US')}) changed from ${beforeStatus} to ${status} by ${verifierName}.`,
+    before: { verificationStatus: beforeStatus },
+    after: { verificationStatus: status, receiptNumber: p.receiptNumber ?? null },
+  });
+
   return p;
 }
 
@@ -917,9 +1078,12 @@ export function updateHousekeepingTask(
 ): HousekeepingTask {
   const task = db.housekeeping.find((t) => t.id === taskId);
   if (!task) throw new OperationError('Cleaning task not found.', 404, 'not_found');
-  const actor = db.staff.find((s) => s.id === actorId);
-  if (actor?.role === 'cleaner') {
-    if (task.assignedTo !== actor.id) {
+  const actorUser = (db.users ?? []).find((u) => u.uid === actorId);
+  const actorStaff = db.staff.find((s) => s.id === actorId);
+  const actorRole = actorUser?.role ?? actorStaff?.role;
+  const actorDisplayName = actorUser?.fullName ?? actorStaff?.name ?? 'System';
+  if (actorRole === 'cleaner') {
+    if (task.assignedTo !== actorId) {
       throw new OperationError('That job is not on your list.', 403, 'not_assigned');
     }
     if (patch.assignedTo !== undefined || patch.date !== undefined || patch.apartmentId !== undefined || patch.type !== undefined) {
@@ -928,7 +1092,12 @@ export function updateHousekeepingTask(
   }
 
   const before = task.status;
-  if (patch.assignedTo !== undefined) task.assignedTo = patch.assignedTo;
+  if (patch.assignedTo !== undefined) {
+    task.assignedTo = patch.assignedTo;
+    if (patch.assignedTo && task.status === 'needs_cleaning') {
+      task.status = 'assigned';
+    }
+  }
   if (patch.date) task.date = patch.date;
   if (patch.dueTime) task.dueTime = patch.dueTime;
   if (patch.priority) task.priority = patch.priority;
@@ -937,37 +1106,50 @@ export function updateHousekeepingTask(
   if (patch.apartmentId) task.apartmentId = patch.apartmentId;
 
   if (patch.status && patch.status !== before) {
-    task.status = patch.status;
-    if (patch.status === 'in_progress' && !task.startedAt) task.startedAt = nowISO();
-    if (patch.status === 'clean') {
+    let targetStatus: CleaningStatus = patch.status === 'completed' ? 'clean' : patch.status;
+    if (
+      targetStatus === 'clean' &&
+      actorRole === 'cleaner' &&
+      db.settings.housekeeping.requireInspectionBeforeReady
+    ) {
+      targetStatus = 'inspection_required';
+    }
+    task.status = targetStatus;
+    if (targetStatus === 'in_progress' && !task.startedAt) task.startedAt = nowISO();
+    if (targetStatus === 'clean') {
       task.completedAt = nowISO();
       task.completedBy = actorId;
       const start = task.startedAt ? new Date(task.startedAt).getTime() : new Date(task.createdAt).getTime();
       task.durationMinutes = Math.max(1, Math.round((Date.now() - start) / 60000));
-    } else {
+    } else if (targetStatus !== 'inspection_required') {
       task.completedAt = null;
       task.completedBy = null;
     }
   }
 
   if (patch.note) {
-    task.notes.unshift({ at: nowISO(), by: actorId, byName: actor?.name ?? 'System', text: patch.note });
+    task.notes.unshift({ at: nowISO(), by: actorId, byName: actorDisplayName, text: patch.note });
   }
 
   if (task.status !== before) {
+    const blockedByMaintenance = (db.maintenance ?? []).some(
+      (m) => m.apartmentId === task.apartmentId && m.status !== 'resolved' && m.blocksReadiness,
+    );
     db.cleaningState[task.apartmentId] = {
-      status: task.status,
+      status: blockedByMaintenance ? 'maintenance' : task.status,
       updatedAt: nowISO(),
       note:
         task.status === 'clean'
-          ? `Turnover completed by ${task.completedBy ? db.staff.find((s) => s.id === task.completedBy)?.name ?? 'staff' : 'staff'}${
+          ? `Turnover completed by ${actorDisplayName}${
               task.durationMinutes ? ` in ${task.durationMinutes} minutes` : ''
             }.`
-          : task.status === 'maintenance'
-            ? 'Maintenance hold — blocked to new bookings.'
-            : task.status === 'in_progress'
-              ? 'Team is in the unit.'
-              : 'Awaiting cleaning.',
+          : task.status === 'inspection_required'
+            ? `Cleaned by ${actorDisplayName} — awaiting supervisor inspection.`
+            : task.status === 'maintenance'
+              ? 'Maintenance hold — blocked to new bookings.'
+              : task.status === 'in_progress'
+                ? 'Team is in the unit.'
+                : 'Awaiting cleaning.',
     };
 
     if (task.status === 'maintenance') {
@@ -976,7 +1158,7 @@ export function updateHousekeepingTask(
         event: 'maintenance_reported',
         channel: 'in_app',
         title: `Maintenance reported · Apt ${apartment?.number}`,
-        body: `${actor?.name ?? 'A cleaner'} flagged ${apartment?.name}: ${patch.note || task.instructions}. The unit is held against new bookings until it is signed off.`,
+        body: `${actorDisplayName} flagged ${apartment?.name}: ${patch.note || task.instructions}. The unit is held against new bookings until it is signed off.`,
         recipientName: 'Alice Chanda',
         recipientContact: db.settings.property.phone,
         apartmentId: task.apartmentId,
@@ -994,7 +1176,7 @@ export function updateHousekeepingTask(
         recipientContact: 'in-app',
         apartmentId: task.apartmentId,
         reservationId: task.reservationId,
-        actor: actor?.name ?? undefined,
+        actor: actorDisplayName,
       });
     }
   }
@@ -1046,19 +1228,57 @@ export function createHousekeepingTask(
 /* ------------------------------------------------------------------------ apartments */
 
 export function upsertApartment(db: Database, actorId: ID, input: Partial<Apartment> & { id?: ID }): Apartment {
-  void actorId;
   if (input.id) {
     const apt = db.apartments.find((a) => a.id === input.id);
     if (!apt) throw new OperationError('Apartment not found.', 404, 'not_found');
+    const priorRate = apt.nightlyRate;
+    const priorWeekend = apt.weekendRate;
     Object.assign(apt, input);
+    if (input.publicationStatus) {
+      apt.active = input.publicationStatus === 'published';
+    } else if (input.active !== undefined && !input.publicationStatus) {
+      apt.publicationStatus = input.active ? 'published' : 'unpublished';
+    }
+    apt.updatedAt = nowISO();
+    if (priorRate !== apt.nightlyRate || priorWeekend !== apt.weekendRate) {
+      appendAuditLog(db, {
+        category: 'apartment',
+        action: 'apartment.price_changed',
+        actorUid: actorId,
+        targetType: 'apartment',
+        targetId: apt.id,
+        summary: `Updated pricing on Apt ${apt.number} (${apt.name}): K${priorRate} -> K${apt.nightlyRate}.`,
+        before: { nightlyRate: priorRate, weekendRate: priorWeekend ?? null },
+        after: { nightlyRate: apt.nightlyRate, weekendRate: apt.weekendRate ?? null },
+      });
+    } else {
+      appendAuditLog(db, {
+        category: 'apartment',
+        action: 'apartment.updated',
+        actorUid: actorId,
+        targetType: 'apartment',
+        targetId: apt.id,
+        summary: `Updated Apartment ${apt.number} (${apt.name}).`,
+      });
+    }
     return apt;
   }
-  const number = Math.max(0, ...db.apartments.map((a) => a.number)) + 1;
+  const number = input.number ?? Math.max(0, ...db.apartments.map((a) => a.number)) + 1;
   const name = input.name?.trim() || `Apartment ${number}`;
+  const defaultPhotoByTier =
+    input.tier === 'penthouse'
+      ? '/images/rooms/executive-suite.jpg'
+      : input.tier === 'family'
+        ? '/images/rooms/family-apartment.jpg'
+        : input.tier === 'deluxe'
+          ? '/images/rooms/luxury-bedroom.jpg'
+          : '/images/rooms/standard-bedroom.jpg';
+  const initialPhotos = input.photos?.length ? input.photos : [defaultPhotoByTier, '/images/rooms/living-room.jpg', '/images/rooms/bathroom.jpg'];
+  const pubStatus = input.publicationStatus ?? (input.active === false ? 'unpublished' : 'published');
   const apt: Apartment = {
     id: nextId('apt'),
     number,
-    code: `LHA-${100 + number}`,
+    code: input.code || `LHA-${100 + number}`,
     name,
     slug: `apt-${number}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
     tier: input.tier ?? 'standard',
@@ -1071,17 +1291,45 @@ export function upsertApartment(db: Database, actorId: ID, input: Partial<Apartm
     floor: input.floor ?? 0,
     bedConfiguration: input.bedConfiguration ?? '1 queen bed',
     nightlyRate: input.nightlyRate ?? 1000,
+    weekendRate: input.weekendRate ?? null,
+    seasonalRates: input.seasonalRates ?? [],
+    specialOffers: input.specialOffers ?? [],
+    includedGuests: input.includedGuests ?? Math.min(2, input.maxGuests ?? 2),
+    extraGuestFee: input.extraGuestFee ?? 0,
+    optionalServices: input.optionalServices ?? [],
     amenities: input.amenities ?? [],
-    photos: [
-      `/images/apartments/apt-${String(number).padStart(2, '0')}/01.jpg`,
-      `/images/apartments/apt-${String(number).padStart(2, '0')}/02.jpg`,
-    ],
-    active: true,
-    outOfService: false,
+    facilities: input.facilities ?? input.amenities ?? [],
+    photos: initialPhotos,
+    coverPhoto: input.coverPhoto ?? initialPhotos[0],
+    gallery:
+      input.gallery ??
+      initialPhotos.map((url, idx) => ({
+        id: `ph-${number}-${idx + 1}`,
+        url,
+        publicId: `lemma/apartments/apt-${number}-${idx + 1}`,
+        title: `${name} — Photo ${idx + 1}`,
+        description: '',
+        order: idx,
+        isCover: idx === 0,
+        mediaType: 'image',
+        uploadedAt: nowISO(),
+      })),
+    active: pubStatus === 'published',
+    publicationStatus: pubStatus,
+    outOfService: input.outOfService ?? false,
     houseNotes: input.houseNotes ?? '',
+    updatedAt: nowISO(),
   };
   db.apartments.push(apt);
   db.cleaningState[apt.id] = { status: 'clean', updatedAt: nowISO(), note: 'Added to the catalogue.' };
+  appendAuditLog(db, {
+    category: 'apartment',
+    action: 'apartment.created',
+    actorUid: actorId,
+    targetType: 'apartment',
+    targetId: apt.id,
+    summary: `Created Apartment ${apt.number} (${apt.name}) at K${apt.nightlyRate.toLocaleString('en-US')}/night.`,
+  });
   return apt;
 }
 
@@ -1092,13 +1340,53 @@ export function upsertStaff(
   actorId: ID,
   input: Partial<StaffUser> & { id?: ID; password?: string },
 ): StaffUser {
-  void actorId;
+  db.users = db.users ?? [];
   if (input.id) {
     const user = db.staff.find((s) => s.id === input.id);
     if (!user) throw new OperationError('Staff account not found.', 404, 'not_found');
+    const beforeActive = user.active;
+    const beforeRole = user.role;
     const { password, ...rest } = input;
     Object.assign(user, rest);
     if (password) user.passwordHash = hashPassword(password);
+
+    const mirror = db.users.find((u) => u.uid === user.id);
+    if (mirror) {
+      mirror.fullName = user.name;
+      mirror.email = user.email;
+      mirror.phoneNumber = user.phone;
+      mirror.role = user.role;
+      mirror.accountStatus = user.active ? 'active' : 'deactivated';
+      mirror.jobTitle = user.jobTitle;
+      mirror.shift = user.shift;
+      mirror.permissions = user.permissions;
+      if (password && user.passwordHash) mirror.passwordHash = user.passwordHash;
+      if (!user.active && beforeActive) {
+        mirror.sessionVersion = (mirror.sessionVersion ?? 1) + 1;
+      }
+      mirror.updatedAt = nowISO();
+    }
+
+    if (beforeRole !== user.role) {
+      appendAuditLog(db, {
+        category: 'role',
+        action: 'staff.role_changed',
+        actorUid: actorId,
+        targetType: 'user',
+        targetId: user.id,
+        summary: `Changed staff role for ${user.name} from ${beforeRole} to ${user.role}.`,
+      });
+    }
+    if (beforeActive !== user.active) {
+      appendAuditLog(db, {
+        category: 'staff',
+        action: user.active ? 'staff.reactivated' : 'staff.deactivated',
+        actorUid: actorId,
+        targetType: 'user',
+        targetId: user.id,
+        summary: `${user.active ? 'Reactivated' : 'Deactivated'} staff account ${user.name}.`,
+      });
+    }
     return user;
   }
   const username = (input.username ?? '').trim().toLowerCase();
@@ -1107,6 +1395,7 @@ export function upsertStaff(
     throw new OperationError('That login handle is already taken.', 409, 'duplicate');
   }
   if (!input.name?.trim()) throw new OperationError('Enter the staff member’s name.', 422, 'validation');
+  const pwHash = hashPassword(input.password || 'lemma2026');
   const user: StaffUser = {
     id: nextId('st'),
     name: input.name.trim(),
@@ -1120,9 +1409,37 @@ export function upsertStaff(
     lastSeenAt: null,
     shift: input.shift ?? null,
     permissions: input.permissions ?? null,
-    passwordHash: hashPassword(input.password || 'lemma2026'),
+    passwordHash: pwHash,
   };
   db.staff.push(user);
+  db.users.unshift({
+    uid: user.id,
+    fullName: user.name,
+    email: (user.email || `${username}@lemmaheights.co.zm`).toLowerCase(),
+    phoneNumber: user.phone,
+    profilePhoto: '',
+    role: user.role,
+    accountStatus: user.active ? 'active' : 'deactivated',
+    emailVerified: true,
+    createdAt: nowISO(),
+    updatedAt: nowISO(),
+    lastLoginAt: null,
+    username: user.username,
+    jobTitle: user.jobTitle,
+    shift: user.shift,
+    permissions: user.permissions,
+    hiredOn: user.hiredOn,
+    passwordHash: pwHash,
+    sessionVersion: 1,
+  });
+  appendAuditLog(db, {
+    category: 'staff',
+    action: 'staff.created',
+    actorUid: actorId,
+    targetType: 'user',
+    targetId: user.id,
+    summary: `Added staff account ${user.name} (${user.role}).`,
+  });
   return user;
 }
 
@@ -1269,3 +1586,6 @@ export function newReceiptNumber(db: Database): string {
 export function dateOrNull(value: string | undefined | null): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
+
+export * from './production-ops';
+

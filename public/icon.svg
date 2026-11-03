@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <rect width="128" height="128" rx="16" fill="#FFFFFF"/>
+  <path d="M18 82A48 48 0 0 1 52 36.5L48 44A40 40 0 0 0 22 82H18Z" fill="#707E91"/>
+  <path d="M110 82A48 48 0 0 0 76 36.5L80 44A40 40 0 0 1 106 82H110Z" fill="#707E91"/>
+  <path d="M48 68V42L64 20V60L48 68Z" fill="#707E91"/>
+  <rect x="66" y="23" width="4" height="36" fill="#707E91"/>
+  <rect x="72" y="28" width="4" height="33" fill="#707E91"/>
+  <rect x="78" y="34" width="4" height="30" fill="#707E91"/>
+  <path d="M31 76V55L35 52V73L31 76ZM37 72V51L41 48V70L37 72Z" fill="#707E91"/>
+  <path d="M85 65V51L101 60V74L85 65Z" fill="#707E91"/>
+  <path d="M20 88L51 69L81 88H70L51 76L31 88H20Z" fill="#707E91"/>
+  <path d="M56 71L72 61L112 88H100L72 69L63 75L56 71Z" fill="#707E91"/>
+  <rect x="47" y="80" width="3.5" height="3.5" fill="#707E91"/>
+  <rect x="52" y="80" width="3.5" height="3.5" fill="#707E91"/>
+  <rect x="47" y="85" width="3.5" height="3.5" fill="#707E91"/>
+  <rect x="52" y="85" width="3.5" height="3.5" fill="#707E91"/>
+  <rect x="69" y="74" width="3.5" height="3.5" fill="#707E91"/>
+  <rect x="74" y="74" width="3.5" height="3.5" fill="#707E91"/>
+  <rect x="69" y="79" width="3.5" height="3.5" fill="#707E91"/>
+  <rect x="74" y="79" width="3.5" height="3.5" fill="#707E91"/>
+  <text x="64" y="108" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="4" fill="#4E5B6E">LEMMA</text>
+</svg>

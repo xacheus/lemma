@@ -1,94 +1,131 @@
 import type { Config } from 'tailwindcss';
 
+/**
+ * Lemma Heights Apartments — Brand Design System
+ *
+ * Extracted directly from logo.jpg:
+ *   Primary brand slate:   #707E91 (500) with high-contrast #4E5B6E (600) & #394454 (700)
+ *   Secondary slate-silver:#969FA9 / #BCC3CC (used sparingly for borders, dividers & muted marks)
+ *   Charcoal darks:        #181E27 / #11161D (sidebars, primary typography, high-contrast actions)
+ *   Neutral surfaces:      #FFFFFF, #F7F8FA, #EFF2F6, #E2E6EC
+ *
+ * Note: legacy token names (`navy`, `sand`, `gold`, `teal`) are mapped onto the exact
+ * Lemma Slate + Charcoal + Neutral palette so all existing and new screens share one
+ * restrained, cohesive hospitality visual language without extraneous colours.
+ */
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        /* Deep navy / charcoal — administration chrome */
+        brand: {
+          50: '#F4F6F8',
+          100: '#E8ECF1',
+          200: '#CFD6E0',
+          300: '#B4BBC5',
+          400: '#969FA9',
+          500: '#707E91', // Exact dominant colour extracted from logo.jpg
+          600: '#566476',
+          700: '#414D5C',
+          800: '#2E3744',
+          900: '#1E2530',
+          950: '#12171E',
+        },
+        charcoal: {
+          50: '#F6F7F9',
+          100: '#ECEEF2',
+          200: '#D6DBE3',
+          300: '#B2BAC7',
+          400: '#8490A2',
+          500: '#5E6B7E',
+          600: '#455061',
+          700: '#313A47',
+          800: '#212832',
+          900: '#161B22',
+          950: '#0E1217',
+        },
+        /* Mapped tokens for seamless continuity across administration & public components */
         navy: {
-          50: '#eef2f7',
-          100: '#d7dfec',
-          200: '#aebfd6',
-          300: '#7d94b6',
-          400: '#4f6a92',
-          500: '#2f4c74',
-          600: '#1f3757',
-          700: '#162944',
-          800: '#0f1f35',
-          900: '#0a1626',
-          950: '#060f1b',
+          50: '#F4F6F8',
+          100: '#E8ECF1',
+          200: '#CFD6E0',
+          300: '#9AA5B4',
+          400: '#707E91',
+          500: '#566476',
+          600: '#414D5C',
+          700: '#2E3744',
+          800: '#1E2530',
+          900: '#161B22',
+          950: '#0E1217',
         },
-        /* Warm neutral paper tones — public site + cards */
         sand: {
-          50: '#fbfaf7',
-          100: '#f6f3ed',
-          200: '#ece7dd',
-          300: '#ddd6c7',
-          400: '#c4bba7',
-          500: '#a89e88',
-          600: '#8a8069',
-          700: '#6b6352',
+          50: '#F7F8FA',
+          100: '#F0F2F5',
+          200: '#E3E7ED',
+          300: '#D1D7E0',
+          400: '#B4BBC5',
+          500: '#8E98A6',
+          600: '#68717D',
+          700: '#4B535E',
         },
-        /* Muted gold — primary accent */
         gold: {
-          50: '#fbf6e9',
-          100: '#f4e8c9',
-          200: '#e9d294',
-          300: '#dcba63',
-          400: '#cba33f',
-          500: '#b58a2c',
-          600: '#916d22',
-          700: '#6d511b',
+          50: '#F4F6F8',
+          100: '#E8ECF1',
+          200: '#CFD6E0',
+          300: '#969FA9',
+          400: '#707E91',
+          500: '#566476',
+          600: '#414D5C',
+          700: '#2E3744',
         },
-        /* Teal — secondary accent */
         teal: {
-          50: '#e9f5f3',
-          100: '#c9e6e2',
-          200: '#95cec8',
-          300: '#5eb2aa',
-          400: '#2f9189',
-          500: '#1d756e',
-          600: '#165d58',
-          700: '#114643',
+          50: '#F4F6F8',
+          100: '#E6EBF1',
+          200: '#C8D2DE',
+          300: '#9AA8BA',
+          400: '#707E91',
+          500: '#566476',
+          600: '#414D5C',
+          700: '#2E3744',
         },
-        /* Brand slate, sampled from the Lemma Heights mark */
-        lemma: '#6b7a91',
-        /* Status colours used by calendar + badges */
+        lemma: '#707E91',
+        /* Semantic operational statuses (restrained, legible, accessible) */
         st: {
-          available: '#2f7d5e',
-          availableBg: '#e6f2ec',
-          reserved: '#2563a6',
-          reservedBg: '#e6effa',
-          occupied: '#6747a3',
-          occupiedBg: '#eee9f9',
-          cleaning: '#c2701f',
-          cleaningBg: '#fbefe0',
-          cancelled: '#b0362c',
-          cancelledBg: '#fbeae8',
+          available: '#236B4E',
+          availableBg: '#EAF4F0',
+          reserved: '#3E5A7A',
+          reservedBg: '#EBF0F6',
+          occupied: '#2E3744',
+          occupiedBg: '#E7EBF0',
+          cleaning: '#9A5B1A',
+          cleaningBg: '#F9F0E6',
+          cancelled: '#A6322A',
+          cancelledBg: '#FAECEB',
         },
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'Georgia', 'serif'],
+        sans: ['Inter', 'DM Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['Inter', 'DM Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       fontSize: {
         '2xs': ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.04em' }],
       },
       boxShadow: {
-        card: '0 1px 2px rgba(15, 31, 53, 0.04), 0 8px 24px -12px rgba(15, 31, 53, 0.10)',
-        pop: '0 12px 40px -12px rgba(10, 22, 38, 0.28)',
+        card: '0 1px 2px rgba(22, 27, 34, 0.04)',
+        pop: '0 10px 30px -8px rgba(14, 18, 23, 0.18), 0 2px 6px rgba(14, 18, 23, 0.06)',
         inset: 'inset 0 1px 0 rgba(255,255,255,0.06)',
       },
       borderRadius: {
-        xl: '0.75rem',
-        '2xl': '1rem',
+        lg: '0.375rem',
+        xl: '0.375rem',
+        '2xl': '0.5rem',
       },
       maxWidth: {
         shell: '84rem',
       },
       transitionDuration: {
-        DEFAULT: '150ms',
+        DEFAULT: '140ms',
       },
     },
   },

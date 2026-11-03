@@ -3,41 +3,47 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'Noto Sans', sans-serif;
-  --font-display: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', Georgia, serif;
-  --lemma-slate: #6b7a91;
-  --navy: #0f1f35;
-  --gold: #cba33f;
-  --paper: #fbfaf7;
+  --font-sans: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --lemma-slate: #707E91;
+  --lemma-slate-dark: #566476;
+  --lemma-secondary: #969FA9;
+  --charcoal: #1E2530;
+  --surface-neutral: #F7F8FA;
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-sand-50 text-navy-800 antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum' 0;
+    @apply bg-sand-50 text-navy-800 antialiased overflow-x-hidden;
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04';
   }
 
   h1,
   h2,
-  h3 {
-    text-wrap: balance;
+  h3,
+  h4 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.015em;
   }
 
   *:focus-visible {
-    outline: 2px solid var(--gold);
+    outline: 2px solid var(--lemma-slate);
     outline-offset: 2px;
     border-radius: 4px;
   }
 
   ::selection {
-    background: rgba(203, 163, 63, 0.24);
+    background: rgba(112, 126, 145, 0.22);
   }
 
-  /* Numbers line up in financial tables without opting the whole UI into mono. */
+  /* Tabular numerals for ZMW currency columns and calendar dates */
   .tnum {
     font-variant-numeric: tabular-nums;
   }
@@ -45,7 +51,7 @@
 
 @layer components {
   .card {
-    @apply rounded-xl border border-sand-200 bg-white shadow-card;
+    @apply rounded-md border border-sand-200 bg-white shadow-card;
   }
 
   .card-pad {
@@ -57,13 +63,13 @@
   }
 
   .label {
-    @apply text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400;
+    @apply text-[0.69rem] font-semibold uppercase tracking-[0.07em] text-navy-500;
   }
 
   .field {
-    @apply w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-[0.9rem] text-navy-800
-      placeholder:text-sand-500 transition
-      hover:border-sand-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-200/70
+    @apply w-full rounded-md border border-sand-300 bg-white px-3 py-2 text-[0.875rem] text-navy-800
+      placeholder:text-sand-500 transition-colors
+      hover:border-brand-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200/70
       disabled:cursor-not-allowed disabled:bg-sand-100 disabled:text-sand-600;
   }
 
@@ -72,28 +78,28 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg text-[0.85rem] font-semibold
-      transition active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md text-[0.84rem] font-medium
+      transition-colors disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply btn bg-navy-800 text-white hover:bg-navy-700 shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_6px_18px_-10px_rgba(15,31,53,0.65)];
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
   }
 
   .btn-gold {
-    @apply btn bg-gold-400 text-navy-900 hover:bg-gold-300;
+    @apply btn bg-navy-800 text-white hover:bg-navy-900;
   }
 
   .btn-secondary {
-    @apply btn border border-sand-300 bg-white text-navy-700 hover:border-sand-400 hover:bg-sand-50;
+    @apply btn border border-sand-300 bg-white text-navy-700 hover:border-brand-400 hover:bg-sand-50;
   }
 
   .btn-ghost {
-    @apply btn text-navy-500 hover:bg-navy-50 hover:text-navy-800;
+    @apply btn text-navy-600 hover:bg-sand-100 hover:text-navy-900;
   }
 
   .btn-danger {
-    @apply btn border border-st-cancelled/30 bg-st-cancelledBg text-st-cancelled hover:bg-st-cancelled/10;
+    @apply btn border border-st-cancelled/30 bg-st-cancelledBg text-st-cancelled hover:bg-st-cancelled/15;
   }
 
   .btn-sm {
@@ -109,15 +115,15 @@
   }
 
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-md px-2 py-[3px] text-[0.7rem] font-semibold uppercase tracking-[0.05em];
+    @apply inline-flex items-center gap-1.5 rounded px-2 py-[3px] text-[0.68rem] font-semibold uppercase tracking-[0.05em];
   }
 
   .th {
-    @apply px-3 py-2 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-navy-400;
+    @apply px-3 py-2.5 text-left text-[0.68rem] font-semibold uppercase tracking-[0.07em] text-navy-500 bg-sand-50 border-b border-sand-200;
   }
 
   .td {
-    @apply px-3 py-2.5 align-middle text-[0.86rem] text-navy-700;
+    @apply px-3 py-2.5 align-middle text-[0.85rem] text-navy-800;
   }
 
   .row-hover {
@@ -125,35 +131,32 @@
   }
 
   .link {
-    @apply text-teal-600 underline decoration-teal-200 underline-offset-2 hover:text-teal-500 hover:decoration-teal-400;
+    @apply text-brand-600 underline decoration-brand-200 underline-offset-2 hover:text-brand-700 hover:decoration-brand-500;
   }
 
   .scroll-slim {
     scrollbar-width: thin;
-    scrollbar-color: rgba(15, 31, 53, 0.25) transparent;
+    scrollbar-color: rgba(112, 126, 145, 0.35) transparent;
   }
 
   .scroll-slim::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
   }
 
   .scroll-slim::-webkit-scrollbar-thumb {
-    background: rgba(15, 31, 53, 0.22);
-    border-radius: 999px;
+    background: rgba(112, 126, 145, 0.32);
+    border-radius: 4px;
   }
 
   .scroll-slim::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  /* Placeholder treatment for photography the operator has not supplied yet. */
   .photo-frame {
     position: relative;
     overflow: hidden;
-    background:
-      linear-gradient(135deg, rgba(107, 122, 145, 0.14), rgba(15, 31, 53, 0.06) 55%, rgba(203, 163, 63, 0.1)),
-      #eef0f3;
+    background-color: #EFF2F6;
   }
 
   .photo-frame img {
@@ -166,8 +169,8 @@
   }
 
   .photo-grid-lines {
-    background-image: linear-gradient(rgba(255, 255, 255, 0.55) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.55) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(112, 126, 145, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(112, 126, 145, 0.08) 1px, transparent 1px);
     background-size: 28px 28px;
   }
 }

@@ -4,8 +4,54 @@ export const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the date pic
 export const timeStr = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:mm.');
 
 export const loginSchema = z.object({
-  username: z.string().min(2, 'Enter your login handle.'),
+  username: z.string().min(2, 'Enter your email address or login handle.'),
   password: z.string().min(1, 'Enter your password.'),
+  firebaseIdToken: z.string().optional(),
+});
+
+// Strict customer registration schema — never accepts privileged role fields
+export const registerSchema = z.object({
+  fullName: z.string().min(2, 'Full name is required.').max(100),
+  email: z.string().email('Enter a valid email address.'),
+  phoneNumber: z.string().min(6, 'Enter a reachable phone number.').max(28),
+  password: z.string().min(6, 'Password must be at least 6 characters.').max(128).optional(),
+  firebaseIdToken: z.string().optional(),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Enter a valid email address.'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10, 'Reset token is required.'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters.').max(128),
+});
+
+export const profileUpdateSchema = z.object({
+  fullName: z.string().min(2).max(100).optional(),
+  phoneNumber: z.string().min(4).max(28).optional(),
+  profilePhoto: z.string().max(500).optional(),
+  currentPassword: z.string().max(128).optional(),
+  newPassword: z.string().min(6).max(128).optional(),
+});
+
+export const bootstrapAdminSchema = z.object({
+  setupToken: z.string().min(6, 'Enter the FIRST_ADMIN_SETUP_TOKEN.'),
+  fullName: z.string().min(2, 'Full name is required.'),
+  email: z.string().email('Enter a valid email address.'),
+  phoneNumber: z.string().min(6, 'Enter a phone number.'),
+  password: z.string().min(8, 'Administrator password must be at least 8 characters.'),
+});
+
+export const userRoleChangeSchema = z.object({
+  role: z.enum(['super_admin', 'admin', 'receptionist', 'cleaner', 'guest']),
+  jobTitle: z.string().max(80).optional(),
+  shift: z.enum(['morning', 'afternoon', 'evening']).nullable().optional(),
+});
+
+export const userStatusChangeSchema = z.object({
+  accountStatus: z.enum(['active', 'deactivated', 'suspended']),
+  reason: z.string().max(300).optional(),
 });
 
 const guestFields = {
@@ -19,6 +65,17 @@ const guestFields = {
   specialRequests: z.string().max(600).optional(),
 };
 
+const bookingStatusEnum = z.enum([
+  'inquiry',
+  'pending_confirmation',
+  'reserved',
+  'fully_paid',
+  'checked_in',
+  'checked_out',
+  'cancellation_requested',
+  'cancelled',
+]);
+
 export const reservationCreateSchema = z
   .object({
     guestId: z.string().min(1).optional(),
@@ -29,8 +86,9 @@ export const reservationCreateSchema = z
     guestCount: z.coerce.number().int().min(1).max(12),
     nightlyRate: z.coerce.number().min(0).optional(),
     discount: z.coerce.number().min(0).optional(),
+    selectedServiceIds: z.array(z.string()).optional(),
     source: z.enum(['website', 'whatsapp', 'phone', 'walk_in', 'email', 'corporate', 'travel_agent']),
-    status: z.enum(['inquiry', 'reserved', 'fully_paid', 'checked_in', 'checked_out', 'cancelled']).optional(),
+    status: bookingStatusEnum.optional(),
     notes: z.string().max(1200).optional(),
     arrivalTime: timeStr.optional(),
     asInquiry: z.boolean().optional(),
@@ -43,7 +101,7 @@ export const reservationCreateSchema = z
       .nullable()
       .optional(),
   })
-  .refine((v) => (v.guestId || v.guest?.fullName) && (v.guest?.phone || v.guest?.email) !== undefined, {
+  .refine((v) => Boolean(v.guestId || (v.guest?.fullName && (v.guest?.phone || v.guest?.email))), {
     message: 'Attach an existing guest or capture a name and contact detail.',
     path: ['guest'],
   });
@@ -58,7 +116,7 @@ export const reservationPatchSchema = z.object({
   nightlyRate: z.coerce.number().min(0).optional(),
   discount: z.coerce.number().min(0).optional(),
   source: z.enum(['website', 'whatsapp', 'phone', 'walk_in', 'email', 'corporate', 'travel_agent']).optional(),
-  status: z.enum(['inquiry', 'reserved', 'fully_paid', 'checked_in', 'checked_out', 'cancelled']).optional(),
+  status: bookingStatusEnum.optional(),
   notes: z.string().max(1200).optional(),
   arrivalTime: timeStr.optional(),
 });
@@ -69,8 +127,12 @@ export const cancelSchema = z.object({
   refundMethod: z.enum(['airtel_money', 'mtn_money', 'bank_transfer', 'cash']).optional(),
 });
 
+export const cancellationRequestSchema = z.object({
+  reason: z.string().min(4, 'Please explain why you are requesting cancellation.').max(600),
+});
+
 export const statusSchema = z.object({
-  status: z.enum(['inquiry', 'reserved', 'fully_paid', 'checked_in', 'checked_out', 'cancelled']),
+  status: bookingStatusEnum,
   note: z.string().max(400).optional(),
 });
 
@@ -96,22 +158,69 @@ export const guestSchema = z.object({
 
 export const apartmentSchema = z.object({
   id: z.string().optional(),
+  number: z.coerce.number().int().min(1).max(999).optional(),
+  code: z.string().max(32).optional(),
   name: z.string().min(2, 'Name the apartment.'),
-  tier: z.enum(['standard', 'deluxe', 'executive', 'family', 'premium', 'studio', 'suite']).optional(),
-  tagline: z.string().max(120).optional(),
-  description: z.string().max(2000).optional(),
-  maxGuests: z.coerce.number().int().min(1).max(12),
-  bedrooms: z.coerce.number().int().min(0).max(8),
-  bathrooms: z.coerce.number().int().min(1).max(6),
-  sizeSqm: z.coerce.number().min(8).max(600),
-  floor: z.coerce.number().int().min(-3).max(30).optional(),
-  bedConfiguration: z.string().max(120).optional(),
+  tier: z
+    .enum(['standard', 'deluxe', 'executive', 'family', 'premium', 'studio', 'suite', 'penthouse'])
+    .optional(),
+  tagline: z.string().max(160).optional(),
+  description: z.string().max(3000).optional(),
+  maxGuests: z.coerce.number().int().min(1).max(16),
+  bedrooms: z.coerce.number().int().min(0).max(10),
+  bathrooms: z.coerce.number().int().min(1).max(10),
+  sizeSqm: z.coerce.number().min(8).max(1000),
+  floor: z.coerce.number().int().min(-3).max(40).optional(),
+  bedConfiguration: z.string().max(160).optional(),
   nightlyRate: z.coerce.number().min(1, 'A nightly rate in Kwacha is required.'),
+  weekendRate: z.coerce.number().min(0).nullable().optional(),
+  includedGuests: z.coerce.number().int().min(1).max(16).optional(),
+  extraGuestFee: z.coerce.number().min(0).optional(),
+  seasonalRates: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(80),
+        startDate: dateStr,
+        endDate: dateStr,
+        nightlyRate: z.coerce.number().min(1),
+        active: z.boolean().default(true),
+      }),
+    )
+    .optional(),
+  specialOffers: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(80),
+        minNights: z.coerce.number().int().min(1),
+        discountPercent: z.coerce.number().min(0).max(90),
+        validFrom: dateStr.optional(),
+        validTo: dateStr.optional(),
+        active: z.boolean().default(true),
+      }),
+    )
+    .optional(),
+  optionalServices: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(80),
+        price: z.coerce.number().min(0),
+        priceType: z.enum(['per_stay', 'per_night']),
+        description: z.string().max(200).optional(),
+        active: z.boolean().default(true),
+      }),
+    )
+    .optional(),
   amenities: z.array(z.string()).optional(),
-  photos: z.array(z.string().max(300)).max(8).optional(),
+  facilities: z.array(z.string()).optional(),
+  photos: z.array(z.string().max(500)).max(24).optional(),
+  coverPhoto: z.string().max(500).optional(),
   active: z.boolean().optional(),
+  publicationStatus: z.enum(['published', 'draft', 'unpublished']).optional(),
   outOfService: z.boolean().optional(),
-  houseNotes: z.string().max(600).optional(),
+  houseNotes: z.string().max(800).optional(),
 });
 
 export const paymentCreateSchema = z.object({
@@ -126,7 +235,8 @@ export const paymentCreateSchema = z.object({
     .object({
       fileName: z.string().max(120),
       mimeType: z.string().max(60),
-      dataUrl: z.string().max(4_500_000),
+      dataUrl: z.string().max(8_000_000),
+      publicId: z.string().max(240).optional(),
       sizeBytes: z.coerce.number().min(0),
     })
     .nullable()
@@ -139,11 +249,22 @@ export const paymentVerifySchema = z.object({
 });
 
 export const refundSchema = z.object({
+  reservationId: z.string().optional(),
   amount: z.coerce.number().positive(),
   method: z.enum(['airtel_money', 'mtn_money', 'bank_transfer', 'cash']),
   reference: z.string().max(64).optional(),
   note: z.string().max(400).optional(),
 });
+
+const cleaningStatusEnum = z.enum([
+  'clean',
+  'needs_cleaning',
+  'assigned',
+  'in_progress',
+  'completed',
+  'inspection_required',
+  'maintenance',
+]);
 
 export const housekeepingCreateSchema = z.object({
   apartmentId: z.string().min(1),
@@ -153,12 +274,12 @@ export const housekeepingCreateSchema = z.object({
   assignedTo: z.string().nullable().optional(),
   priority: z.enum(['low', 'normal', 'high']).optional(),
   instructions: z.string().max(600).optional(),
-  status: z.enum(['clean', 'needs_cleaning', 'in_progress', 'maintenance']).optional(),
+  status: cleaningStatusEnum.optional(),
   reservationId: z.string().nullable().optional(),
 });
 
 export const housekeepingPatchSchema = z.object({
-  status: z.enum(['clean', 'needs_cleaning', 'in_progress', 'maintenance']).optional(),
+  status: cleaningStatusEnum.optional(),
   assignedTo: z.string().nullable().optional(),
   date: dateStr.optional(),
   dueTime: timeStr.optional(),
@@ -169,13 +290,105 @@ export const housekeepingPatchSchema = z.object({
   type: z.enum(['turnover', 'stayover', 'pre_arrival', 'deep_clean', 'maintenance']).optional(),
 });
 
+export const maintenanceCreateSchema = z.object({
+  apartmentId: z.string().min(1, 'Select an apartment.'),
+  faultDescription: z.string().min(4, 'Describe the fault or repair needed.').max(1200),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  assignedTo: z.string().nullable().optional(),
+  blocksReadiness: z.boolean().optional(),
+  photos: z
+    .array(
+      z.object({
+        url: z.string().max(600),
+        publicId: z.string().max(240),
+        caption: z.string().max(200).optional(),
+      }),
+    )
+    .optional(),
+});
+
+export const maintenancePatchSchema = z.object({
+  status: z.enum(['reported', 'assigned', 'in_progress', 'resolved']).optional(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  assignedTo: z.string().nullable().optional(),
+  blocksReadiness: z.boolean().optional(),
+  resolutionNotes: z.string().max(1200).optional(),
+  addPhotos: z
+    .array(
+      z.object({
+        url: z.string().max(600),
+        publicId: z.string().max(240),
+        caption: z.string().max(200).optional(),
+      }),
+    )
+    .optional(),
+});
+
+export const quotationCreateSchema = z.object({
+  idempotencyKey: z.string().max(100).optional(),
+  guestId: z.string().optional(),
+  customerName: z.string().min(2, 'Customer name is required.').max(120),
+  customerEmail: z.string().email('Enter a valid email.').or(z.literal('')).optional(),
+  customerPhone: z.string().min(6, 'Customer phone is required.').max(32),
+  customerCompany: z.string().max(120).optional(),
+  customerAddress: z.string().max(200).optional(),
+  apartmentId: z.string().min(1, 'Select an apartment.'),
+  checkIn: dateStr,
+  checkOut: dateStr,
+  guestCount: z.coerce.number().int().min(1).max(16),
+  overrideNightlyRate: z.coerce.number().min(1).nullable().optional(),
+  discount: z.coerce.number().min(0).optional(),
+  selectedServiceIds: z.array(z.string()).optional(),
+  customServices: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(120),
+        quantity: z.coerce.number().min(1),
+        unitPrice: z.coerce.number().min(0),
+        total: z.coerce.number().min(0),
+      }),
+    )
+    .optional(),
+  notes: z.string().max(1200).optional(),
+  validityDays: z.coerce.number().int().min(1).max(90).optional(),
+  reservationId: z.string().nullable().optional(),
+});
+
+export const quotationActionSchema = z.object({
+  action: z.enum(['set_status', 'convert_to_booking', 'convert_to_invoice', 'send_email']),
+  status: z.enum(['draft', 'sent', 'accepted', 'expired', 'converted', 'declined']).optional(),
+  customerTpin: z.string().max(40).optional(),
+  emailTo: z.string().email().optional(),
+});
+
+export const invoiceCreateSchema = z.object({
+  reservationId: z.string().min(1, 'Select a booking.'),
+  customerCompany: z.string().max(120).optional(),
+  customerTpin: z.string().max(40).optional(),
+  notes: z.string().max(1200).optional(),
+});
+
+export const mediaPatchSchema = z.object({
+  title: z.string().max(160).optional(),
+  description: z.string().max(600).optional(),
+  apartmentId: z.string().nullable().optional(),
+  isCover: z.boolean().optional(),
+  order: z.coerce.number().int().min(0).optional(),
+});
+
+export const galleryReorderSchema = z.object({
+  apartmentId: z.string().min(1),
+  orderedIds: z.array(z.string().min(1)),
+});
+
 export const staffSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, 'Name is required.'),
   username: z.string().min(2, 'Choose a login handle.'),
   email: z.string().email('Enter a valid email.').or(z.literal('')).optional(),
   phone: z.string().max(24).optional(),
-  role: z.enum(['admin', 'receptionist', 'cleaner']),
+  role: z.enum(['super_admin', 'admin', 'receptionist', 'cleaner']),
   jobTitle: z.string().max(60).optional(),
   active: z.boolean().optional(),
   shift: z.enum(['morning', 'afternoon', 'evening']).nullable().optional(),
@@ -185,10 +398,14 @@ export const staffSchema = z.object({
 
 export const settingsSchema = z.object({
   property: z.record(z.string(), z.any()).optional(),
+  tax: z.record(z.string(), z.any()).optional(),
+  documents: z.record(z.string(), z.any()).optional(),
   booking: z.record(z.string(), z.any()).optional(),
   payments: z.record(z.string(), z.any()).optional(),
   notifications: z.record(z.string(), z.any()).optional(),
   housekeeping: z.record(z.string(), z.any()).optional(),
+  googleBusiness: z.record(z.string(), z.any()).optional(),
+  googleBusinessProfile: z.record(z.string(), z.any()).optional(),
   locale: z.record(z.string(), z.any()).optional(),
 });
 
@@ -220,6 +437,7 @@ export const publicBookingSchema = z
     checkIn: dateStr,
     checkOut: dateStr,
     guestCount: z.coerce.number().int().min(1).max(12),
+    selectedServiceIds: z.array(z.string()).optional(),
     notes: z.string().max(800).optional(),
     agreedPolicy: z.literal(true, { error: 'Please accept the booking conditions.' }),
     /** Honeypot — humans never see this field. */
