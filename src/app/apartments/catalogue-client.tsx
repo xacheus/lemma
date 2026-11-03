@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Bath, BedDouble, CheckCircle2, Maximize2, Search, Users, XCircle } from 'lucide-react';
+import { Bath, BedDouble, Building2, CheckCircle2, Maximize2, Phone, Search, Users, XCircle } from 'lucide-react';
 import type { Apartment } from '@/lib/domain/types';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { PhotoFrame } from '@/components/ui/photo';
+import { Reveal } from '@/components/ui/motion';
 
 interface CatalogueUnit {
   apartment: Apartment;
@@ -25,6 +26,8 @@ export function ApartmentsCatalogueClient({
   initialGuests,
   initialTier,
   today,
+  publishedTotal,
+  phone,
 }: {
   units: CatalogueUnit[];
   initialCheckIn: string;
@@ -32,6 +35,8 @@ export function ApartmentsCatalogueClient({
   initialGuests: number;
   initialTier: string;
   today: string;
+  publishedTotal: number;
+  phone: string;
 }) {
   const router = useRouter();
   const [checkIn, setCheckIn] = useState(initialCheckIn);
@@ -61,18 +66,26 @@ export function ApartmentsCatalogueClient({
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="animate-fade-up">
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
           Live Inventory &amp; ZMW Rates
         </p>
         <h1 className="mt-1 text-[1.85rem] font-bold tracking-tight text-navy-900">
           Serviced Apartments &amp; Availability
         </h1>
-        <p className="mt-1.5 text-[0.9rem] text-navy-600">
-          Showing real-time availability for {initialCheckIn} to {initialCheckOut} ({units[0]?.nights ?? 1}{' '}
-          {(units[0]?.nights ?? 1) === 1 ? 'night' : 'nights'}) — {availableCount} of {filtered.length}{' '}
-          apartments available for immediate booking.
-        </p>
+        {publishedTotal > 0 ? (
+          <p className="mt-1.5 text-[0.9rem] text-navy-600">
+            Showing real-time availability for {initialCheckIn} to {initialCheckOut} ({units[0]?.nights ?? 1}{' '}
+            {(units[0]?.nights ?? 1) === 1 ? 'night' : 'nights'}) — {availableCount} of{' '}
+            {filtered.length} {filtered.length === 1 ? 'apartment' : 'apartments'} available for
+            immediate booking.
+          </p>
+        ) : (
+          <p className="mt-1.5 text-[0.9rem] text-navy-600">
+            The residence list has not been published yet. Reception can confirm what is free for
+            your dates and hold it for you.
+          </p>
+        )}
       </div>
 
       {/* Filter & Availability Bar */}
@@ -162,16 +175,48 @@ export function ApartmentsCatalogueClient({
       </form>
 
       {/* Apartment Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-sand-300 bg-white px-6 py-14 text-center">
+          <Building2 size={24} className="mx-auto text-lemma" />
+          <h2 className="mt-3 text-[1.1rem] font-semibold text-navy-900">
+            {publishedTotal === 0
+              ? 'No apartments are listed for online booking yet'
+              : 'No apartment matches these dates'}
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-[0.88rem] leading-relaxed text-navy-600">
+            {publishedTotal === 0
+              ? 'Our residence list is being finalised. Call reception and we will confirm availability for your dates and quote you directly.'
+              : 'Every unit is either booked or too small for this party. Try a different date range or speak to reception about a cancellation.'}
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+            <a href={`tel:${phone}`} className="btn btn-primary">
+              <Phone size={14} /> Call reception ({phone})
+            </a>
+            {publishedTotal > 0 ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setOnlyAvailable(false);
+                  setTier('all');
+                }}
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+      <div className="stagger grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((item) => {
           const { apartment: apt } = item;
           const detailHref = `/apartments/${apt.slug}?checkIn=${encodeURIComponent(initialCheckIn)}&checkOut=${encodeURIComponent(initialCheckOut)}&guests=${initialGuests}`;
           return (
             <article
               key={apt.id}
-              className="card flex flex-col overflow-hidden transition hover:border-lemma"
+              className="card hover-lift group flex flex-col overflow-hidden hover:border-brand-300 hover:shadow-pop"
             >
-              <Link href={detailHref} className="relative block">
+              <Link href={detailHref} className="img-zoom relative block overflow-hidden">
                 <PhotoFrame
                   src={apt.coverPhoto || apt.photos[0]}
                   alt={apt.name}
@@ -259,6 +304,7 @@ export function ApartmentsCatalogueClient({
           );
         })}
       </div>
+      )}
     </div>
   );
 }

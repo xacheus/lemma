@@ -127,6 +127,59 @@ const config: Config = {
       transitionDuration: {
         DEFAULT: '140ms',
       },
+      transitionTimingFunction: {
+        smooth: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        entrance: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      },
+      keyframes: {
+        'fade-up': {
+          from: { opacity: '0', transform: 'translate3d(0, 18px, 0)' },
+          to: { opacity: '1', transform: 'translate3d(0, 0, 0)' },
+        },
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        'fade-down': {
+          from: { opacity: '0', transform: 'translate3d(0, -12px, 0)' },
+          to: { opacity: '1', transform: 'translate3d(0, 0, 0)' },
+        },
+        'scale-in': {
+          from: { opacity: '0', transform: 'scale(0.96)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+        'slide-in-right': {
+          from: { opacity: '0', transform: 'translate3d(24px, 0, 0)' },
+          to: { opacity: '1', transform: 'translate3d(0, 0, 0)' },
+        },
+        'hero-pan': {
+          '0%': { transform: 'scale(1.06) translate3d(0, 0, 0)' },
+          '100%': { transform: 'scale(1) translate3d(0, 0, 0)' },
+        },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'pulse-ring': {
+          '0%': { transform: 'scale(0.9)', opacity: '0.7' },
+          '70%': { transform: 'scale(1.5)', opacity: '0' },
+          '100%': { transform: 'scale(1.5)', opacity: '0' },
+        },
+        'marquee-slow': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
+      },
+      animation: {
+        'fade-up': 'fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'fade-in': 'fade-in 0.6s ease-out both',
+        'fade-down': 'fade-down 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'scale-in': 'scale-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'slide-in-right': 'slide-in-right 0.55s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'hero-pan': 'hero-pan 14s ease-out both',
+        shimmer: 'shimmer 1.8s infinite',
+        'pulse-ring': 'pulse-ring 2.4s cubic-bezier(0.24, 0, 0.38, 1) infinite',
+        'marquee-slow': 'marquee-slow 44s linear infinite',
+      },
     },
   },
   plugins: [],

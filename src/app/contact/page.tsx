@@ -19,7 +19,7 @@ export default async function ContactPage() {
       <PublicHeader property={property} session={session} activePath="/contact" />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 lg:px-8 space-y-10">
-        <div>
+        <div className="animate-fade-up">
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
             Direct Front Office
           </p>
@@ -32,10 +32,18 @@ export default async function ContactPage() {
           </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1.05fr_1fr]">
+        <div className="stagger grid gap-8 lg:grid-cols-[1.05fr_1fr]">
           <div className="space-y-6">
             <div className="card space-y-4 p-6">
-              <h2 className="text-[1.1rem] font-semibold text-navy-900">Reception Details</h2>
+              <div className="flex items-center gap-2.5 border-b border-sand-100 pb-3.5">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                  <MapPin size={16} />
+                </span>
+                <div>
+                  <h2 className="text-[1.05rem] font-semibold leading-tight text-navy-900">Reception Details</h2>
+                  <p className="text-[0.75rem] text-navy-400">Reach the desk directly — no call centre</p>
+                </div>
+              </div>
               <ul className="space-y-3 text-[0.88rem] text-navy-700">
                 <li className="flex items-start gap-3">
                   <MapPin size={17} className="mt-0.5 shrink-0 text-lemma-dark" />
@@ -116,7 +124,7 @@ export default async function ContactPage() {
                   .map((m) => (
                     <div
                       key={m.id}
-                      className="rounded-md border border-sand-200 bg-sand-50 p-3 text-[0.8rem]"
+                      className="rounded-lg border border-sand-200 bg-sand-50 p-3 text-[0.8rem] transition-colors duration-200 hover:border-brand-300 hover:bg-white"
                     >
                       <p className="font-semibold text-navy-900">{m.label}</p>
                       <p className="mt-0.5 text-navy-600">
@@ -129,7 +137,7 @@ export default async function ContactPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="card overflow-hidden p-3">
+            <div className="card img-zoom overflow-hidden p-3">
               <PhotoFrame
                 src="/images/property/reception.jpg"
                 alt="Lemma Heights Reception"

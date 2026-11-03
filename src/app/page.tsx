@@ -2,8 +2,10 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Bath,
+  Building2,
   BedDouble,
   CheckCircle2,
+  Clock,
   MapPin,
   Maximize2,
   MessageCircle,
@@ -20,6 +22,7 @@ import { addISO } from '@/lib/domain/dates';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
+import { CountUp, Reveal } from '@/components/ui/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,104 +46,156 @@ export default async function HomePage() {
       <PublicHeader property={property} session={session} activePath="/" />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="border-b border-sand-200 bg-navy-900 text-white">
-          <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.08fr_1fr] lg:px-8 lg:py-16">
-            <div>
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-lemma-light">
-                Serviced Residences · {property.city}, {property.country}
-              </p>
-              <h1 className="mt-3 text-[2.1rem] font-bold leading-[1.15] tracking-tight sm:text-[2.65rem]">
-                Quiet, solar-backed serviced apartments on Great East Road.
-              </h1>
-              <p className="mt-4 max-w-xl text-[0.98rem] leading-relaxed text-navy-200">
-                Twelve thoughtfully furnished apartments in Chainama Lands — built for corporate
-                travellers, diplomatic missions, and families seeking reliable power, 200Mbps fibre
-                internet, full kitchens, and transparent ZMW billing.
-              </p>
+        {/* Hero Banner */}
+        <section className="relative isolate overflow-hidden bg-charcoal-950 text-white">
+          {/* Photograph layer: settles in once, then holds still */}
+          <div className="absolute inset-0 -z-10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/hero-banner.jpg"
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              className="hero-settle h-full w-full object-cover object-[62%_center] opacity-[0.92]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-charcoal-950 via-charcoal-950/85 to-charcoal-950/25" />
+            <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950 via-transparent to-charcoal-950/40" />
+            {/* Architectural hairline grid, faint */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 opacity-[0.18]"
+              style={{
+                backgroundImage:
+                  'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
+                backgroundSize: '72px 72px',
+              }}
+            />
+          </div>
 
-              {/* Live Availability Search Bar */}
-              <form
-                action="/apartments"
-                method="get"
-                className="mt-7 grid gap-3 rounded-md border border-white/15 bg-white p-4 text-navy-900 shadow-card sm:grid-cols-4"
+          <div className="mx-auto max-w-7xl px-4 pb-14 pt-16 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
+            <div className="max-w-2xl">
+              <div className="hero-line flex items-center gap-3" style={{ animationDelay: '0.05s' }}>
+                <span className="relative flex h-1.5 w-1.5">
+                  {/* emerald is the one non-brand accent, reserved for "open / live" */}
+                  <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-[#34d399]" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#34d399]" />
+                </span>
+                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-white/70">
+                  Serviced Residences · {property.city}, {property.country}
+                </p>
+              </div>
+
+              <h1
+                className="hero-line mt-5 text-[2.3rem] font-semibold leading-[1.08] tracking-[-0.02em] sm:text-[3.1rem] lg:text-[3.4rem]"
+                style={{ animationDelay: '0.12s' }}
               >
-                <div>
-                  <label className="label mb-1 block" htmlFor="hero-checkin">
-                    Check-in
-                  </label>
-                  <input
-                    id="hero-checkin"
-                    name="checkIn"
-                    type="date"
-                    defaultValue={defaultCheckIn}
-                    min={defaultCheckIn}
-                    className="field"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label mb-1 block" htmlFor="hero-checkout">
-                    Check-out
-                  </label>
-                  <input
-                    id="hero-checkout"
-                    name="checkOut"
-                    type="date"
-                    defaultValue={defaultCheckOut}
-                    min={addISO(defaultCheckIn, 1)}
-                    className="field"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label mb-1 block" htmlFor="hero-guests">
-                    Guests
-                  </label>
-                  <select id="hero-guests" name="guests" defaultValue="2" className="field">
-                    {[1, 2, 3, 4, 5, 6].map((n) => (
-                      <option key={n} value={n}>
-                        {n} {n === 1 ? 'Guest' : 'Guests'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="btn btn-primary w-full justify-center py-2.5"
-                  >
-                    Search Availability
-                  </button>
-                </div>
-              </form>
+                A quiet base in Lusaka,
+                <span className="block text-white/70">run like a house, not a hotel.</span>
+              </h1>
 
-              <div className="mt-5 flex flex-wrap items-center gap-5 text-[0.8rem] text-navy-200">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-lemma-light" /> Check-in from{' '}
-                  {booking.checkInTime}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-lemma-light" /> Instant corporate ZMW
-                  quotations &amp; receipts
-                </span>
+              <p
+                className="hero-line mt-5 max-w-xl text-[0.98rem] leading-relaxed text-white/75"
+                style={{ animationDelay: '0.2s' }}
+              >
+                {publishedApartments.length > 0
+                  ? `${publishedApartments.length} furnished ${
+                      publishedApartments.length === 1 ? 'apartment' : 'apartments'
+                    } on Great East Road — solar backup, 200Mbps fibre, full kitchens and honest Kwacha billing.`
+                  : 'Furnished apartments on Great East Road — solar backup, 200Mbps fibre, full kitchens and honest Kwacha billing.'}
+              </p>
+
+              <div
+                className="hero-line mt-7 flex flex-wrap items-center gap-3"
+                style={{ animationDelay: '0.28s' }}
+              >
+                <Link
+                  href="/apartments"
+                  className="btn shine bg-white px-6 py-3 text-[0.9rem] font-semibold text-charcoal-900 transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:bg-white/90"
+                >
+                  Check availability <ArrowRight size={16} />
+                </Link>
+                <a
+                  href={`tel:${property.phone}`}
+                  className="btn border border-white/25 px-5 py-3 text-[0.88rem] text-white transition-colors duration-300 hover:border-white/50 hover:bg-white/10"
+                >
+                  <Phone size={15} /> {property.phone}
+                </a>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-md ring-1 ring-white/20">
-              <PhotoFrame
-                src="/images/hero/exterior-building.jpg"
-                alt="Lemma Heights Apartments Exterior"
-                ratio="4 / 3"
-                variant="hero"
-                priority
-              />
+            {/* Floating availability card */}
+            <form
+              action="/apartments"
+              method="get"
+              className="hero-line mt-10 grid gap-3 rounded-xl border border-white/15 bg-white/95 p-4 text-navy-900 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.6)] backdrop-blur-md sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.7fr_auto] lg:items-end"
+              style={{ animationDelay: '0.36s' }}
+            >
+              <div>
+                <label className="label mb-1 block" htmlFor="hero-checkin">
+                  Check-in
+                </label>
+                <input
+                  id="hero-checkin"
+                  name="checkIn"
+                  type="date"
+                  defaultValue={defaultCheckIn}
+                  min={defaultCheckIn}
+                  className="field"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label mb-1 block" htmlFor="hero-checkout">
+                  Check-out
+                </label>
+                <input
+                  id="hero-checkout"
+                  name="checkOut"
+                  type="date"
+                  defaultValue={defaultCheckOut}
+                  min={addISO(defaultCheckIn, 1)}
+                  className="field"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label mb-1 block" htmlFor="hero-guests">
+                  Guests
+                </label>
+                <select id="hero-guests" name="guests" defaultValue="2" className="field">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <option key={n} value={n}>
+                      {n} {n === 1 ? 'Guest' : 'Guests'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary shine h-[38px] justify-center px-5 transition-transform duration-300 ease-smooth hover:-translate-y-0.5"
+              >
+                Search dates
+              </button>
+            </form>
+
+            {/* Trust strip */}
+            <div className="hero-line mt-6 flex flex-wrap items-center gap-x-7 gap-y-3 text-[0.78rem] text-white/65" style={{ animationDelay: '0.44s' }}>
+              {[
+                { icon: Sun, label: 'Solar & inverter backup' },
+                { icon: Wifi, label: '200Mbps fibre' },
+                { icon: ShieldCheck, label: '24/7 gated security' },
+                { icon: Clock, label: `Check-in from ${booking.checkInTime}` },
+              ].map((item) => (
+                <span key={item.label} className="flex items-center gap-1.5">
+                  <item.icon size={14} className="text-white/80" /> {item.label}
+                </span>
+              ))}
             </div>
           </div>
         </section>
 
         {/* Featured Apartments */}
-        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
@@ -150,21 +205,45 @@ export default async function HomePage() {
                 Featured Serviced Apartments
               </h2>
             </div>
-            <Link
-              href="/apartments"
-              className="inline-flex items-center gap-1.5 text-[0.86rem] font-semibold text-navy-900 hover:text-lemma-dark"
-            >
-              View all {publishedApartments.length} apartments <ArrowRight size={15} />
-            </Link>
+            {publishedApartments.length > 0 ? (
+              <Link
+                href="/apartments"
+                className="inline-flex items-center gap-1.5 text-[0.86rem] font-semibold text-navy-900 hover:text-lemma-dark"
+              >
+                View all {publishedApartments.length}{' '}
+                {publishedApartments.length === 1 ? 'apartment' : 'apartments'}{' '}
+                <ArrowRight size={15} />
+              </Link>
+            ) : null}
           </div>
 
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {featured.length === 0 ? (
+            <div className="mt-8 rounded-md border border-dashed border-sand-300 bg-sand-50 px-6 py-12 text-center">
+              <Building2 size={22} className="mx-auto text-lemma-dark" />
+              <h3 className="mt-3 text-[1.05rem] font-semibold text-navy-900">
+                Apartments are being prepared for online booking
+              </h3>
+              <p className="mx-auto mt-2 max-w-xl text-[0.88rem] leading-relaxed text-navy-600">
+                The residence list is not published yet. Call or message reception and we will
+                confirm availability and hold dates for you directly.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                <a href={`tel:${property.phone}`} className="btn btn-primary">
+                  <Phone size={15} /> Call reception ({property.phone})
+                </a>
+                <Link href="/contact" className="btn btn-secondary">
+                  Contact the front desk
+                </Link>
+              </div>
+            </div>
+          ) : (
+          <div className="stagger mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((apt) => (
               <article
                 key={apt.id}
-                className="flex flex-col overflow-hidden rounded-md border border-sand-200 bg-white transition hover:border-lemma"
+                className="hover-lift group flex flex-col overflow-hidden rounded-lg border border-sand-200 bg-white hover:border-brand-300 hover:shadow-pop"
               >
-                <Link href={`/apartments/${apt.slug}`} className="block">
+                <Link href={`/apartments/${apt.slug}`} className="img-zoom block overflow-hidden">
                   <PhotoFrame
                     src={apt.coverPhoto || apt.photos[0]}
                     alt={apt.name}
@@ -219,10 +298,11 @@ export default async function HomePage() {
               </article>
             ))}
           </div>
-        </section>
+          )}
+        </Reveal>
 
         {/* Amenities & Guest Benefits */}
-        <section className="border-y border-sand-200 bg-sand-50">
+        <Reveal as="section" className="border-y border-sand-200 bg-sand-50">
           <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
             <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.05fr]">
               <div>
@@ -237,7 +317,7 @@ export default async function HomePage() {
                   in Lusaka, backed by on-site engineering and reception teams.
                 </p>
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="stagger mt-6 grid gap-4 sm:grid-cols-2">
                   {[
                     {
                       icon: Sun,
@@ -262,7 +342,7 @@ export default async function HomePage() {
                   ].map((item) => (
                     <div
                       key={item.title}
-                      className="rounded-md border border-sand-200 bg-white p-4"
+                      className="hover-lift rounded-lg border border-sand-200 bg-white p-4 hover:border-brand-300 hover:shadow-card"
                     >
                       <item.icon size={18} className="text-lemma-dark" />
                       <h3 className="mt-2.5 text-[0.9rem] font-semibold text-navy-900">
@@ -300,11 +380,32 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
-        </section>
+        </Reveal>
+
+        {/* Numbers band */}
+        <Reveal as="section" className="bg-charcoal-950 text-white">
+          <div className="mx-auto grid max-w-7xl gap-px overflow-hidden px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
+            {[
+              { value: publishedApartments.length, suffix: '', label: 'Serviced apartments', sub: 'Studio to three-bedroom family units' },
+              { value: 200, suffix: 'Mbps', label: 'Fibre in every unit', sub: 'Dedicated, not shared building Wi-Fi' },
+              { value: 24, suffix: '/7', label: 'Gated security', sub: 'Controlled access and on-site parking' },
+              { value: 50, suffix: '%', label: 'Deposit to confirm', sub: 'Balance due on or before check-in' },
+            ].map((stat) => (
+              <div key={stat.label} className="border-l border-white/10 px-5 py-6 first:border-l-0 lg:py-4">
+                <p className="text-[2rem] font-semibold leading-none tracking-tight">
+                  <CountUp value={stat.value} />
+                  <span className="text-[1rem] font-medium text-white/50">{stat.suffix}</span>
+                </p>
+                <p className="mt-2.5 text-[0.86rem] font-semibold text-white/90">{stat.label}</p>
+                <p className="mt-1 text-[0.76rem] leading-relaxed text-white/50">{stat.sub}</p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
 
         {/* Location & Direct Reception CTA */}
-        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-8 rounded-md border border-sand-200 bg-white p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr]">
+        <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-8 rounded-lg border border-sand-200 bg-white p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr]">
             <div>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
                 Location &amp; Direct Desk
@@ -344,7 +445,8 @@ export default async function HomePage() {
               </a>
             </div>
           </div>
-        </section>
+        </Reveal>
+
       </main>
 
       <PublicFooter property={property} />

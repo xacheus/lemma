@@ -1,8 +1,23 @@
+'use client';
+
 import Link from 'next/link';
-import { Building2, Clock, Mail, MapPin, MessageCircle, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  ArrowRight,
+  Building2,
+  Clock,
+  Mail,
+  MapPin,
+  Menu,
+  MessageCircle,
+  Phone,
+  User,
+  X,
+} from 'lucide-react';
 import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole } from '@/lib/domain/permissions';
+import { useScrolled } from '@/components/ui/motion';
 
 export function PublicHeader({
   property,
@@ -14,6 +29,8 @@ export function PublicHeader({
   activePath?: string;
 }) {
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
+  const scrolled = useScrolled(10);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/apartments', label: 'Apartments' },
@@ -21,9 +38,23 @@ export function PublicHeader({
     { href: '/contact', label: 'Contact' },
   ];
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [activePath]);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-sand-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+    <header
+      className={`sticky top-0 z-40 border-b transition-all duration-300 ease-smooth ${
+        scrolled
+          ? 'header-solid border-sand-200 bg-white/92 backdrop-blur-md'
+          : 'border-transparent bg-white/80 backdrop-blur-sm'
+      }`}
+    >
+      <div
+        className={`mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 transition-all duration-300 ease-smooth sm:px-6 lg:px-8 ${
+          scrolled ? 'py-2.5' : 'py-3.5'
+        }`}
+      >
         <Link href="/" className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -51,8 +82,9 @@ export function PublicHeader({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-[0.86rem] font-medium transition ${
-                  active ? 'text-navy-900 font-semibold' : 'text-navy-600 hover:text-navy-900'
+                data-active={active ? 'true' : 'false'}
+                className={`underline-sweep text-[0.86rem] font-medium transition-colors duration-200 ${
+                  active ? 'font-semibold text-navy-900' : 'text-navy-600 hover:text-navy-900'
                 }`}
               >
                 {item.label}
@@ -67,7 +99,7 @@ export function PublicHeader({
               href={`https://wa.me/${waDigits}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden items-center gap-1.5 rounded-md border border-sand-300 px-3 py-1.5 text-[0.8rem] font-medium text-navy-700 hover:bg-sand-50 sm:inline-flex"
+              className="hidden items-center gap-1.5 rounded-md border border-sand-300 px-3 py-1.5 text-[0.8rem] font-medium text-navy-700 transition-colors duration-200 hover:border-brand-400 hover:bg-sand-50 sm:inline-flex"
             >
               <MessageCircle size={14} className="text-lemma-dark" />
               WhatsApp
@@ -86,31 +118,64 @@ export function PublicHeader({
             <>
               <Link
                 href="/login"
-                className="rounded-md px-3 py-1.5 text-[0.82rem] font-medium text-navy-700 hover:bg-sand-100"
+                className="hidden rounded-md px-3 py-1.5 text-[0.82rem] font-medium text-navy-700 transition-colors hover:bg-sand-100 sm:inline-flex"
               >
                 Sign in
               </Link>
-              <Link href="/apartments" className="btn btn-primary py-1.5 text-[0.8rem]">
+              <Link
+                href="/apartments"
+                className="btn btn-primary shine hidden py-1.5 text-[0.8rem] transition-transform duration-300 ease-smooth hover:-translate-y-0.5 sm:inline-flex"
+              >
                 Book a Stay
               </Link>
             </>
           )}
+
+          <button
+            type="button"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="grid h-9 w-9 place-items-center rounded-md border border-sand-300 text-navy-700 transition-colors hover:bg-sand-100 md:hidden"
+          >
+            {menuOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
         </div>
       </div>
 
-      {/* Compact mobile nav bar */}
-      <div className="flex items-center justify-around border-t border-sand-200 bg-sand-50/70 px-3 py-2 md:hidden">
-        {navLinks.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`text-[0.78rem] font-medium ${
-              activePath === item.href ? 'text-navy-900 font-semibold' : 'text-navy-600'
-            }`}
-          >
-            {item.label}
+      {/* Mobile drawer */}
+      <div
+        className={`overflow-hidden border-t border-sand-200 bg-white transition-[max-height,opacity] duration-300 ease-smooth md:hidden ${
+          menuOpen ? 'max-h-[22rem] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <nav aria-label="Mobile navigation" className="px-4 py-3">
+          <ul className="divide-y divide-sand-100">
+            {navLinks.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center justify-between py-2.5 text-[0.88rem] ${
+                    activePath === item.href
+                      ? 'font-semibold text-navy-900'
+                      : 'text-navy-600'
+                  }`}
+                >
+                  {item.label}
+                  <ArrowRight size={14} className="text-navy-300" />
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href="/login" className="flex items-center justify-between py-2.5 text-[0.88rem] text-navy-600">
+                Staff sign in <ArrowRight size={14} className="text-navy-300" />
+              </Link>
+            </li>
+          </ul>
+          <Link href="/apartments" className="btn btn-primary mt-3 w-full justify-center py-2.5">
+            Check dates &amp; book
           </Link>
-        ))}
+        </nav>
       </div>
     </header>
   );
