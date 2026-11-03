@@ -324,5 +324,5 @@ export async function deleteMediaAssetFromStorage(opts: {
     }
   }
 
-  return { deletedFromRemote: false, detail: 'Seeded static reference detached from database.' };
+  return { deletedFromRemote: false, detail: 'Static reference detached from database.' };
 }

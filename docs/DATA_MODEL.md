@@ -1,6 +1,6 @@
 # Data model
 
-One JSON document (`.data/lemma-db.json`) stands in for the production database. Its shape is deliberately the shape a Postgres schema would have, so the swap is a repository layer, not a rewrite. All business rules live in `src/lib/domain/` and are shared by the admin UI, the public site and the seed generator.
+One JSON document (`.data/lemma-db.json`) stands in for the production database. Its shape is deliberately the shape a Postgres schema would have, so the swap is a repository layer, not a rewrite. All business rules live in `src/lib/domain/` and are shared by the admin UI, the public site and the API routes.
 
 ```
 StaffUser ──┐
@@ -45,7 +45,7 @@ Settings (singleton)          cleaningState: Apartment → status
 7. Cancelling requires the apartment to be free of any *other* confirmed stay on those dates before it releases inventory; refunds are recorded as `kind: refund` rows inside the cancellation, so money and reason stay together.
 8. Housekeeping completion is a *human* action: a calendar cell turning green never marks a unit clean.
 9. Every status change appends to `reservation.history[]` with actor, timestamp and note. Nothing is overwritten.
-10. `updatedAt` moves with every mutation, and `createdBy` records the staff member who opened the booking — the audit trail is what makes the demo's permissions meaningful.
+10. `updatedAt` moves with every mutation, and `createdBy` records the staff member who opened the booking — the audit trail is what makes the permissions meaningful.
 
 ## Money
 
@@ -56,4 +56,4 @@ Whole Kwacha only: `roundKwacha()` and `formatKwacha()` render `K1,200` / `K48,5
 Stored: the guest's phone number, the rate at booking, a payment, a note.
 Derived on read: occupancy, available/occupied/cleaning counts, dashboard metrics, guest lifetime value and outstanding balance, receipt numbers, apartment last-30-day performance, next free night, day-by-day calendar cells.
 
-Anything a user could catch you out on is computed from the records — that is what makes the demo defensible in front of an owner.
+Anything a user could catch you out on is computed from the records — nothing on screen is a hardcoded figure.

@@ -115,8 +115,7 @@ export type PermissionKey =
   | 'staff.manage'
   | 'staff.super_admin'
   | 'settings.manage'
-  | 'audit.view'
-  | 'data.reset';
+  | 'audit.view';
 
 /* --------------------------------------------------- 2. Apartments & Pricing */
 
@@ -894,7 +893,6 @@ export type CalendarSource = Pick<
 
 export interface Database {
   version: number;
-  seededOn: string;
   createdAt: string;
   updatedAt: string;
   users?: UserRecord[];

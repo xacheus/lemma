@@ -31,5 +31,3 @@ export function verifyPassword(password: string, stored: string | undefined | nu
     return false;
   }
 }
-
-export const DEMO_PASSWORD = 'lemma2026';

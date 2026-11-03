@@ -5,7 +5,7 @@ out/
 build/
 *.tsbuildinfo
 
-# demo database written by the running app (regenerate with `npm run seed:reset`)
+# live database written by the running app
 .data/
 
 # local env & logs

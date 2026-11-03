@@ -122,7 +122,20 @@ export default function ApartmentsPage() {
         />
       </div>
 
-      {rows.length === 0 ? (
+      {all.length === 0 ? (
+        <EmptyState
+          icon={Plus}
+          title="No apartments yet"
+          body="The booking engine sells whatever is in this list, so start here: add each unit with its rate, capacity and photos. Until then the public site shows a contact card instead of a catalogue."
+          action={
+            can('apartments.manage') ? (
+              <button type="button" className="btn-primary btn-sm" onClick={() => setCreating(true)}>
+                <Plus size={14} /> Add your first apartment
+              </button>
+            ) : null
+          }
+        />
+      ) : rows.length === 0 ? (
         <EmptyState title="Nothing in this view" body="No apartment matches the filter you picked. Switch back to All to see the full building." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

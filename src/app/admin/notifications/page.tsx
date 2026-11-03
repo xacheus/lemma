@@ -139,7 +139,7 @@ export default function NotificationsPage() {
         }
       />
 
-      <Alert tone="warn" title="No messaging provider is connected to this demo">
+      <Alert tone="warn" title="No messaging provider is connected">
         <div className="space-y-2">
           <p>
             WhatsApp, SMS and email rows are drafts: the copy is written, addressed and ready, but nothing leaves the building by itself. A row only becomes{' '}

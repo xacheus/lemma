@@ -2,13 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { DatabaseBackup, Info, Lock, RefreshCw, Save, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { Database, Info, Lock, RefreshCw, Save, ShieldCheck } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
 import { PageHeader } from '@/components/admin/shell';
 import { Alert, EmptyState, Panel, Skeleton, StatusChip, Toggle } from '@/components/ui';
 import { CheckboxRow, SelectInput, TextArea, TextInput } from '@/components/ui/forms';
-import { ConfirmDialog } from '@/components/ui/overlays';
-import { formatDateTime } from '@/lib/domain/dates';
 import { PAYMENT_METHOD_META } from '@/lib/domain/status';
 import type { Settings } from '@/lib/domain/types';
 
@@ -39,14 +37,13 @@ export default function SettingsPage() {
   const { snapshot, request, toast, can } = useApp();
   const [draft, setDraft] = useState<Settings | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
-  const [resetOpen, setResetOpen] = useState(false);
-  const [resetting, setResetting] = useState(false);
   interface DataStats {
     file: string;
     exists: boolean;
     sizeBytes: number;
-    seededOn: string;
+    createdAt: string;
     today: string;
+    backendMode: string;
     counts: { apartments: number; guests: number; staff: number; reservations: number; payments: number; housekeeping: number; notifications: number };
   }
   const [stats, setStats] = useState<DataStats | null>(null);
@@ -73,7 +70,7 @@ export default function SettingsPage() {
         <EmptyState
           icon={Lock}
           title="Management only"
-          body="Rates, payment rules and staff permissions are changed by an administrator. Ask Alice Chanda (or any admin) to adjust policy for you."
+          body="Rates, payment rules and staff permissions are changed by an administrator. Ask any admin account to adjust policy for you."
           action={
             <Link href="/admin" className="btn-secondary h-9 px-3.5 text-[0.82rem]">
               Back to the dashboard
@@ -109,19 +106,6 @@ export default function SettingsPage() {
       });
     } catch (err) {
       toast({ tone: 'error', title: 'Sweep failed', body: err instanceof Error ? err.message : 'Try again.' });
-    }
-  }
-
-  async function resetDemo() {
-    setResetting(true);
-    try {
-      await request('/api/data', { method: 'POST', data: {} });
-      setResetOpen(false);
-      toast({ tone: 'success', title: 'Demo data rebuilt', body: 'The seeded ledger, guests, folios and housekeeping are back as generated.' });
-    } catch (err) {
-      toast({ tone: 'error', title: 'Reset failed', body: err instanceof Error ? err.message : 'Try again from the terminal with npm run seed:reset.' });
-    } finally {
-      setResetting(false);
     }
   }
 
@@ -555,7 +539,7 @@ export default function SettingsPage() {
           </div>
         </Panel>
 
-        <Panel title="Locale & the demo data" subtitle="What is stored, and how to get the seeded ledger back" bodyClass="p-4 space-y-3.5">
+        <Panel title="Locale & data storage" subtitle="Where the live records are kept, and what this property currently holds" bodyClass="p-4 space-y-3.5">
           <div className="grid gap-3.5 sm:grid-cols-2">
             <SelectInput
               label="Currency"
@@ -574,7 +558,7 @@ export default function SettingsPage() {
 
           <div className="rounded-xl border border-sand-200 bg-sand-50/70 p-3">
             <p className="flex items-center gap-1.5 text-[0.8rem] font-semibold text-navy-800">
-              <DatabaseBackup size={13} className="text-teal-600" /> Demo dataset
+              <Database size={13} className="text-teal-600" /> Live data
             </p>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[0.78rem] sm:grid-cols-4">
               {stats ? (
@@ -588,20 +572,20 @@ export default function SettingsPage() {
                   <Figure label="Staff" value={stats.counts.staff} />
                 </>
               ) : (
-                <p className="col-span-4 text-navy-400">Stats unavailable — the data endpoint did not answer.</p>
+                <p className="col-span-4 text-navy-400">Storage figures unavailable — the data endpoint did not answer.</p>
               )}
             </dl>
             <p className="mt-2 text-[0.74rem] leading-relaxed text-navy-400">
-              Everything you change here, and every booking, receipt and job taken in the app, is written to a JSON file under <span className="font-mono">.data/</span> in the project
-              directory — it survives a restart, and <span className="font-mono">npm run seed:reset</span> rebuilds it from the generator.{' '}
-              {stats ? `Seeded ${formatDateTime(stats.seededOn)}; the store is ${stats.file} (${Math.round(stats.sizeBytes / 1024)} KB).` : ''}
+              Every apartment, booking, receipt and job in this app is written to the property database and survives a restart. Nothing on this screen regenerates records:
+              what is stored is exactly what was entered or booked.{' '}
+              {stats
+                ? `Store ${stats.file} (${Math.round(stats.sizeBytes / 1024)} KB), backend ${stats.backendMode.replace(/_/g, ' ')}, business date ${stats.today}.`
+                : ''}
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              <button type="button" className="btn-danger h-9 px-3 text-[0.82rem]" onClick={() => setResetOpen(true)}>
-                <TriangleAlert size={14} /> Reset to seeded demo data
-              </button>
+              <span className="chip">Records are never seeded or fabricated</span>
               <span className="flex items-center gap-1 text-[0.74rem] text-navy-400">
-                <Info size={12} /> Staff accounts and logins are restored too.
+                <Info size={12} /> New units, guests and staff are added from their own screens.
               </span>
             </div>
           </div>
@@ -614,22 +598,6 @@ export default function SettingsPage() {
         Passwords are salted SHA-256 hashes stored with the staff record, and the session is an HMAC-signed cookie that expires after 12 hours. A production deployment would move the
         hashes behind bcrypt or argon2 and the ledger behind PostgreSQL — the API layer is already the only place that reads the store.
       </p>
-
-      <ConfirmDialog
-        open={resetOpen}
-        busy={resetting}
-        onClose={() => !resetting && setResetOpen(false)}
-        title="Reset the demo dataset?"
-        confirmLabel="Rebuild from the generator"
-        tone="danger"
-        body={
-          <p>
-            This discards every booking, payment, note and job created in this workspace and regenerates the seeded twelve apartments, guest register, folios and housekeeping board. It
-            cannot be undone. Anything you want to keep should be exported first (the reservations and payments pages both have CSV export).
-          </p>
-        }
-        onConfirm={resetDemo}
-      />
     </div>
   );
 }

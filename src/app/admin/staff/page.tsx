@@ -79,7 +79,7 @@ export default function StaffPage() {
             </div>
           </div>
           <p className="text-[0.8rem] text-navy-500">
-            You hold {snapshot.permissions.length} permission{snapshot.permissions.length === 1 ? '' : 's'}. Only an administrator can add accounts or change roles — ask Alice Chanda if you need
+            You hold {snapshot.permissions.length} permission{snapshot.permissions.length === 1 ? '' : 's'}. Only an administrator can add accounts or change roles — ask an admin if you need
             something.
           </p>
           <PermissionMatrix />
@@ -132,7 +132,7 @@ export default function StaffPage() {
       <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <Panel
           title="Accounts"
-          subtitle={`${staff.filter((s) => s.active).length} active of ${staff.length} · sign-in password for every demo account is lemma2026`}
+          subtitle={`${staff.filter((s) => s.active).length} active of ${staff.length} · each person signs in with the password set for their own account`}
           bodyClass="divide-y divide-sand-100"
         >
           {(['super_admin', 'admin', 'receptionist', 'cleaner'] as Role[]).map((role) => {
@@ -239,7 +239,7 @@ export default function StaffPage() {
             </ul>
           </Panel>
 
-          <Panel title="Sign-in as this person" subtitle="Handy while demoing the same booking from three roles" bodyClass="p-4">
+          <Panel title="Sign-in as this person" subtitle="Prefill the handle, then type that person’s own password" bodyClass="p-4">
             <div className="grid gap-2 sm:grid-cols-2">
               {staff
                 .filter((s) => s.active)
@@ -257,7 +257,7 @@ export default function StaffPage() {
                 ))}
             </div>
             <p className="mt-2 text-[0.74rem] text-navy-400">
-              The demo deliberately stops short of signing in as somebody else in one click — you type the password, exactly as a client would when testing what each role can reach.
+              Signing in as somebody else always requires their password — there is no one-click impersonation, so an audit trail can never be attributed to the wrong person.
             </p>
           </Panel>
         </div>
@@ -380,7 +380,7 @@ function StaffEditor({
         title: draft.id ? 'Account updated' : 'Account created',
         body: draft.id
           ? `${draft.name}'s access is saved. Any override applies from their next request.`
-          : `${draft.name} can sign in with the demo password${draft.password.trim() ? ' — or the one you just set' : ''}.`,
+          : `${draft.name} can now sign in with the password you set for them.`,
       });
       onClose();
     } catch (err) {
@@ -451,8 +451,9 @@ function StaffEditor({
             type="password"
             value={draft.password}
             onChange={(e) => set({ password: e.target.value })}
-            placeholder={draft.id ? 'Leave blank to keep the current password' : 'lemma2026'}
-            hint={draft.id ? 'Passwords are stored hashed with a per-user salt; nobody can read the current one back.' : 'The demo seeds every account with lemma2026.'}
+            placeholder={draft.id ? 'Leave blank to keep the current password' : 'Set a password for this person'}
+            hint={draft.id ? 'Passwords are stored hashed with a per-user salt; nobody can read the current one back.' : 'Required — the person needs it to sign in. At least six characters.'}
+            required={!draft.id}
             error={draft.password && draft.password.trim().length < 6 ? 'Use at least six characters.' : null}
           />
         </div>

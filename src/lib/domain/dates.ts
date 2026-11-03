@@ -39,7 +39,7 @@ export function toISO(date: Date): ISODate {
 /**
  * The property trades on Zambian time. "Today" for reception is whatever date it
  * is in Lusaka, not the server's local clock, so check-in/check-out lists stay
- * correct when the demo is opened from another timezone.
+ * correct when the app is opened from another timezone.
  */
 export function businessToday(now: Date = new Date()): ISODate {
   const parts = new Intl.DateTimeFormat('en-CA', {

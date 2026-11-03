@@ -11,7 +11,7 @@ public/images/
 │   ├── home-1.jpg                 public home page hero (21 / 9)
 │   └── home-2.jpg                 secondary hero tile (4 / 3)
 ├── apartments/
-│   └── apt-01/ … apt-12/
+│   └── apt-01/ … apt-NN/
 │       ├── 01.jpg                 primary card image — 16 / 10
 │       ├── 02.jpg … 05.jpg        gallery frames — 4 / 3
 ├── property/
@@ -37,7 +37,7 @@ Export as `.jpg`, quality 80, sRGB, no GPS/EXIF beyond orientation. Target under
 
 ## What to shoot (property list)
 
-For each of the twelve units, in this order — the sequence is what the gallery slots expect:
+For each unit, in this order — the sequence is what the gallery slots expect:
 
 1. **Wide entry shot** from the doorway, showing the living space and the window
 2. **Bedroom**, lights on, bed dressed, no personal items
@@ -53,4 +53,4 @@ Never publish a photograph that shows a guest, their vehicle plate, or documents
 
 ## Placeholder behaviour, on purpose
 
-`PhotoFrame` renders a soft sand-toned frame with a hairline grid, the alt text and a caption — "Property photograph — to be supplied". It is deliberately visible in the demo so the gap reads as *pending*, not as a broken build. The layout, ratios and cropping are final, so real images drop in without touching any component.
+`PhotoFrame` renders a soft sand-toned frame with a hairline grid, the alt text and a caption — "Property photograph — to be supplied". It is deliberately visible so the gap reads as *pending*, not as a broken build. The layout, ratios and cropping are final, so real images drop in without touching any component.

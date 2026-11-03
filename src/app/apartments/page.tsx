@@ -74,6 +74,8 @@ export default async function ApartmentsPage({
           initialGuests={guests}
           initialTier={selectedTier}
           today={db.__today}
+          publishedTotal={published.length}
+          phone={db.settings.property.phone}
         />
       </main>
       <PublicFooter property={db.settings.property} />

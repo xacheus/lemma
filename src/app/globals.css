@@ -49,6 +49,182 @@
   }
 }
 
+/* ---------------------------------------------------------------- motion */
+@layer utilities {
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    transition:
+      opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+
+  .reveal[data-visible='true'] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .reveal-left {
+    transform: translate3d(-28px, 0, 0);
+  }
+
+  .reveal-scale {
+    transform: scale(0.96);
+  }
+
+  .hover-lift {
+    transition:
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.35s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translate3d(0, -4px, 0);
+  }
+
+  .img-zoom img {
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .group:hover .img-zoom img,
+  .img-zoom:hover img {
+    transform: scale(1.05);
+  }
+
+  .underline-sweep {
+    position: relative;
+  }
+
+  .underline-sweep::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    height: 1.5px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .underline-sweep:hover::after,
+  .underline-sweep[data-active='true']::after {
+    transform: scaleX(1);
+  }
+
+  .shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%);
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.28) 48%,
+      transparent 72%
+    );
+  }
+
+  .shine:hover::after {
+    animation: shimmer 0.9s ease-out;
+  }
+
+  /*
+   * `backwards` fill only: children are hidden during their stagger delay, then
+   * animate in and return to their natural styles. Using `both`/`forwards` would
+   * pin `transform` on the element and block the hover-lift transition.
+   */
+  .stagger > * {
+    animation: fade-up 0.75s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  .stagger > *:nth-child(1) { animation-delay: 0.04s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.1s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.16s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.22s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.28s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.34s; }
+  .stagger > *:nth-child(7) { animation-delay: 0.4s; }
+  .stagger > *:nth-child(8) { animation-delay: 0.46s; }
+  .stagger > *:nth-child(9) { animation-delay: 0.52s; }
+  .stagger > *:nth-child(n + 10) { animation-delay: 0.58s; }
+
+  .header-solid {
+    box-shadow: 0 1px 0 rgba(22, 27, 34, 0.06), 0 8px 24px -18px rgba(14, 18, 23, 0.4);
+  }
+}
+
+/* Entrance for the hero banner: a slow, one-time settle. */
+@keyframes hero-settle {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hero-settle {
+  animation: hero-settle 1.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes hero-line {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.hero-line {
+  animation: hero-line 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* People who ask for less motion get none of the decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-left,
+  .reveal-scale {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .stagger > *,
+  .hero-settle,
+  .hero-line,
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-fade-down,
+  .animate-scale-in,
+  .animate-slide-in-right {
+    animation: none !important;
+  }
+
+  .hover-lift:hover,
+  .img-zoom:hover img,
+  .group:hover .img-zoom img {
+    transform: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 @layer components {
   .card {
     @apply rounded-md border border-sand-200 bg-white shadow-card;

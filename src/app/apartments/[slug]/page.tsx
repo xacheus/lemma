@@ -55,7 +55,7 @@ export default async function ApartmentDetailPage({
           <ArrowLeft size={14} /> Back to all apartments
         </Link>
 
-        <div className="mt-5 grid items-start gap-8 lg:grid-cols-[1.35fr_0.95fr]">
+        <div className="animate-fade-up mt-5 grid items-start gap-8 lg:grid-cols-[1.35fr_0.95fr]">
           {/* Left: Gallery & Specifications */}
           <div className="space-y-6">
             <div>
@@ -72,7 +72,7 @@ export default async function ApartmentDetailPage({
               ) : null}
             </div>
 
-            <div className="card overflow-hidden p-3">
+            <div className="card img-zoom overflow-hidden p-3">
               <PhotoStrip
                 photos={galleryPhotos}
                 alt={apartment.name}
