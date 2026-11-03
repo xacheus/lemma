@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'Noto Sans', sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', Georgia, serif;
+  --lemma-slate: #6b7a91;
+  --navy: #0f1f35;
+  --gold: #cba33f;
+  --paper: #fbfaf7;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-sand-50 text-navy-800 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum' 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: rgba(203, 163, 63, 0.24);
+  }
+
+  /* Numbers line up in financial tables without opting the whole UI into mono. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-sand-200 bg-white shadow-card;
+  }
+
+  .card-pad {
+    @apply p-4 sm:p-5;
+  }
+
+  .hairline {
+    @apply border-sand-200;
+  }
+
+  .label {
+    @apply text-[0.7rem] font-semibold uppercase tracking-[0.09em] text-navy-400;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-[0.9rem] text-navy-800
+      placeholder:text-sand-500 transition
+      hover:border-sand-400 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-200/70
+      disabled:cursor-not-allowed disabled:bg-sand-100 disabled:text-sand-600;
+  }
+
+  .field-invalid {
+    @apply border-st-cancelled/70 focus:border-st-cancelled focus:ring-st-cancelled/20;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-[0.85rem] font-semibold
+      transition active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-navy-800 text-white hover:bg-navy-700 shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_6px_18px_-10px_rgba(15,31,53,0.65)];
+  }
+
+  .btn-gold {
+    @apply btn bg-gold-400 text-navy-900 hover:bg-gold-300;
+  }
+
+  .btn-secondary {
+    @apply btn border border-sand-300 bg-white text-navy-700 hover:border-sand-400 hover:bg-sand-50;
+  }
+
+  .btn-ghost {
+    @apply btn text-navy-500 hover:bg-navy-50 hover:text-navy-800;
+  }
+
+  .btn-danger {
+    @apply btn border border-st-cancelled/30 bg-st-cancelledBg text-st-cancelled hover:bg-st-cancelled/10;
+  }
+
+  .btn-sm {
+    @apply h-8 px-3 text-[0.78rem];
+  }
+
+  .btn-md {
+    @apply h-10 px-4;
+  }
+
+  .btn-lg {
+    @apply h-11 px-5 text-[0.9rem];
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-md px-2 py-[3px] text-[0.7rem] font-semibold uppercase tracking-[0.05em];
+  }
+
+  .th {
+    @apply px-3 py-2 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-navy-400;
+  }
+
+  .td {
+    @apply px-3 py-2.5 align-middle text-[0.86rem] text-navy-700;
+  }
+
+  .row-hover {
+    @apply transition-colors hover:bg-sand-50;
+  }
+
+  .link {
+    @apply text-teal-600 underline decoration-teal-200 underline-offset-2 hover:text-teal-500 hover:decoration-teal-400;
+  }
+
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(15, 31, 53, 0.25) transparent;
+  }
+
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: rgba(15, 31, 53, 0.22);
+    border-radius: 999px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Placeholder treatment for photography the operator has not supplied yet. */
+  .photo-frame {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(107, 122, 145, 0.14), rgba(15, 31, 53, 0.06) 55%, rgba(203, 163, 63, 0.1)),
+      #eef0f3;
+  }
+
+  .photo-frame img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .photo-grid-lines {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.55) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.55) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .no-print,
+  .app-shell aside,
+  .app-shell header {
+    display: none !important;
+  }
+
+  .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .print-page {
+    padding: 0 !important;
+  }
+}

@@ -1,0 +1,236 @@
+import type {
+  BookingSource,
+  BookingStatus,
+  CleaningStatus,
+  DayStatus,
+  DeliveryStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Role,
+  VerificationStatus, ApartmentTier
+} from './types';
+
+export interface Meta {
+  label: string;
+  /** Tailwind classes for chips/badges. */
+  chip: string;
+  dot: string;
+  description: string;
+}
+
+export const BOOKING_STATUS_META: Record<BookingStatus, Meta> = {
+  inquiry: {
+    label: 'Inquiry',
+    chip: 'bg-sand-100 text-sand-700 ring-1 ring-sand-300',
+    dot: 'bg-sand-500',
+    description: 'Enquiry only — holds no inventory.',
+  },
+  reserved: {
+    label: 'Reserved',
+    chip: 'bg-st-reservedBg text-st-reserved ring-1 ring-st-reserved/25',
+    dot: 'bg-st-reserved',
+    description: 'Confirmed booking with a balance to settle.',
+  },
+  fully_paid: {
+    label: 'Fully Paid',
+    chip: 'bg-teal-50 text-teal-600 ring-1 ring-teal-200',
+    dot: 'bg-teal-500',
+    description: 'Confirmed and settled in advance of arrival.',
+  },
+  checked_in: {
+    label: 'Checked-in',
+    chip: 'bg-st-occupiedBg text-st-occupied ring-1 ring-st-occupied/25',
+    dot: 'bg-st-occupied',
+    description: 'Guest is currently in residence.',
+  },
+  checked_out: {
+    label: 'Checked-out',
+    chip: 'bg-sand-200 text-sand-700 ring-1 ring-sand-400/70',
+    dot: 'bg-sand-600',
+    description: 'Stay completed and closed.',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25',
+    dot: 'bg-st-cancelled',
+    description: 'Released inventory — never counts as occupancy.',
+  },
+};
+
+export const PAYMENT_STATUS_META: Record<PaymentStatus, Meta> = {
+  unpaid: {
+    label: 'Unpaid',
+    chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25',
+    dot: 'bg-st-cancelled',
+    description: 'No verified funds received.',
+  },
+  partially_paid: {
+    label: 'Partially Paid',
+    chip: 'bg-st-cleaningBg text-st-cleaning ring-1 ring-st-cleaning/25',
+    dot: 'bg-st-cleaning',
+    description: 'Deposit or part payment banked, balance outstanding.',
+  },
+  fully_paid: {
+    label: 'Fully Paid',
+    chip: 'bg-st-availableBg text-st-available ring-1 ring-st-available/25',
+    dot: 'bg-st-available',
+    description: 'Verified receipts cover the full stay.',
+  },
+  refunded: {
+    label: 'Refunded',
+    chip: 'bg-sand-200 text-sand-700 ring-1 ring-sand-400/70',
+    dot: 'bg-sand-600',
+    description: 'Money returned to the guest.',
+  },
+};
+
+export const CLEANING_STATUS_META: Record<CleaningStatus, Meta> = {
+  clean: {
+    label: 'Clean',
+    chip: 'bg-st-availableBg text-st-available ring-1 ring-st-available/25',
+    dot: 'bg-st-available',
+    description: 'Inspected and ready to sell.',
+  },
+  needs_cleaning: {
+    label: 'Needs Cleaning',
+    chip: 'bg-st-cleaningBg text-st-cleaning ring-1 ring-st-cleaning/25',
+    dot: 'bg-st-cleaning',
+    description: 'Awaiting allocation to the cleaning team.',
+  },
+  in_progress: {
+    label: 'Cleaning in Progress',
+    chip: 'bg-gold-50 text-gold-700 ring-1 ring-gold-300',
+    dot: 'bg-gold-400',
+    description: 'Team is in the unit right now.',
+  },
+  maintenance: {
+    label: 'Maintenance Required',
+    chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25',
+    dot: 'bg-st-cancelled',
+    description: 'Blocked from sale until signed off.',
+  },
+};
+
+export const PAYMENT_METHOD_META: Record<PaymentMethod, { label: string; short: string; hint: string }> = {
+  airtel_money: {
+    label: 'Airtel Money',
+    short: 'Airtel',
+    hint: 'Mobile money — verify against the AirtelMoney SMS reference before banking.',
+  },
+  mtn_money: {
+    label: 'MTN Mobile Money',
+    short: 'MTN MoMo',
+    hint: 'Mobile money — verify against the MoMo SMS reference before banking.',
+  },
+  bank_transfer: {
+    label: 'Bank Transfer',
+    short: 'Bank',
+    hint: 'Zanaco / FNB / Stanbic — reconcile against the statement line.',
+  },
+  cash: {
+    label: 'Cash',
+    short: 'Cash',
+    hint: 'Notes counted at reception; verified instantly with the drawer count.',
+  },
+};
+
+export const SOURCE_META: Record<BookingSource, string> = {
+  website: 'Website',
+  whatsapp: 'WhatsApp',
+  phone: 'Phone',
+  walk_in: 'Walk-in',
+  email: 'Email',
+  corporate: 'Corporate',
+  travel_agent: 'Travel agent',
+};
+
+export const ROLE_META: Record<Role, { label: string; description: string; chip: string }> = {
+  admin: {
+    label: 'Administrator',
+    description: 'Full control: bookings, apartments, guests, payments, reports, staff and settings.',
+    chip: 'bg-navy-800 text-white',
+  },
+  receptionist: {
+    label: 'Receptionist',
+    description: 'Bookings, guest registration and payment capture. No refunds, staff or settings.',
+    chip: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
+  },
+  cleaner: {
+    label: 'Cleaner',
+    description: 'Assigned housekeeping tasks only. No financial or guest records.',
+    chip: 'bg-gold-50 text-gold-700 ring-1 ring-gold-300',
+  },
+};
+
+export const VERIFICATION_META: Record<VerificationStatus, Meta> = {
+  pending: {
+    label: 'Awaiting verification',
+    chip: 'bg-st-cleaningBg text-st-cleaning ring-1 ring-st-cleaning/25',
+    dot: 'bg-st-cleaning',
+    description: 'Recorded by reception, not yet banked by an authorised user.',
+  },
+  verified: {
+    label: 'Verified',
+    chip: 'bg-st-availableBg text-st-available ring-1 ring-st-available/25',
+    dot: 'bg-st-available',
+    description: 'Confirmed against the provider reference or drawer count.',
+  },
+  rejected: {
+    label: 'Rejected',
+    chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25',
+    dot: 'bg-st-cancelled',
+    description: 'Proof did not match a real transaction.',
+  },
+};
+
+export const DELIVERY_META: Record<DeliveryStatus, { label: string; chip: string; icon: 'link' | 'clock' | 'check' | 'alert' }> = {
+  not_connected: {
+    label: 'Not sent — no provider connected',
+    chip: 'bg-sand-100 text-sand-700 ring-1 ring-sand-300',
+    icon: 'link',
+  },
+  queued_for_manual_send: {
+    label: 'Queued for manual send',
+    chip: 'bg-gold-50 text-gold-700 ring-1 ring-gold-300',
+    icon: 'clock',
+  },
+  delivered_manually: {
+    label: 'Marked sent by staff',
+    chip: 'bg-st-availableBg text-st-available ring-1 ring-st-available/25',
+    icon: 'check',
+  },
+  failed: {
+    label: 'Failed',
+    chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25',
+    icon: 'alert',
+  },
+};
+
+export const APARTMENT_TIER_LABELS: Record<ApartmentTier, string> = {
+  standard: 'Standard Suite',
+  deluxe: 'Deluxe Suite',
+  executive: 'Executive Suite',
+  family: 'Family Apartment',
+  premium: 'Premium Apartment',
+  studio: 'Studio Apartment',
+  suite: 'One-Bedroom Suite',
+};
+
+export const DAY_STATUS_META: Record<DayStatus, { label: string; bg: string; text: string; ring: string }> = {
+  available: { label: 'Available', bg: 'bg-st-availableBg', text: 'text-st-available', ring: 'ring-st-available/30' },
+  reserved: { label: 'Reserved', bg: 'bg-st-reservedBg', text: 'text-st-reserved', ring: 'ring-st-reserved/30' },
+  occupied: { label: 'Occupied', bg: 'bg-st-occupiedBg', text: 'text-st-occupied', ring: 'ring-st-occupied/30' },
+  cleaning: { label: 'Cleaning', bg: 'bg-st-cleaningBg', text: 'text-st-cleaning', ring: 'ring-st-cleaning/30' },
+  maintenance: { label: 'Maintenance', bg: 'bg-st-cancelledBg', text: 'text-st-cancelled', ring: 'ring-st-cancelled/30' },
+  cancelled: { label: 'Cancelled', bg: 'bg-st-cancelledBg', text: 'text-st-cancelled', ring: 'ring-st-cancelled/20' },
+  out_of_service: { label: 'Out of service', bg: 'bg-sand-200', text: 'text-sand-700', ring: 'ring-sand-400/50' },
+  past: { label: 'Past', bg: 'bg-sand-100/70', text: 'text-sand-500', ring: 'ring-sand-300/50' },
+};
+
+export const CALENDAR_LEGEND: { key: DayStatus; label: string }[] = [
+  { key: 'available', label: 'Available' },
+  { key: 'reserved', label: 'Reserved' },
+  { key: 'occupied', label: 'Occupied' },
+  { key: 'cleaning', label: 'Cleaning' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
