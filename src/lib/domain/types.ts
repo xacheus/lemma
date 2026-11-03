@@ -1,15 +1,124 @@
 /**
- * Lemma Heights Apartments — domain types.
+ * Lemma Heights Apartments — Production Domain Types
  *
- * The whole product (public booking site + administration suite) reads and writes
- * these shapes. Every monetary amount is stored in Zambian Kwacha (ZMW) as an
- * integer number of kwacha — amounts in this business are never fractional, and
- * keeping integers avoids floating point drift in the payment ledger.
+ * Maps directly to the Firestore collection architecture:
+ *   users/{uid}
+ *   apartments/{apartmentId}
+ *   bookings/{bookingId}
+ *   guests/{guestId}
+ *   payments/{paymentId}
+ *   quotations/{quotationId}
+ *   invoices/{invoiceId}
+ *   receipts/{receiptId}
+ *   staff_tasks/{taskId}
+ *   notifications/{notificationId}
+ *   maintenance/{maintenanceId}
+ *   media/{mediaId}
+ *   audit_logs/{logId}
+ *   settings/{documentId}
+ *
+ * All monetary amounts are stored in Zambian Kwacha (ZMW).
  */
 
 export type ID = string;
 
-/* ------------------------------------------------------------------ apartments */
+/* ---------------------------------------------------------- 1. Users & Roles */
+
+export type Role = 'super_admin' | 'admin' | 'receptionist' | 'cleaner' | 'guest';
+
+export type AccountStatus = 'active' | 'deactivated' | 'suspended';
+
+/**
+ * Firestore document stored at `users/{uid}` where document ID === Firebase Auth UID.
+ */
+export interface UserRecord {
+  uid: ID;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  profilePhoto: string;
+  role: Role;
+  accountStatus: AccountStatus;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  /** Optional staff operational fields */
+  username?: string;
+  jobTitle?: string;
+  shift?: 'morning' | 'afternoon' | 'evening' | null;
+  hiredOn?: string;
+  permissions?: PermissionKey[] | null;
+  /** Server-only password hash & tokens when running local auth fallback */
+  passwordHash?: string;
+  emailVerificationToken?: string | null;
+  passwordResetToken?: string | null;
+  passwordResetExpiresAt?: string | null;
+  sessionVersion?: number;
+}
+
+export interface StaffUser {
+  id: ID;
+  uid?: ID;
+  name: string;
+  fullName?: string;
+  username: string;
+  email: string;
+  phone: string;
+  phoneNumber?: string;
+  profilePhoto?: string;
+  role: Role;
+  accountStatus?: AccountStatus;
+  emailVerified?: boolean;
+  jobTitle: string;
+  active: boolean;
+  hiredOn: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastSeenAt: string | null;
+  lastLoginAt?: string | null;
+  shift: 'morning' | 'afternoon' | 'evening' | null;
+  passwordHash?: string;
+  permissions: PermissionKey[] | null;
+}
+
+export type PermissionKey =
+  | 'reservations.view'
+  | 'reservations.create'
+  | 'reservations.edit'
+  | 'reservations.cancel'
+  | 'reservations.checkin'
+  | 'calendar.view'
+  | 'apartments.view'
+  | 'apartments.manage'
+  | 'media.view'
+  | 'media.manage'
+  | 'guests.view'
+  | 'guests.viewPii'
+  | 'guests.manage'
+  | 'payments.view'
+  | 'payments.record'
+  | 'payments.verify'
+  | 'payments.refund'
+  | 'quotations.view'
+  | 'quotations.manage'
+  | 'invoices.view'
+  | 'invoices.manage'
+  | 'housekeeping.view'
+  | 'housekeeping.assign'
+  | 'housekeeping.complete'
+  | 'housekeeping.maintenance'
+  | 'reports.view'
+  | 'notifications.view'
+  | 'notifications.manage'
+  | 'notifications.send'
+  | 'staff.manage'
+  | 'staff.super_admin'
+  | 'settings.manage'
+  | 'audit.view'
+  | 'data.reset';
+
+/* --------------------------------------------------- 2. Apartments & Pricing */
 
 export type ApartmentTier =
   | 'standard'
@@ -18,7 +127,50 @@ export type ApartmentTier =
   | 'family'
   | 'premium'
   | 'studio'
-  | 'suite';
+  | 'suite'
+  | 'penthouse';
+
+export type PublicationStatus = 'published' | 'draft' | 'unpublished';
+
+export interface ApartmentPhoto {
+  id: ID;
+  url: string;
+  publicId: string;
+  title: string;
+  description: string;
+  order: number;
+  isCover: boolean;
+  mediaType?: 'image' | 'document';
+  uploadedAt?: string;
+}
+
+export interface SeasonalRateRule {
+  id: ID;
+  name: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+  nightlyRate: number; // ZMW
+  active: boolean;
+}
+
+export interface SpecialOfferRule {
+  id: ID;
+  name: string;
+  minNights: number;
+  discountPercent: number;
+  validFrom?: string;
+  validTo?: string;
+  active: boolean;
+}
+
+export interface OptionalServiceItem {
+  id: ID;
+  name: string;
+  price: number; // ZMW
+  priceType: 'per_stay' | 'per_night';
+  description?: string;
+  active: boolean;
+}
 
 export interface Apartment {
   id: ID;
@@ -28,6 +180,7 @@ export interface Apartment {
   name: string;
   slug: string;
   tier: ApartmentTier;
+  category?: ApartmentTier;
   tagline: string;
   description: string;
   maxGuests: number;
@@ -36,20 +189,40 @@ export interface Apartment {
   sizeSqm: number;
   floor: number;
   bedConfiguration: string;
+  /** Standard weekday nightly rate in ZMW */
   nightlyRate: number;
+  /** Optional Friday/Saturday night rate in ZMW */
+  weekendRate?: number | null;
+  /** Guests included in base rate before extraGuestFee applies */
+  includedGuests?: number;
+  /** Per-night charge in ZMW for each guest above includedGuests */
+  extraGuestFee?: number;
+  seasonalRates?: SeasonalRateRule[];
+  specialOffers?: SpecialOfferRule[];
+  optionalServices?: OptionalServiceItem[];
   amenities: string[];
-  /** Conventional paths under /public — see docs/PHOTOGRAPHY.md. */
+  facilities?: string[];
+  coverPhoto?: string;
+  /** Display URLs in order (kept in sync with structured gallery for compatibility) */
   photos: string[];
+  gallery?: ApartmentPhoto[];
+  publicationStatus?: PublicationStatus;
   active: boolean;
   /** True when the unit is out of service and must not be sold. */
   outOfService: boolean;
   houseNotes: string;
+  updatedAt?: string;
 }
+
+/* ------------------------------------------- 3. Housekeeping & Maintenance */
 
 export type CleaningStatus =
   | 'clean'
   | 'needs_cleaning'
+  | 'assigned'
   | 'in_progress'
+  | 'completed'
+  | 'inspection_required'
   | 'maintenance';
 
 export interface HousekeepingNote {
@@ -69,117 +242,105 @@ export type HousekeepingTaskType =
 export interface HousekeepingTask {
   id: ID;
   apartmentId: ID;
-  /** Set when the task was produced by a departure. */
   reservationId: ID | null;
   type: HousekeepingTaskType;
   status: CleaningStatus;
   assignedTo: ID | null;
-  /** YYYY-MM-DD */
   date: string;
-  /** HH:mm — target completion time. */
   dueTime: string;
   priority: 'low' | 'normal' | 'high';
   instructions: string;
+  checkOutTime?: string | null;
   notes: HousekeepingNote[];
   createdAt: string;
+  updatedAt?: string;
   createdBy: ID;
   startedAt: string | null;
   completedAt: string | null;
   completedBy: ID | null;
-  /** Minutes actually spent, derived on completion. */
+  inspectedAt?: string | null;
+  inspectedBy?: ID | null;
   durationMinutes: number | null;
 }
 
-/* ----------------------------------------------------------------------- staff */
+export type MaintenancePriority = 'low' | 'normal' | 'medium' | 'high' | 'urgent';
+export type MaintenanceStatus = 'reported' | 'assigned' | 'in_progress' | 'resolved';
 
-export type Role = 'admin' | 'receptionist' | 'cleaner';
-
-export interface StaffUser {
+export interface MaintenancePhoto {
   id: ID;
-  name: string;
-  /** Login handle used on the sign-in screen. */
-  username: string;
-  email: string;
-  phone: string;
-  role: Role;
-  jobTitle: string;
-  active: boolean;
-  hiredOn: string;
-  lastSeenAt: string | null;
-  /** Only meaningful for cleaners. */
-  shift: 'morning' | 'afternoon' | 'evening' | null;
-  /** sha256$salt$digest — server-side only, never included in an API payload. */
-  passwordHash?: string;
-  /** Free-text permission notes shown to admins. */
-  permissions: PermissionKey[] | null;
+  url: string;
+  publicId: string;
+  caption?: string;
+  uploadedAt: string;
 }
 
-export type PermissionKey =
-  | 'reservations.view'
-  | 'reservations.create'
-  | 'reservations.edit'
-  | 'reservations.cancel'
-  | 'reservations.checkin'
-  | 'calendar.view'
-  | 'apartments.view'
-  | 'apartments.manage'
-  | 'guests.view'
-  | 'guests.viewPii'
-  | 'guests.manage'
-  | 'payments.view'
-  | 'payments.record'
-  | 'payments.verify'
-  | 'payments.refund'
-  | 'housekeeping.view'
-  | 'housekeeping.assign'
-  | 'housekeeping.complete'
-  | 'housekeeping.maintenance'
-  | 'reports.view'
-  | 'notifications.view'
-  | 'notifications.manage'
-  | 'notifications.send'
-  | 'staff.manage'
-  | 'settings.manage'
-  | 'data.reset';
+export interface MaintenanceRecord {
+  id: ID;
+  apartmentId: ID;
+  apartmentNumber: number;
+  apartmentName: string;
+  faultDescription: string;
+  priority: MaintenancePriority;
+  assignedTo: ID | null;
+  assignedToName: string | null;
+  status: MaintenanceStatus;
+  blocksReadiness: boolean;
+  photos: MaintenancePhoto[];
+  resolutionNotes: string;
+  reportedBy: ID;
+  reportedByName: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+}
 
-/* ----------------------------------------------------------------------- guests */
+/* --------------------------------------------------------------- 4. Guests */
+
+export type GuestSource =
+  | 'website'
+  | 'whatsapp'
+  | 'phone'
+  | 'walk_in'
+  | 'referral'
+  | 'corporate'
+  | 'email'
+  | 'travel_agent';
 
 export interface Guest {
   id: ID;
+  /** Linked Firebase Auth UID if the guest registered an online account */
+  userId?: ID | null;
   fullName: string;
   phone: string;
   email: string;
-  /** National Registration Card or passport number. Restricted by `guests.viewPii`. */
   nationalId: string;
   idType: 'nrc' | 'passport';
   nationality: string;
   city: string;
   company: string;
   vip: boolean;
-  /** Standing preferences the team should honour on every stay. */
   specialRequests: string;
   internalNotes: string;
   createdAt: string;
-  /** How the guest first reached the property. */
+  updatedAt?: string;
   source: GuestSource;
 }
 
-/* ------------------------------------------------------------------ reservations */
-
-/** Where a guest record came from — a superset of the booking channels. */
-export type GuestSource = 'website' | 'whatsapp' | 'phone' | 'walk_in' | 'referral' | 'corporate' | 'email' | 'travel_agent';
+/* --------------------------------------------------- 5. Bookings / Folios */
 
 export type BookingStatus =
   | 'inquiry'
+  | 'pending_confirmation'
   | 'reserved'
   | 'fully_paid'
   | 'checked_in'
   | 'checked_out'
+  | 'cancellation_requested'
   | 'cancelled';
 
 export type PaymentStatus = 'unpaid' | 'partially_paid' | 'fully_paid' | 'refunded';
 
-/** How a reservation reached the property. */
 export type BookingSource =
   | 'website'
   | 'whatsapp'
@@ -189,16 +350,21 @@ export type BookingSource =
   | 'corporate'
   | 'travel_agent';
 
-/** Statuses that hold inventory and block other guests from the same dates. */
+/** Statuses that permanently hold inventory (plus unexpired pending_confirmation holds). */
 export const CONFIRMED_BOOKING_STATUSES: BookingStatus[] = [
   'reserved',
   'fully_paid',
   'checked_in',
   'checked_out',
+  'cancellation_requested',
 ];
 
-/** Statuses that mean somebody is physically in the unit tonight. */
-export const OCCUPYING_STATUSES: BookingStatus[] = ['reserved', 'fully_paid', 'checked_in'];
+export const OCCUPYING_STATUSES: BookingStatus[] = [
+  'reserved',
+  'fully_paid',
+  'checked_in',
+  'cancellation_requested',
+];
 
 export interface ReservationEvent {
   at: string;
@@ -207,23 +373,40 @@ export interface ReservationEvent {
   detail?: string;
 }
 
+export interface SelectedServiceLine {
+  id: ID;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  total: number;
+}
+
 export interface Reservation {
   id: ID;
   reference: string;
+  /** Authenticated customer UID when booked by or linked to a registered guest */
+  userId?: ID | null;
   guestId: ID;
   apartmentId: ID;
-  /** Local dates. checkOut is the morning the guest vacates — it is not a charged night. */
   checkIn: string;
   checkOut: string;
   guestCount: number;
-  /** Price captured at booking time — rate changes must not rewrite old folios. */
   nightlyRate: number;
   nights: number;
-  totalAmount: number;
-  /** Discounts are rare but real (long stays, corporate rate). Always >= 0. */
+  roomSubtotal?: number;
+  extraGuestTotal?: number;
+  servicesTotal?: number;
+  selectedServices?: SelectedServiceLine[];
   discount: number;
+  taxRatePercent?: number;
+  taxAmount?: number;
+  totalAmount: number;
   status: BookingStatus;
   paymentStatus: PaymentStatus;
+  /** ISO timestamp when a temporary `pending_confirmation` hold expires */
+  holdExpiresAt?: string | null;
+  quotationId?: ID | null;
+  invoiceId?: ID | null;
   source: BookingSource;
   arrivalTime: string;
   notes: string;
@@ -232,34 +415,55 @@ export interface Reservation {
   createdBy: ID;
   checkedInAt: string | null;
   checkedOutAt: string | null;
+  cancellationRequestedAt?: string | null;
+  cancellationRequestReason?: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
   history: ReservationEvent[];
 }
 
-/* --------------------------------------------------------------------- payments */
+/* ----------------------------------------------------- 6. Payments Ledger */
 
 export type PaymentMethod = 'airtel_money' | 'mtn_money' | 'bank_transfer' | 'cash';
 
-export type VerificationStatus = 'pending' | 'verified' | 'rejected';
+export type VerificationStatus =
+  | 'pending'
+  | 'pending_verification'
+  | 'verified'
+  | 'rejected'
+  | 'refunded';
 
 export interface PaymentProof {
   fileName: string;
   mimeType: string;
-  /** Base64 data URL — the demo keeps evidence next to the record it belongs to. */
+  /** Cloudinary secure URL or local uploaded asset URL */
+  url?: string;
+  publicId?: string;
   dataUrl: string;
   uploadedAt: string;
   uploadedBy: string;
   sizeBytes: number;
 }
 
+export interface PaymentAuditEntry {
+  at: string;
+  by: string;
+  action: string;
+  status: VerificationStatus;
+  note?: string;
+}
+
 export interface Payment {
   id: ID;
   reservationId: ID;
+  bookingId?: ID;
+  guestId?: ID;
+  userId?: ID | null;
+  receiptId?: ID | null;
+  receiptNumber?: string | null;
   amount: number;
   method: PaymentMethod;
   kind: 'deposit' | 'part_payment' | 'final_settlement' | 'refund';
-  /** Mobile-money transaction reference or bank confirmation number. */
   reference: string;
   paidAt: string;
   recordedBy: ID;
@@ -270,34 +474,246 @@ export interface Payment {
   verificationNote: string;
   proof: PaymentProof | null;
   note: string;
+  auditTrail?: PaymentAuditEntry[];
   createdAt: string;
 }
 
-/* ------------------------------------------------------------------ notifications */
+/* ------------------------------- 7. Quotations, Invoices & Payment Receipts */
+
+export type QuotationStatus =
+  | 'draft'
+  | 'sent'
+  | 'accepted'
+  | 'expired'
+  | 'declined'
+  | 'converted';
+
+export interface DocumentLineItem {
+  description: string;
+  quantity: number;
+  unitLabel: string;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface Quotation {
+  id: ID;
+  quotationNumber: string;
+  idempotencyKey?: string | null;
+  shareToken: string;
+  status: QuotationStatus;
+  issueDate: string;
+  expiryDate: string;
+  userId: ID | null;
+  guestId: ID | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerCompany: string;
+  customerAddress: string;
+  apartmentId: ID;
+  apartmentNumber: number;
+  apartmentName: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guestCount: number;
+  nightlyRate: number;
+  lineItems: DocumentLineItem[];
+  additionalServices: SelectedServiceLine[];
+  subtotal: number;
+  discount: number;
+  taxName: string;
+  taxRatePercent: number;
+  taxInclusive: boolean;
+  taxAmount: number;
+  totalAmount: number;
+  depositPercent: number;
+  depositRequired: number;
+  outstandingBalance: number;
+  notes: string;
+  termsAndConditions: string;
+  paymentInstructions: string;
+  reservationId: ID | null;
+  invoiceId: ID | null;
+  emailedAt: string | null;
+  createdBy: ID;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InvoiceStatus = 'unpaid' | 'partially_paid' | 'paid' | 'void';
+
+export interface Invoice {
+  id: ID;
+  invoiceNumber: string;
+  idempotencyKey?: string | null;
+  status: InvoiceStatus;
+  issueDate: string;
+  dueDate: string;
+  quotationId: ID | null;
+  reservationId: ID | null;
+  userId: ID | null;
+  guestId: ID | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerCompany: string;
+  customerTpin: string;
+  apartmentId: ID | null;
+  apartmentNumber: number | null;
+  apartmentName: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guestCount: number;
+  lineItems: DocumentLineItem[];
+  subtotal: number;
+  discount: number;
+  taxName: string;
+  taxRatePercent: number;
+  taxInclusive: boolean;
+  taxAmount: number;
+  totalAmount: number;
+  verifiedPaid: number;
+  balanceDue: number;
+  notes: string;
+  paymentInstructions: string;
+  termsAndConditions: string;
+  createdBy: ID;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReceiptRecord {
+  id: ID;
+  receiptNumber: string;
+  paymentId: ID;
+  reservationId: ID;
+  invoiceId: ID | null;
+  userId: ID | null;
+  guestId: ID | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  apartmentName: string;
+  apartmentNumber: number;
+  bookingReference: string;
+  amount: number;
+  method: PaymentMethod;
+  transactionReference: string;
+  paidAt: string;
+  verifiedBy: string;
+  verifiedAt: string;
+  totalBookingAmount: number;
+  totalVerifiedPaid: number;
+  remainingBalance: number;
+  createdAt: string;
+}
+
+/* ------------------------------------------- 8. Media & Audit Log Records */
+
+export type MediaCategory =
+  | 'apartment'
+  | 'property'
+  | 'property_document'
+  | 'profile'
+  | 'profile_photo'
+  | 'payment_proof'
+  | 'maintenance'
+  | 'document'
+  | 'brand';
+
+export interface MediaRecord {
+  id: ID;
+  url: string;
+  thumbnailUrl: string;
+  detailUrl: string;
+  publicId: string;
+  storageProvider: 'cloudinary' | 'local';
+  mediaType: 'image' | 'document';
+  category: MediaCategory;
+  title: string;
+  description: string;
+  apartmentId: ID | null;
+  apartmentName: string | null;
+  order: number;
+  isCover: boolean;
+  mimeType: string;
+  sizeBytes: number;
+  width?: number | null;
+  height?: number | null;
+  visibility: 'public' | 'private';
+  uploadedBy: ID;
+  uploadedByName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AuditCategory =
+  | 'role'
+  | 'auth'
+  | 'booking'
+  | 'payment'
+  | 'refund'
+  | 'staff'
+  | 'apartment'
+  | 'document'
+  | 'media'
+  | 'housekeeping'
+  | 'maintenance'
+  | 'settings';
+
+export interface AuditLogRecord {
+  id: ID;
+  category: AuditCategory;
+  action: string;
+  actorUid: ID;
+  actorName: string;
+  actorRole: Role | 'system' | 'public';
+  targetType: string;
+  targetId: ID;
+  summary: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+/* ----------------------------------------------------- 9. Notifications */
 
 export type NotificationChannel = 'whatsapp' | 'sms' | 'email' | 'in_app';
 
 export type NotificationEventType =
+  | 'new_booking'
   | 'booking_confirmation'
   | 'booking_request'
+  | 'payment_recorded'
   | 'payment_received'
+  | 'payment_verified'
+  | 'payment_rejected'
+  | 'upcoming_checkin'
   | 'checkin_reminder'
+  | 'upcoming_checkout'
   | 'checkout_reminder'
   | 'balance_reminder'
+  | 'booking_cancellation'
   | 'cancellation'
+  | 'cleaning_assignment'
   | 'cleaning_assigned'
   | 'cleaning_completed'
+  | 'maintenance_report'
   | 'maintenance_reported'
-  | 'reservation_modified';
+  | 'reservation_modified'
+  | 'quotation_sent';
 
-/**
- * `not_connected` is the honest default: no messaging provider is wired up, so
- * the system never claims a message was delivered.
- */
 export type DeliveryStatus =
   | 'not_connected'
+  | 'in_app_only'
   | 'queued_for_manual_send'
   | 'delivered_manually'
+  | 'sent'
   | 'failed';
 
 export interface NotificationRecord {
@@ -306,28 +722,30 @@ export interface NotificationRecord {
   channel: NotificationChannel;
   title: string;
   body: string;
+  recipientUid?: ID | null;
   recipientName: string;
   recipientContact: string;
   guestId: ID | null;
   reservationId: ID | null;
   apartmentId: ID | null;
+  providerMessageId?: string | null;
   createdAt: string;
   scheduledFor: string | null;
   deliveryStatus: DeliveryStatus;
   deliveryDetail: string;
   markedDeliveredAt: string | null;
   markedDeliveredBy: string | null;
+  sentAt?: string | null;
   readAt: string | null;
   createdAutomatically: boolean;
 }
 
-/* --------------------------------------------------------------------- settings */
+/* ------------------------------ 10. Settings, GBP & Dashboard Aggregations */
 
 export interface PaymentMethodSetting {
   id: PaymentMethod;
   label: string;
   enabled: boolean;
-  /** Paybill / merchant code for mobile money, account number for transfers. */
   instructions: string;
   accountLabel: string;
   accountNumber: string;
@@ -335,16 +753,78 @@ export interface PaymentMethodSetting {
 
 export interface ChannelSetting {
   enabled: boolean;
-  /** Always false until a real provider is wired up — surfaced in the UI. */
   connected: boolean;
   provider: string | null;
   note: string;
+}
+
+export interface TaxSettings {
+  enabled: boolean;
+  name: string;
+  ratePercent: number;
+  inclusive: boolean;
+  registrationNumber: string;
+}
+
+export interface DocumentNumberingSettings {
+  quotationPrefix: string;
+  quotationValidityDays: number;
+  invoicePrefix: string;
+  receiptPrefix: string;
+  termsAndConditions: string;
+}
+
+export interface GoogleBusinessOpeningHour {
+  day: string;
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
+export interface GoogleBusinessProfileSettings {
+  businessName: string;
+  primaryCategory: string;
+  secondaryCategories: string[];
+  addressLine: string;
+  city: string;
+  province: string;
+  country: string;
+  postalCode: string;
+  serviceArea: string;
+  phone: string;
+  website: string;
+  description: string;
+  openingHours: GoogleBusinessOpeningHour[];
+  photos: string[];
+  placeId: string;
+  mapsProfileUrl: string;
+  /** Strictly false unless confirmed by Google Business Profile verification */
+  googleVerified: boolean;
+  verificationNote: string;
+  updatedAt: string;
+}
+
+export interface DashboardSummaryDoc {
+  totalBookings: number;
+  monthlyVerifiedRevenue: Record<string, number>; // YYYY-MM -> ZMW verified net of refunds
+  currentMonthKey: string;
+  currentMonthRevenue: number;
+  occupiedCount: number;
+  availableApartments: number;
+  cleaningApartments: number;
+  maintenanceApartments: number;
+  todayCheckInsCount: number;
+  todayCheckOutsCount: number;
+  pendingVerificationAmount: number;
+  openMaintenanceCount: number;
+  updatedAt: string;
 }
 
 export interface Settings {
   property: {
     name: string;
     legalName: string;
+    logoUrl?: string;
     tagline: string;
     addressLine: string;
     city: string;
@@ -356,12 +836,16 @@ export interface Settings {
     taxPayerId: string;
     receptionHours: string;
   };
+  tax?: TaxSettings;
+  documents?: DocumentNumberingSettings;
+  googleBusiness?: GoogleBusinessProfileSettings;
   booking: {
     checkInTime: string;
     checkOutTime: string;
     depositPercent: number;
     minNightsWeekend: number;
     maxAdvanceBookingDays: number;
+    holdDurationMinutes?: number;
     cancellationPolicyHours: number;
     cancellationText: string;
     taxesIncluded: boolean;
@@ -391,6 +875,7 @@ export interface Settings {
     turnaroundMinutes: number;
     autoAssignCleaner: boolean;
     preArrivalInspectionMinutes: number;
+    requireInspectionBeforeReady?: boolean;
   };
   locale: {
     currency: 'ZMW';
@@ -400,48 +885,64 @@ export interface Settings {
   };
 }
 
-/* ------------------------------------------------------------------------ db root */
+/* ----------------------------------------------------- 11. Database Root */
 
-/** Subset of the database the calendar/availability engine needs to do its job. */
-export type CalendarSource = Pick<Database, 'apartments' | 'reservations' | 'housekeeping' | 'cleaningState'>;
+export type CalendarSource = Pick<
+  Database,
+  'apartments' | 'reservations' | 'housekeeping' | 'cleaningState'
+> & { maintenance?: MaintenanceRecord[] };
 
 export interface Database {
   version: number;
-  /** Anchor date the demo data was generated for; used to keep the demo evergreen. */
   seededOn: string;
   createdAt: string;
   updatedAt: string;
+  users?: UserRecord[];
   apartments: Apartment[];
   housekeeping: HousekeepingTask[];
-  /** Apartment-level housekeeping snapshot, keyed by apartment id. */
+  maintenance?: MaintenanceRecord[];
   cleaningState: Record<ID, { status: CleaningStatus; updatedAt: string; note: string }>;
   guests: Guest[];
   staff: StaffUser[];
   reservations: Reservation[];
   payments: Payment[];
+  quotations?: Quotation[];
+  invoices?: Invoice[];
+  receipts?: ReceiptRecord[];
+  media?: MediaRecord[];
+  auditLogs?: AuditLogRecord[];
   notifications: NotificationRecord[];
   settings: Settings;
-  sequences: { reservation: number; receipt: number };
-  /**
-   * Business date in Africa/Lusaka, stamped by the store on every read and never
-   * persisted. Selectors use it so "today" is the property's today, not the clock
-   * of whoever happens to be hosting the demo.
-   */
+  dashboardSummary?: DashboardSummaryDoc;
+  sequences: {
+    reservation: number;
+    receipt: number;
+    quotation?: number;
+    invoice?: number;
+  };
   __today: string;
 }
 
-/* ------------------------------------------------------------------ derived views */
+/* ----------------------------------------------------- 12. Derived Views */
+
+export interface PaginatedResult<T> {
+  items: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  pageSize: number;
+  totalEstimate?: number;
+}
 
 export interface ReservationView extends Reservation {
   guest: Guest | null;
   apartment: Apartment | null;
-  /** Sum of verified payments only. */
   verifiedPaid: number;
-  /** Recorded but awaiting verification by authorised staff. */
   pendingVerification: number;
+  refundsTotal?: number;
   balanceDue: number;
   balanceIsSettled: boolean;
   depositDue: number;
+  depositPercent?: number;
   isTodayCheckIn: boolean;
   isTodayCheckOut: boolean;
   isConfirmed: boolean;
@@ -467,6 +968,7 @@ export interface CalendarCell {
   reservationRef: string | null;
   guestName: string | null;
   taskId: ID | null;
+  maintenanceId?: ID | null;
 }
 
 export interface ApartmentAvailability {

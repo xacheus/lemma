@@ -4,8 +4,18 @@ const nextConfig = {
   poweredByHeader: false,
   eslint: { ignoreDuringBuilds: true },
   images: {
-    // All photography is served from /public — no remote image hosts are configured.
-    localPatterns: [{ pathname: '/images/**' }],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/**',
+      },
+    ],
+    localPatterns: [
+      { pathname: '/images/**' },
+      { pathname: '/brand/**' },
+      { pathname: '/api/media/**' },
+    ],
   },
 };
 

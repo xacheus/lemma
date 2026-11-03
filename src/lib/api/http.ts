@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { ZodType } from 'zod';
 import { getSession, SESSION_COOKIE, SESSION_MAX_AGE, type Session } from '../auth/session';
 import { OperationError } from '../domain/operations';
-import type { PermissionKey } from '../domain/types';
+import type { PermissionKey, Role } from '../domain/types';
 import { describeMissing } from '../domain/permissions';
 
 export class HttpError extends Error {
@@ -27,6 +27,7 @@ interface RouteOptions {
   /** `none` opens the endpoint to the public booking site. */
   auth?: 'required' | 'none';
   permission?: PermissionKey;
+  roles?: Role[];
   handler: (ctx: Ctx) => Promise<unknown> | unknown;
 }
 
@@ -65,6 +66,13 @@ export function apiRoute(options: RouteOptions) {
       if (!session) {
         throw new HttpError('Your session has expired. Sign in again to continue.', 401, 'unauthenticated');
       }
+      if (options.roles && !options.roles.includes(session.user.role)) {
+        throw new HttpError(
+          `Your role (${session.user.role.replace(/_/g, ' ')}) is not authorised for this action.`,
+          403,
+          'forbidden',
+        );
+      }
       if (options.permission && !session.permissions.has(options.permission)) {
         throw new HttpError(describeMissing(options.permission), 403, 'forbidden');
       }
@@ -79,10 +87,19 @@ export function apiRoute(options: RouteOptions) {
 }
 
 /** Same as apiRoute for endpoints that must work without a signed-in user. */
-export function publicRoute(handler: (ctx: { req: NextRequest; search: URLSearchParams }) => Promise<unknown> | unknown) {
-  return async (req: NextRequest) => {
+export function publicRoute(
+  handler: (ctx: {
+    req: NextRequest;
+    search: URLSearchParams;
+    params: Record<string, string>;
+    session: Session | null;
+  }) => Promise<unknown> | unknown,
+) {
+  return async (req: NextRequest, context?: { params?: Promise<Record<string, string>> }) => {
     try {
-      const result = await handler({ req, search: req.nextUrl.searchParams });
+      const session = await getSession();
+      const params = (await context?.params) ?? {};
+      const result = await handler({ req, search: req.nextUrl.searchParams, params, session });
       if (result instanceof NextResponse) return result;
       return NextResponse.json({ ok: true, data: result });
     } catch (error) {

@@ -1,28 +1,35 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 /**
- * Demo credential handling. Passwords are salted-SHA256 hashed; the salt is random
- * per account and stored with the hash. This is deliberately *not* a production
- * password scheme (no work factor) — see docs/DEMO-LIMITATIONS.md, which lists what
- * has to change before this ships to a real property.
+ * Production credential hashing using Node `crypto.scryptSync` (memory-hard KDF)
+ * with per-account 16-byte random salt and timing-safe digest comparison.
+ * Retains read compatibility with legacy `sha256$...` seed hashes.
  */
 export function hashPassword(password: string): string {
-  const salt = randomBytes(8).toString('hex');
-  const digest = createHash('sha256').update(`${salt}:${password}`).digest('hex');
-  return `sha256$${salt}$${digest}`;
+  const salt = randomBytes(16).toString('hex');
+  const digest = scryptSync(password, salt, 64).toString('hex');
+  return `scrypt$${salt}$${digest}`;
 }
 
 export function verifyPassword(password: string, stored: string | undefined | null): boolean {
   if (!stored) return false;
-  const [, salt, digest] = stored.split('$');
+  const [scheme, salt, digest] = stored.split('$');
   if (!salt || !digest) return false;
-  const candidate = createHash('sha256').update(`${salt}:${password}`).digest('hex');
+
+  if (scheme === 'scrypt') {
+    const candidate = scryptSync(password, salt, 64);
+    const expected = Buffer.from(digest, 'hex');
+    if (candidate.length !== expected.length) return false;
+    return timingSafeEqual(candidate, expected);
+  }
+
+  // Backward compatibility for pre-existing sha256 seed records
+  const candidateHex = createHash('sha256').update(`${salt}:${password}`).digest('hex');
   try {
-    return timingSafeEqual(Buffer.from(candidate, 'hex'), Buffer.from(digest, 'hex'));
+    return timingSafeEqual(Buffer.from(candidateHex, 'hex'), Buffer.from(digest, 'hex'));
   } catch {
     return false;
   }
 }
 
-/** Shared demo password shown on the sign-in screen. */
 export const DEMO_PASSWORD = 'lemma2026';

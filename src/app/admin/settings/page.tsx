@@ -363,7 +363,196 @@ export default function SettingsPage() {
             onChange={(on) => set('housekeeping', { autoAssignCleaner: on })}
             hint="Enforced · new turnover jobs go to the cleanest roster; off, they land unassigned"
           />
+          <CheckboxRow
+            label="Require supervisor inspection before marking unit ready for check-in"
+            checked={Boolean(draft.housekeeping.requireInspectionBeforeReady)}
+            onChange={(on) => set('housekeeping', { requireInspectionBeforeReady: on })}
+            hint="Enforced · cleaner completion places apartment into Inspection Required until signed off"
+          />
           <SectionFooter onSave={() => saveSection('housekeeping', 'Housekeeping settings')} busy={saving === 'housekeeping'} dirty={dirty} />
+        </Panel>
+
+        <Panel
+          title="Tax & Commercial Document Numbering"
+          subtitle="Configurable ZMW tax rules and prefixes for Quotations, Invoices & Receipts"
+          bodyClass="p-4 space-y-3.5"
+        >
+          <CheckboxRow
+            label="Enable Tax / VAT calculation on Quotations, Bookings & Invoices"
+            checked={Boolean(draft.tax?.enabled)}
+            onChange={(on) =>
+              set('tax', {
+                ...(draft.tax ?? {
+                  name: 'VAT',
+                  ratePercent: 16,
+                  inclusive: true,
+                  registrationNumber: draft.property.taxPayerId,
+                }),
+                enabled: on,
+              })
+            }
+            hint="Enforced · never hardcoded; turn off if rates are exempt or non-VAT registered"
+          />
+          <div className="grid gap-3.5 sm:grid-cols-3">
+            <TextInput
+              label="Tax Label"
+              value={draft.tax?.name ?? 'VAT'}
+              onChange={(e) => set('tax', { ...(draft.tax ?? {}), name: e.target.value } as Settings['tax'])}
+            />
+            <TextInput
+              label="Tax Rate (%)"
+              type="number"
+              min={0}
+              max={50}
+              value={String(draft.tax?.ratePercent ?? 0)}
+              onChange={(e) =>
+                set('tax', { ...(draft.tax ?? {}), ratePercent: Number(e.target.value) } as Settings['tax'])
+              }
+            />
+            <CheckboxRow
+              label="Rates are tax-inclusive"
+              checked={Boolean(draft.tax?.inclusive ?? true)}
+              onChange={(on) => set('tax', { ...(draft.tax ?? {}), inclusive: on } as Settings['tax'])}
+            />
+          </div>
+          <div className="grid gap-3.5 sm:grid-cols-3 border-t border-sand-100 pt-3">
+            <TextInput
+              label="Quotation Prefix"
+              value={draft.documents?.quotationPrefix ?? 'QUO'}
+              onChange={(e) =>
+                set('documents', { ...(draft.documents ?? {}), quotationPrefix: e.target.value } as Settings['documents'])
+              }
+            />
+            <TextInput
+              label="Invoice Prefix"
+              value={draft.documents?.invoicePrefix ?? 'INV'}
+              onChange={(e) =>
+                set('documents', { ...(draft.documents ?? {}), invoicePrefix: e.target.value } as Settings['documents'])
+              }
+            />
+            <TextInput
+              label="Official Receipt Prefix"
+              value={draft.documents?.receiptPrefix ?? 'RCP'}
+              onChange={(e) =>
+                set('documents', { ...(draft.documents ?? {}), receiptPrefix: e.target.value } as Settings['documents'])
+              }
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 border-t border-sand-100 pt-3">
+            <button
+              type="button"
+              className="btn-primary h-9 px-3.5 text-[0.82rem]"
+              disabled={saving === 'tax'}
+              onClick={async () => {
+                setSaving('tax');
+                try {
+                  await request('/api/settings', {
+                    method: 'PATCH',
+                    data: { tax: draft.tax, documents: draft.documents },
+                  });
+                  toast({ tone: 'success', title: 'Tax & Document settings saved' });
+                } finally {
+                  setSaving(null);
+                }
+              }}
+            >
+              <Save size={14} /> Save Tax &amp; Numbering
+            </button>
+          </div>
+        </Panel>
+
+        <Panel
+          title="Google Business Profile Readiness & Onboarding"
+          subtitle="Structured Google Search & Google Maps listing preparation (honest verification tracking)"
+          bodyClass="p-4 space-y-3.5"
+        >
+          <div className="rounded-md border border-sand-200 bg-sand-50 p-3 text-[0.8rem] text-navy-700">
+            <p className="font-semibold text-navy-900">
+              Official Verification Status:{' '}
+              <span className="uppercase">
+                {draft.googleBusiness?.googleVerified
+                  ? 'Confirmed Externally in Google Business Manager'
+                  : 'Pending Official Google Verification'}
+              </span>
+            </p>
+            <p className="mt-1 text-navy-600">
+              Google Business Profile ownership verification must be completed directly with Google
+              via postcard, phone, video, or Search Console. Use the synchronised property details
+              below to submit or update your listing accurately.
+            </p>
+          </div>
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            <TextInput
+              label="Google Business Name"
+              value={draft.googleBusiness?.businessName ?? draft.property.name}
+              onChange={(e) =>
+                set('googleBusiness', {
+                  ...(draft.googleBusiness ?? {}),
+                  businessName: e.target.value,
+                } as Settings['googleBusiness'])
+              }
+            />
+            <TextInput
+              label="Primary Category"
+              value={draft.googleBusiness?.primaryCategory ?? 'Serviced accommodation'}
+              onChange={(e) =>
+                set('googleBusiness', {
+                  ...(draft.googleBusiness ?? {}),
+                  primaryCategory: e.target.value,
+                } as Settings['googleBusiness'])
+              }
+            />
+            <TextInput
+              label="Google Maps Profile URL"
+              value={draft.googleBusiness?.mapsProfileUrl ?? ''}
+              onChange={(e) =>
+                set('googleBusiness', {
+                  ...(draft.googleBusiness ?? {}),
+                  mapsProfileUrl: e.target.value,
+                } as Settings['googleBusiness'])
+              }
+              hint="Paste your live Google Maps share URL once verified"
+            />
+            <TextInput
+              label="Verification Note"
+              value={draft.googleBusiness?.verificationNote ?? ''}
+              onChange={(e) =>
+                set('googleBusiness', {
+                  ...(draft.googleBusiness ?? {}),
+                  verificationNote: e.target.value,
+                } as Settings['googleBusiness'])
+              }
+            />
+          </div>
+          <CheckboxRow
+            label="Listing has completed official Google Business Profile verification"
+            checked={Boolean(draft.googleBusiness?.googleVerified)}
+            onChange={(on) =>
+              set('googleBusiness', {
+                ...(draft.googleBusiness ?? {}),
+                googleVerified: on,
+              } as Settings['googleBusiness'])
+            }
+            hint="Only enable after completing official verification at business.google.com"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-sand-100 pt-3">
+            <a
+              href="https://business.google.com/create"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary h-9 px-3 text-[0.8rem]"
+            >
+              Open Official Google Business Profile Setup
+            </a>
+            <button
+              type="button"
+              className="btn-primary h-9 px-3.5 text-[0.82rem]"
+              disabled={saving === 'googleBusiness'}
+              onClick={() => saveSection('googleBusiness', 'Google Business Profile')}
+            >
+              <Save size={14} /> Save GBP Onboarding Details
+            </button>
+          </div>
         </Panel>
 
         <Panel title="Locale & the demo data" subtitle="What is stored, and how to get the seeded ledger back" bodyClass="p-4 space-y-3.5">

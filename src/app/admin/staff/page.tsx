@@ -135,7 +135,7 @@ export default function StaffPage() {
           subtitle={`${staff.filter((s) => s.active).length} active of ${staff.length} · sign-in password for every demo account is lemma2026`}
           bodyClass="divide-y divide-sand-100"
         >
-          {(['admin', 'receptionist', 'cleaner'] as Role[]).map((role) => {
+          {(['super_admin', 'admin', 'receptionist', 'cleaner'] as Role[]).map((role) => {
             const rows = byRole(role);
             if (!rows.length) return null;
             return (
@@ -216,6 +216,7 @@ export default function StaffPage() {
         </Panel>
 
         <div className="space-y-4">
+          <RegisteredUsersRolePanel />
           <PermissionMatrix />
 
           <Panel title="What a cleaner can never see" bodyClass="p-4 space-y-2 text-[0.82rem] leading-relaxed text-navy-600">
@@ -509,3 +510,121 @@ function StaffEditor({
     </Modal>
   );
 }
+
+function RegisteredUsersRolePanel() {
+  const { snapshot, request, toast } = useApp();
+  const [search, setSearch] = useState('');
+  const [updatingUid, setUpdatingUid] = useState<string | null>(null);
+
+  if (!snapshot) return null;
+  const isSuper = snapshot.user.role === 'super_admin';
+
+  const users = (snapshot.users ?? []).filter((u) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      u.fullName.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.role.toLowerCase().includes(q)
+    );
+  });
+
+  async function updateRole(uid: string, role: Role) {
+    setUpdatingUid(uid);
+    try {
+      await request(`/api/users/${uid}/role`, { method: 'PATCH', data: { role } });
+      toast({
+        tone: 'success',
+        title: 'Role updated',
+        body: `Account role changed to ${role.replace(/_/g, ' ')} and synchronised.`,
+      });
+    } finally {
+      setUpdatingUid(null);
+    }
+  }
+
+  async function toggleUserStatus(uid: string, nextStatus: 'active' | 'deactivated') {
+    setUpdatingUid(uid);
+    try {
+      await request(`/api/users/${uid}/status`, {
+        method: 'PATCH',
+        data: { accountStatus: nextStatus },
+      });
+      toast({
+        tone: 'success',
+        title: nextStatus === 'active' ? 'Account reactivated' : 'Account deactivated',
+        body:
+          nextStatus === 'deactivated'
+            ? 'Active session tokens were immediately revoked.'
+            : 'Account restored.',
+      });
+    } finally {
+      setUpdatingUid(null);
+    }
+  }
+
+  return (
+    <Panel
+      title="Registered Users & Role Promotion"
+      subtitle="Promote registered guests to staff roles or revoke access"
+      bodyClass="p-4 space-y-3"
+    >
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search registered users by name, email, or role..."
+        className="field text-[0.8rem]"
+      />
+      <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+        {users.slice(0, 20).map((u) => {
+          const lockedSuper = u.role === 'super_admin' && !isSuper;
+          return (
+            <div
+              key={u.uid}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-sand-200 p-2.5 text-[0.78rem]"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-navy-900">{u.fullName}</p>
+                <p className="truncate text-[0.72rem] text-navy-500">
+                  {u.email} · <span className="uppercase">{u.accountStatus}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <select
+                  disabled={lockedSuper || updatingUid === u.uid}
+                  value={u.role}
+                  onChange={(e) => void updateRole(u.uid, e.target.value as Role)}
+                  className="field h-8 w-auto py-1 text-[0.75rem]"
+                >
+                  {isSuper || u.role === 'super_admin' ? (
+                    <option value="super_admin">Super Admin</option>
+                  ) : null}
+                  <option value="admin">Admin</option>
+                  <option value="receptionist">Receptionist</option>
+                  <option value="cleaner">Cleaner</option>
+                  <option value="guest">Guest</option>
+                </select>
+                {u.uid !== snapshot.user.id && !lockedSuper ? (
+                  <button
+                    type="button"
+                    disabled={updatingUid === u.uid}
+                    onClick={() =>
+                      void toggleUserStatus(
+                        u.uid,
+                        u.accountStatus === 'active' ? 'deactivated' : 'active',
+                      )
+                    }
+                    className="btn-secondary h-8 px-2 text-[0.72rem]"
+                  >
+                    {u.accountStatus === 'active' ? 'Deactivate' : 'Activate'}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+

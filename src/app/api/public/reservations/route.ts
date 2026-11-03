@@ -1,19 +1,17 @@
-import { publicRoute, HttpError, readBody } from '@/lib/api/http';
+import { HttpError, readBody } from '@/lib/api/http';
 import { publicBookingSchema } from '@/lib/api/schemas';
-import { getDb, mutate } from '@/lib/db/store';
+import { runAtomicTransaction } from '@/lib/db/store';
 import { createReservation } from '@/lib/domain/operations';
 import { take } from '@/lib/api/rate-limit';
+import { getSession } from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
 
-/**
- * The public booking form. A request from the website becomes an inquiry in the
- * same ledger reception works in — it is *not* self-confirmed unless the property
- * has switched on automatic confirmation in Settings.
- */
 export async function POST(req: Request) {
   const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'local';
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    'local';
   const limit = take(`booking:${ip}`);
   if (!limit.allowed) {
     return Response.json(
@@ -28,33 +26,38 @@ export async function POST(req: Request) {
 
   try {
     const input = await readBody(req, publicBookingSchema);
-    if (input.company_url) return Response.json({ ok: false, error: 'Submission rejected.', code: 'spam' }, { status: 400 });
+    if (input.company_url) {
+      return Response.json({ ok: false, error: 'Submission rejected.', code: 'spam' }, { status: 400 });
+    }
 
-    const db = getDb();
-    if (!db.settings.property.name) throw new HttpError('The property is not configured.', 500, 'config');
+    const session = await getSession();
 
-    const created = mutate(() => {
-      const reservation = createReservation(
-        db,
-        'st-2',
-        {
-          apartmentId: input.apartmentId,
-          checkIn: input.checkIn,
-          checkOut: input.checkOut,
-          guestCount: input.guestCount,
-          source: 'website',
-          notes: input.notes ?? '',
-          asInquiry: true,
-          guest: {
-            fullName: input.fullName,
-            phone: input.phone,
-            email: input.email,
-            nationalId: input.nationalId,
-            idType: input.idType,
-          },
+    const created = await runAtomicTransaction((db) => {
+      if (!db.settings.property.name) {
+        throw new HttpError('The property is not configured.', 500, 'config');
+      }
+
+      const reservation = createReservation(db, session?.uid ?? 'public', {
+        userId: session?.uid ?? null,
+        apartmentId: input.apartmentId,
+        checkIn: input.checkIn,
+        checkOut: input.checkOut,
+        guestCount: input.guestCount,
+        selectedServiceIds: input.selectedServiceIds,
+        source: 'website',
+        notes: input.notes ?? '',
+        asInquiry: true,
+        guest: {
+          fullName: input.fullName,
+          phone: input.phone,
+          email: input.email,
+          nationalId: input.nationalId,
+          idType: input.idType,
         },
-      );
+      });
+
       return {
+        id: reservation.id,
         reference: reservation.reference,
         status: reservation.status,
         checkIn: reservation.checkIn,

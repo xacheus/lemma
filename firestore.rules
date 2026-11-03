@@ -1,0 +1,266 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions — Role & Account Status Resolution
+    // Resolves role from verified Firebase Auth custom claims first (0 extra reads),
+    // falling back to users/{uid} document when claims are awaiting token refresh.
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function currentRole() {
+      return !isSignedIn()
+        ? 'anonymous'
+        : ('role' in request.auth.token && request.auth.token.role != null)
+          ? request.auth.token.role
+          : (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+              ? userDoc().role
+              : 'guest');
+    }
+
+    function isAccountActive() {
+      return isSignedIn() && (
+        ('accountStatus' in request.auth.token)
+          ? request.auth.token.accountStatus == 'active'
+          : (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) || userDoc().accountStatus == 'active')
+      );
+    }
+
+    function isSuperAdmin() {
+      return isAccountActive() && currentRole() == 'super_admin';
+    }
+
+    function isAdmin() {
+      return isAccountActive() && currentRole() in ['super_admin', 'admin'];
+    }
+
+    function isReceptionOrAdmin() {
+      return isAccountActive() && currentRole() in ['super_admin', 'admin', 'receptionist'];
+    }
+
+    function isCleaner() {
+      return isAccountActive() && currentRole() == 'cleaner';
+    }
+
+    function isStaff() {
+      return isAccountActive() && currentRole() in ['super_admin', 'admin', 'receptionist', 'cleaner'];
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. Users Collection — users/{uid}
+    // Default registration role MUST be 'guest'. Users can never elevate their own role.
+    // Only super_admin can appoint or modify another super_admin.
+    // -------------------------------------------------------------------------
+    match /users/{uid} {
+      allow get: if (isSignedIn() && request.auth.uid == uid) || isAdmin() || isReceptionOrAdmin();
+      allow list: if isAdmin();
+
+      // Self-registration profile creation: strictly guest + active only
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'guest'
+        && request.resource.data.accountStatus == 'active';
+
+      // Self-profile update: strictly non-privileged profile fields only
+      allow update: if (
+        isSignedIn()
+        && request.auth.uid == uid
+        && isAccountActive()
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.accountStatus == resource.data.accountStatus
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['fullName', 'phoneNumber', 'profilePhoto', 'updatedAt', 'lastLoginAt'])
+      ) || (
+        // Admin role/status management: non-super_admin cannot promote to or alter super_admin
+        isAdmin()
+        && (
+          isSuperAdmin()
+          || (resource.data.role != 'super_admin' && request.resource.data.role != 'super_admin')
+        )
+      );
+
+      allow delete: if isSuperAdmin() && request.auth.uid != uid;
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Apartments Collection — apartments/{apartmentId}
+    // Public users can ONLY read published apartments. Only admins manage apartments.
+    // -------------------------------------------------------------------------
+    match /apartments/{apartmentId} {
+      allow get, list: if resource.data.publicationStatus == 'published'
+        || resource.data.active == true
+        || isStaff();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. Guests Register — guests/{guestId}
+    // Strictly private PII. Never readable by public users, guests, or cleaners.
+    // -------------------------------------------------------------------------
+    match /guests/{guestId} {
+      allow get, list: if isReceptionOrAdmin();
+      allow create, update: if isReceptionOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Bookings Collection — bookings/{bookingId}
+    // Guests read ONLY their own bookings (userId == auth.uid) and can only submit
+    // a cancellation request on their own confirmed/reserved booking.
+    // Cleaners CANNOT read bookings. Reservations are written via atomic server tx
+    // or authorized reception/admin staff.
+    // -------------------------------------------------------------------------
+    match /bookings/{bookingId} {
+      allow get, list: if isReceptionOrAdmin()
+        || (isSignedIn() && isAccountActive() && resource.data.userId == request.auth.uid);
+
+      allow create: if isReceptionOrAdmin();
+
+      allow update: if isReceptionOrAdmin() || (
+        isSignedIn()
+        && isAccountActive()
+        && resource.data.userId == request.auth.uid
+        && resource.data.status in ['inquiry', 'pending_confirmation', 'reserved', 'fully_paid']
+        && request.resource.data.status == 'cancellation_requested'
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'cancellationRequestReason', 'cancellationRequestedAt', 'updatedAt', 'history'])
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Payments Ledger — payments/{paymentId}
+    // Cleaners NEVER read financial records. Guests read ONLY their own payments.
+    // Receptionists can record pending_verification payments; ONLY admins verify/refund.
+    // -------------------------------------------------------------------------
+    match /payments/{paymentId} {
+      allow get, list: if isReceptionOrAdmin()
+        || (isSignedIn() && isAccountActive() && resource.data.userId == request.auth.uid);
+
+      allow create: if isAdmin() || (
+        isReceptionOrAdmin()
+        && request.resource.data.verificationStatus == 'pending_verification'
+      );
+
+      allow update: if isAdmin();
+      allow delete: if false; // Ledger entries are immutable; use refunds/rejections
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Quotations, Invoices, and Receipts
+    // Cleaners cannot read financial documents. Guests read ONLY their own documents.
+    // -------------------------------------------------------------------------
+    match /quotations/{quotationId} {
+      allow get, list: if isReceptionOrAdmin()
+        || (isSignedIn() && isAccountActive() && resource.data.userId == request.auth.uid);
+      allow create, update: if isReceptionOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /invoices/{invoiceId} {
+      allow get, list: if isReceptionOrAdmin()
+        || (isSignedIn() && isAccountActive() && resource.data.userId == request.auth.uid);
+      allow create, update: if isReceptionOrAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /receipts/{receiptId} {
+      allow get, list: if isReceptionOrAdmin()
+        || (isSignedIn() && isAccountActive() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. Housekeeping Tasks — staff_tasks/{taskId}
+    // Cleaners access ONLY their assigned tasks and can only update cleaning progress/notes.
+    // -------------------------------------------------------------------------
+    match /staff_tasks/{taskId} {
+      allow get, list: if isReceptionOrAdmin()
+        || (isCleaner() && resource.data.assignedTo == request.auth.uid);
+
+      allow create: if isReceptionOrAdmin();
+
+      allow update: if isReceptionOrAdmin() || (
+        isCleaner()
+        && resource.data.assignedTo == request.auth.uid
+        && request.resource.data.assignedTo == resource.data.assignedTo
+        && request.resource.data.apartmentId == resource.data.apartmentId
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'startedAt', 'completedAt', 'completedBy', 'durationMinutes', 'notes', 'updatedAt'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. Maintenance Reports — maintenance/{maintenanceId}
+    // Cleaners can view maintenance for units they service and submit new reports.
+    // -------------------------------------------------------------------------
+    match /maintenance/{maintenanceId} {
+      allow get, list: if isStaff();
+      allow create: if isStaff();
+      allow update: if isReceptionOrAdmin()
+        || (isCleaner() && (resource.data.reportedBy == request.auth.uid || resource.data.assignedTo == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 9. Notifications — notifications/{notificationId}
+    // -------------------------------------------------------------------------
+    match /notifications/{notificationId} {
+      allow get, list: if isReceptionOrAdmin()
+        || (isSignedIn() && isAccountActive() && resource.data.recipientUid == request.auth.uid);
+
+      allow create: if isReceptionOrAdmin();
+
+      allow update: if isReceptionOrAdmin() || (
+        isSignedIn()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 10. Central Media Registry — media/{mediaId}
+    // -------------------------------------------------------------------------
+    match /media/{mediaId} {
+      allow get, list: if isAdmin() || resource.data.visibility == 'public';
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 11. Settings & Aggregated Dashboard Summaries — settings/{documentId}
+    // -------------------------------------------------------------------------
+    match /settings/{documentId} {
+      allow get: if documentId in ['business', 'google_business']
+        || (documentId == 'dashboard_summary' && isReceptionOrAdmin())
+        || isAdmin();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // 12. Audit Logs — audit_logs/{logId}
+    // Strictly append-only via trusted backend; readable only by administrators.
+    // -------------------------------------------------------------------------
+    match /audit_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+  }
+}
