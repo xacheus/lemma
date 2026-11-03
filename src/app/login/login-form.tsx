@@ -49,7 +49,7 @@ export function LoginPage({ accounts, propertyName }: { accounts: Account[]; pro
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
       <div className="relative hidden flex-col justify-between bg-navy-900 px-10 py-10 text-white lg:flex">
         <div className="flex items-center gap-3">
-          <img src="/brand/logo.jpg" alt="" className="h-11 w-11 rounded-lg bg-white object-contain p-1" />
+          <img src="/brand/logo.jpg" alt="" className="h-11 w-11 rounded-lg object-cover shadow-card ring-1 ring-navy-900/10" />
           <div>
             <p className="font-display text-[1.05rem] leading-none tracking-[0.16em]">LEMMA HEIGHTS</p>
             <p className="mt-1 text-[0.68rem] uppercase tracking-[0.24em] text-navy-200">Apartments · Lusaka</p>
@@ -78,7 +78,7 @@ export function LoginPage({ accounts, propertyName }: { accounts: Account[]; pro
       <div className="flex flex-col justify-center bg-sand-50 px-5 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-[26rem]">
           <div className="mb-7 flex items-center gap-3 lg:hidden">
-            <img src="/brand/logo.jpg" alt={`${propertyName} logo`} className="h-10 w-10 rounded-lg bg-white object-contain p-1 ring-1 ring-sand-200" />
+            <img src="/brand/logo.jpg" alt={`${propertyName} logo`} className="h-10 w-10 rounded-lg object-cover ring-1 ring-navy-900/10" />
             <p className="font-display text-[1rem] tracking-[0.14em] text-navy-800">LEMMA HEIGHTS</p>
           </div>
 

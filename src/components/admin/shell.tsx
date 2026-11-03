@@ -135,9 +135,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const sidebarHeader = (
     <Link href="/admin" className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white p-1">
+      <span className="shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/logo.jpg" alt="" className="h-full w-full object-contain" />
+        <img src="/brand/logo.jpg" alt="Lemma Heights Apartments" className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/15" />
       </span>
       <span className="min-w-0">
         <span className="block truncate font-display text-[0.9rem] leading-none tracking-[0.14em] text-white">LEMMA HEIGHTS</span>
