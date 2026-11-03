@@ -50,7 +50,7 @@ src/lib/domain/      pure business rules — availability, folios, permissions, 
 src/lib/db/          deterministic seed generator + JSON store (getDb / mutate / resetDemoData)
 src/lib/api/         HTTP route wrappers, zod schemas, role projection into a snapshot
 src/lib/auth/        salted password hashes, HMAC session cookie
-src/app/api/**       22 route handlers; every mutation re-runs the availability check
+src/app/api/**       23 route handlers; every mutation re-runs the availability check
 src/app/admin/**     the eleven back-office screens
 src/app/portal/**    the cleaner's own view
 src/app/print/**     receipt + folio documents (print / Save as PDF)
