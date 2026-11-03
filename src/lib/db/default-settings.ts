@@ -59,13 +59,8 @@ export const DEFAULT_SETTINGS: Settings = {
       { day: 'Saturday', open: '07:00', close: '22:00', closed: false },
       { day: 'Sunday', open: '07:00', close: '22:00', closed: false },
     ],
-    photos: [
-      '/images/hero/exterior-building.jpg',
-      '/images/property/reception.jpg',
-      '/images/rooms/executive-suite.jpg',
-      '/images/rooms/living-room.jpg',
-      '/images/property/amenities.jpg',
-    ],
+    // Populated with uploads from /admin/media. Empty until real photography exists.
+    photos: [],
     placeId: '',
     mapsProfileUrl: '',
     googleVerified: false,

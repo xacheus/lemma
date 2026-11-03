@@ -95,6 +95,47 @@ export default function DashboardPage() {
         }
       />
 
+      {snap.total === 0 ? (
+        <Panel
+          title="Set up your property"
+          subtitle="Three records make the rest of this workspace work"
+          bodyClass="p-4"
+        >
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {[
+              {
+                href: '/admin/apartments',
+                label: 'Add the apartments',
+                body: 'Each unit carries the rate, capacity and photos the booking engine sells against.',
+              },
+              {
+                href: '/admin/staff',
+                label: 'Create staff accounts',
+                body: 'Receptionists take bookings; cleaners only see their own turnover list.',
+              },
+              {
+                href: '/admin/settings',
+                label: 'Confirm property details',
+                body: 'Phone, WhatsApp, check-in times and deposit rules appear on the public site.',
+              },
+            ].map((step, i) => (
+              <li key={step.href} className="rounded-lg border border-sand-200 bg-sand-50/60 p-3">
+                <Link href={step.href} className="group">
+                  <span className="chip">{i + 1}</span>
+                  <span className="mt-2 block text-[0.85rem] font-semibold text-navy-800 group-hover:text-teal-700">
+                    {step.label}
+                  </span>
+                  <span className="mt-1 block text-[0.78rem] leading-relaxed text-navy-500">{step.body}</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-3 text-[0.75rem] text-navy-400">
+            Nothing is pre-filled: every figure on this dashboard is computed from records your team enters.
+          </p>
+        </Panel>
+      ) : null}
+
       {metrics.pendingVerification > 0 || metrics.openMaintenance > 0 ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {metrics.pendingVerification > 0 ? (

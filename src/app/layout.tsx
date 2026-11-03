@@ -25,7 +25,6 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_ZM',
     siteName: 'Lemma Heights Apartments',
-    images: [{ url: '/images/og-cover.jpg', width: 1200, height: 630, alt: 'Lemma Heights Apartments exterior' }],
   },
   icons: {
     icon: [

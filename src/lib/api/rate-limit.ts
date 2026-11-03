@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 /**
  * Very small in-memory throttle for the unauthenticated booking endpoint. A real
- * deployment would put this at the edge; here it just stops a demo from being
+ * deployment would put this at the edge; here it just stops a public form from being
  * spammed into a wall of phantom requests.
  */
 const buckets = new Map<string, { tokens: number; updatedAt: number }>();

@@ -96,6 +96,11 @@ export default function SetupAdminPage() {
               </div>
               <p className="text-[0.82rem] text-navy-600">
                 Requires the server-side <code className="rounded bg-sand-100 px-1.5 py-0.5 text-[0.76rem]">FIRST_ADMIN_SETUP_TOKEN</code> environment variable.
+                {status && !status.tokenConfigured ? (
+                  <span className="mt-2 block rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-2.5 py-1.5 text-[0.78rem] font-medium text-st-cancelled">
+                    FIRST_ADMIN_SETUP_TOKEN is not set on this server, so provisioning cannot run yet. Add it to the environment and reload this page.
+                  </span>
+                ) : null}
               </p>
 
               <div>

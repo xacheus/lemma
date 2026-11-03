@@ -40,7 +40,6 @@ export const ALL_PERMISSIONS: PermissionKey[] = [
   'staff.super_admin',
   'settings.manage',
   'audit.view',
-  'data.reset',
 ];
 
 export const ADMIN_PERMISSIONS: PermissionKey[] = ALL_PERMISSIONS.filter(
@@ -102,7 +101,7 @@ export const PERMISSION_GROUPS: { title: string; note: string; keys: PermissionK
   {
     title: 'Administration & Security',
     note: 'Staff role assignment, audit trail, business settings and super-admin control.',
-    keys: ['staff.manage', 'staff.super_admin', 'settings.manage', 'audit.view', 'data.reset'],
+    keys: ['staff.manage', 'staff.super_admin', 'settings.manage', 'audit.view'],
   },
 ];
 

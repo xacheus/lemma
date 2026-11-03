@@ -3,16 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { AlertCircle, ArrowRight, Eye, EyeOff, KeyRound, UserPlus } from 'lucide-react';
-import { PhotoFrame } from '@/components/ui/photo';
+import { AlertCircle, ArrowRight, Eye, EyeOff, UserPlus } from 'lucide-react';
 import type { Role } from '@/lib/domain/types';
-
-interface QuickAccount {
-  name: string;
-  identifier: string;
-  role: Role;
-  jobTitle: string;
-}
 
 function destinationForRole(role: Role, nextPath: string | null): string {
   if (nextPath && nextPath.startsWith('/')) {
@@ -26,11 +18,9 @@ function destinationForRole(role: Role, nextPath: string | null): string {
 }
 
 export function LoginPage({
-  accounts,
   propertyName,
   nextPath,
 }: {
-  accounts: QuickAccount[];
   propertyName: string;
   nextPath: string | null;
 }) {
@@ -94,13 +84,18 @@ export function LoginPage({
             or sign in with an authorised staff account to operate reservations, housekeeping, and
             property administration.
           </p>
-          <div className="mt-8 overflow-hidden rounded-md ring-1 ring-white/15">
-            <PhotoFrame
-              src="/images/property/reception.jpg"
-              alt="Lemma Heights Reception Desk"
-              ratio="16 / 8"
-              variant="detail"
+          <div className="relative mt-8 overflow-hidden rounded-lg ring-1 ring-white/15">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/hero-banner.jpg"
+              alt=""
+              aria-hidden="true"
+              className="h-44 w-full object-cover object-[60%_center] opacity-90"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/30 to-transparent" />
+            <p className="absolute bottom-3 left-4 right-4 text-[0.76rem] text-white/80">
+              Chainama Lands, Great East Road — 20 minutes from Kenneth Kaunda International Airport.
+            </p>
           </div>
         </div>
 
@@ -110,7 +105,7 @@ export function LoginPage({
       </div>
 
       <div className="flex flex-col justify-center bg-sand-50 px-5 py-10 sm:px-10">
-        <div className="mx-auto w-full max-w-[27rem]">
+        <div className="animate-fade-up mx-auto w-full max-w-[27rem]">
           <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -206,32 +201,6 @@ export function LoginPage({
             </div>
           </form>
 
-          {accounts.length > 0 ? (
-            <div className="mt-6 rounded-md border border-sand-200 bg-white p-4">
-              <div className="flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-navy-500">
-                <KeyRound size={12} /> Role Verification Accounts (Password: lemma2026)
-              </div>
-              <div className="mt-2.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                {accounts.map((acc) => (
-                  <button
-                    key={acc.identifier}
-                    type="button"
-                    onClick={() => {
-                      setUsername(acc.identifier);
-                      setPassword('lemma2026');
-                      setError(null);
-                    }}
-                    className="flex flex-col items-start rounded border border-sand-200 px-2.5 py-2 text-left transition hover:border-lemma hover:bg-sand-50"
-                  >
-                    <span className="text-[0.8rem] font-semibold text-navy-900">{acc.name}</span>
-                    <span className="text-[0.68rem] uppercase tracking-[0.1em] text-navy-500">
-                      {acc.role.replace(/_/g, ' ')} · {acc.identifier}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
           <div className="mt-5 flex items-center justify-between text-[0.76rem] text-navy-500">
             <Link href="/" className="hover:text-navy-900">

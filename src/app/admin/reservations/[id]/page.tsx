@@ -62,7 +62,7 @@ export default function ReservationDetailPage() {
         <EmptyState
           icon={CalendarClock}
           title="That folio is not in this dataset"
-          body="It may have been created in another session and then wiped by a demo reset. Return to the register and open a live reservation."
+          body="It may have been created in another session, or the record has since been removed. Return to the register and open a live reservation."
           action={
             <Link href="/admin/reservations" className="btn-primary btn-sm">
               Back to reservations

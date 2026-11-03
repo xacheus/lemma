@@ -81,7 +81,7 @@ export interface NotifyInput {
 /**
  * Drafts a message. Nothing here pretends to deliver: with no provider connected
  * the record is stored as `not_connected` and reception sends it from their own
- * handset, then marks it sent. That is the honest state of the demo.
+ * handset, then marks it sent. That is the honest state of the system.
  */
 export function draftNotification(db: Database, input: NotifyInput): NotificationRecord {
   const record: NotificationRecord = {
@@ -101,7 +101,7 @@ export function draftNotification(db: Database, input: NotifyInput): Notificatio
     deliveryDetail:
       input.channel === 'in_app'
         ? 'Recorded in the operations log — nothing left the building.'
-        : 'No messaging provider is connected to this demo. Copy the text or open it in a handset, then mark it sent.',
+        : 'No messaging provider is connected. Copy the text or open it in a handset, then mark it sent.',
     markedDeliveredAt: input.channel === 'in_app' ? nowISO() : null,
     markedDeliveredBy: input.actor ?? null,
     readAt: null,
@@ -132,6 +132,7 @@ export function findOrCreateGuest(
     internalNotes?: string;
     source?: Guest['source'];
   },
+  onDuplicate: 'merge' | 'skip' = 'merge',
 ): Guest {
   if (input.guestId) {
     const existing = db.guests.find((g) => g.id === input.guestId);
@@ -148,6 +149,7 @@ export function findOrCreateGuest(
     (g) => (phone && g.phone.replace(/\s/g, '') === phone.replace(/\s/g, '')) || (email && g.email.toLowerCase() === email),
   );
   if (dupe) {
+    if (onDuplicate === 'skip') return dupe;
     const patch: Partial<Guest> = {};
     if (input.nationalId && !dupe.nationalId) patch.nationalId = input.nationalId;
     if (input.city && !dupe.city) patch.city = input.city;
@@ -1159,7 +1161,7 @@ export function updateHousekeepingTask(
         channel: 'in_app',
         title: `Maintenance reported · Apt ${apartment?.number}`,
         body: `${actorDisplayName} flagged ${apartment?.name}: ${patch.note || task.instructions}. The unit is held against new bookings until it is signed off.`,
-        recipientName: 'Alice Chanda',
+        recipientName: db.settings.property.name,
         recipientContact: db.settings.property.phone,
         apartmentId: task.apartmentId,
         reservationId: task.reservationId,
@@ -1265,15 +1267,8 @@ export function upsertApartment(db: Database, actorId: ID, input: Partial<Apartm
   }
   const number = input.number ?? Math.max(0, ...db.apartments.map((a) => a.number)) + 1;
   const name = input.name?.trim() || `Apartment ${number}`;
-  const defaultPhotoByTier =
-    input.tier === 'penthouse'
-      ? '/images/rooms/executive-suite.jpg'
-      : input.tier === 'family'
-        ? '/images/rooms/family-apartment.jpg'
-        : input.tier === 'deluxe'
-          ? '/images/rooms/luxury-bedroom.jpg'
-          : '/images/rooms/standard-bedroom.jpg';
-  const initialPhotos = input.photos?.length ? input.photos : [defaultPhotoByTier, '/images/rooms/living-room.jpg', '/images/rooms/bathroom.jpg'];
+  // No stock imagery: a new unit starts with exactly the photos the operator supplied.
+  const initialPhotos = input.photos ?? [];
   const pubStatus = input.publicationStatus ?? (input.active === false ? 'unpublished' : 'published');
   const apt: Apartment = {
     id: nextId('apt'),
@@ -1395,7 +1390,14 @@ export function upsertStaff(
     throw new OperationError('That login handle is already taken.', 409, 'duplicate');
   }
   if (!input.name?.trim()) throw new OperationError('Enter the staff member’s name.', 422, 'validation');
-  const pwHash = hashPassword(input.password || 'lemma2026');
+  const password = input.password?.trim();
+  if (!password) {
+    throw new OperationError('Set a password for this account — the person needs it to sign in.', 422, 'validation');
+  }
+  if (password.length < 6) {
+    throw new OperationError('Passwords need at least six characters.', 422, 'validation');
+  }
+  const pwHash = hashPassword(password);
   const user: StaffUser = {
     id: nextId('st'),
     name: input.name.trim(),
@@ -1412,26 +1414,30 @@ export function upsertStaff(
     passwordHash: pwHash,
   };
   db.staff.push(user);
-  db.users.unshift({
-    uid: user.id,
-    fullName: user.name,
-    email: (user.email || `${username}@lemmaheights.co.zm`).toLowerCase(),
-    phoneNumber: user.phone,
-    profilePhoto: '',
-    role: user.role,
-    accountStatus: user.active ? 'active' : 'deactivated',
-    emailVerified: true,
-    createdAt: nowISO(),
-    updatedAt: nowISO(),
-    lastLoginAt: null,
-    username: user.username,
-    jobTitle: user.jobTitle,
-    shift: user.shift,
-    permissions: user.permissions,
-    hiredOn: user.hiredOn,
-    passwordHash: pwHash,
-    sessionVersion: 1,
-  });
+  // One identity per person: the staff row is the account, so only add a user
+  // record when one with this uid does not already exist.
+  if (!db.users.some((u) => u.uid === user.id)) {
+    db.users.unshift({
+      uid: user.id,
+      fullName: user.name,
+      email: (user.email || `${username}@lemmaheights.co.zm`).toLowerCase(),
+      phoneNumber: user.phone,
+      profilePhoto: '',
+      role: user.role,
+      accountStatus: user.active ? 'active' : 'deactivated',
+      emailVerified: true,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+      lastLoginAt: null,
+      username: user.username,
+      jobTitle: user.jobTitle,
+      shift: user.shift,
+      permissions: user.permissions,
+      hiredOn: user.hiredOn,
+      passwordHash: pwHash,
+      sessionVersion: 1,
+    });
+  }
   appendAuditLog(db, {
     category: 'staff',
     action: 'staff.created',
@@ -1465,7 +1471,7 @@ export function markNotification(db: Database, id: ID, patch: { read?: boolean; 
     n.markedDeliveredAt = nowISO();
     n.markedDeliveredBy = patch.actor ?? 'Reception';
     n.readAt = n.readAt ?? nowISO();
-    n.deliveryDetail = `Sent by ${n.markedDeliveredBy} from their own handset${patch.note ? ` — ${patch.note}` : ''}. This demo has no provider to confirm delivery, so the timestamp is the staff claim, not a carrier receipt.`;
+    n.deliveryDetail = `Sent by ${n.markedDeliveredBy} from their own handset${patch.note ? ` — ${patch.note}` : ''}. No provider is connected to confirm delivery, so the timestamp is the staff claim, not a carrier receipt.`;
   }
   if (patch.note && !patch.delivered) n.deliveryDetail = patch.note;
   return n;

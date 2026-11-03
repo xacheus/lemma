@@ -56,7 +56,7 @@ export default function ApartmentDetailPage({ params }: { params: Promise<{ id: 
         <PageHeader title="Apartment not found" crumbs={[{ label: 'Apartments', href: '/admin/apartments' }]} />
         <EmptyState
           title="No apartment with that identifier"
-          body="It may have been removed from the demo dataset. Reset the data to restore the twelve seeded units."
+          body="It may have been removed from the inventory. Return to the apartment list to open a live unit."
           action={
             <Link href="/admin/apartments" className="btn-secondary h-9 px-3.5 text-[0.82rem]">
               Back to apartments

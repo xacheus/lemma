@@ -584,16 +584,47 @@ export function bootstrapFirstSuperAdmin(
     );
   }
 
-  const { user } = registerCustomerAccount(db, {
-    fullName: input.fullName,
-    email: input.email,
-    phoneNumber: input.phoneNumber,
-    password: input.password,
-  });
-  user.role = 'super_admin';
-  user.emailVerified = true;
-  user.emailVerificationToken = null;
-  user.jobTitle = 'Owner / Super Administrator';
+  if ((db.users ?? []).some((u) => u.email.toLowerCase() === input.email.trim().toLowerCase())) {
+    throw new OperationError(
+      'An account with that email address already exists.',
+      409,
+      'email_taken',
+    );
+  }
+
+  // Created directly rather than through customer registration: an owner is not a
+  // guest, so this must never create a guest-register profile for them.
+  const uid = `usr-${randomUUID().slice(0, 12)}`;
+  const now = nowISO();
+  const email = input.email.trim().toLowerCase();
+  // A readable handle derived from the email, kept unique across the account list.
+  const baseHandle = email.split('@')[0].replace(/[^a-z0-9._-]/g, '') || 'admin';
+  let username = baseHandle;
+  for (let i = 2; (db.users ?? []).some((u) => u.username === username) && i < 100; i += 1) {
+    username = `${baseHandle}${i}`;
+  }
+  const user: UserRecord = {
+    uid,
+    fullName: input.fullName.trim(),
+    email,
+    phoneNumber: input.phoneNumber.trim(),
+    profilePhoto: '',
+    role: 'super_admin',
+    accountStatus: 'active',
+    emailVerified: true,
+    createdAt: now,
+    updatedAt: now,
+    lastLoginAt: now,
+    username,
+    jobTitle: 'Owner / Super Administrator',
+    passwordHash: hashPassword(input.password),
+    emailVerificationToken: null,
+    passwordResetToken: null,
+    passwordResetExpiresAt: null,
+    sessionVersion: 1,
+  };
+  db.users = db.users ?? [];
+  db.users.unshift(user);
   syncStaffMirrorFromUser(db, user);
 
   appendAuditLog(db, {

@@ -207,7 +207,7 @@ export default function PaymentsPage() {
                       ) : (
                         <span
                           className="grid h-14 w-14 shrink-0 place-items-center rounded-lg border border-dashed border-sand-300 text-navy-300"
-                          title={p.proof ? `${p.proof.fileName} — the file itself is not kept in the demo` : 'No proof attached'}
+                          title={p.proof ? `${p.proof.fileName} — attached as evidence of this receipt` : 'No proof attached'}
                         >
                           <Paperclip size={16} />
                         </span>

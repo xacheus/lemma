@@ -303,7 +303,7 @@ export function Segmented<T extends string>({
   );
 }
 
-/** Reads an image file to a data URL so proof of payment survives a reload in the demo. */
+/** Reads an image file to a data URL so the proof of payment travels with the receipt record. */
 export function ProofUploader({
   value,
   onChange,
@@ -357,7 +357,7 @@ export function ProofUploader({
           if (!file) return;
           if (file.size > maxBytes) {
             setState('error');
-            setMessage(`That image is ${(file.size / 1024).toFixed(0)} KB — the demo stores proof inline, so it is capped at ${Math.round(maxBytes / 1000)} KB.`);
+            setMessage(`That image is ${(file.size / 1024).toFixed(0)} KB — proof is stored inline with the receipt, so it is capped at ${Math.round(maxBytes / 1000)} KB.`);
             return;
           }
           setState('reading');

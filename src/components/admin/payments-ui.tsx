@@ -287,7 +287,7 @@ export function VerificationDialog({
 
         <Alert tone="warn" title="Only confirm what you have actually traced">
           Sign this off after locating {payment.method === 'cash' ? 'the notes in the drawer and the receipt counterfoil' : `the reference ${payment.reference || '(none)'} in the ${PAYMENT_METHOD_META[payment.method].label} statement`}. A
-          screenshot on its own is not proof, and this demo is not connected to any provider that could check for you.
+          a screenshot on its own is not proof, and no payment provider is connected to check it for you.
         </Alert>
 
         <TextArea label="Verifier note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={400} placeholder="e.g. Located MP144729031847 on the Airtel merchant report at 14:05." />
@@ -394,7 +394,7 @@ export function MessageComposer({
       subtitle={
         providerConnected
           ? 'Delivery is confirmed by staff after they send it, because no provider is wired up.'
-          : 'Nothing is dispatched automatically: this demo has no WhatsApp, SMS or email provider connected.'
+          : 'Nothing is dispatched automatically: no WhatsApp, SMS or email provider is connected.'
       }
       footer={
         <>
