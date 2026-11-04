@@ -1,8 +1,29 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
+/**
+ * The canonical origin, used for absolute URLs in metadata and OG tags.
+ *
+ * Order matters: an explicit domain wins, then whatever host Vercel is actually
+ * serving. `VERCEL_PROJECT_PRODUCTION_URL` is the stable production domain and is
+ * preferred over `VERCEL_URL`, which is the per-deployment host and changes on every
+ * push. Reading these means the site is correct on a `*.vercel.app` URL without
+ * anyone having to hardcode one; setting `NEXT_PUBLIC_SITE_URL` later overrides it
+ * without a code change.
+ */
+function siteOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit.startsWith('http') ? explicit : `https://${explicit}`;
+
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || '';
+  if (vercelHost) return `https://${vercelHost}`;
+
+  return 'http://localhost:3000';
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(siteOrigin()),
   applicationName: 'Lemma Apartments',
   title: {
     default: 'Lemma Apartments — Furnished Apartments at Barlaston Park, Lusaka',

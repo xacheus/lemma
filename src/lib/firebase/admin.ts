@@ -15,15 +15,41 @@ import type { AccountStatus, Role } from '../domain/types';
  * Security invariant: Service account credentials must NEVER be prefixed with `NEXT_PUBLIC_`.
  */
 
+/**
+ * Turns the stored key into a real PEM.
+ *
+ * Operators paste this value from a service-account JSON file, so it arrives in one of
+ * two shapes: with real newlines, or as a single line of literal `\n` sequences. Both
+ * are accepted. A value wrapped in quotes is not — it parses as a string that merely
+ * starts with `"-----BEGIN`, which the crypto layer rejects with an unhelpful
+ * `DECODER routines::unsupported` on first use rather than at startup.
+ */
+function normalisePrivateKey(raw: string): string | null {
+  let key = raw.trim();
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    // Quotes are a paste artefact, never part of a PEM. Strip them rather than fail.
+    key = key.slice(1, -1).trim();
+  }
+  key = key.replace(/\\n/g, '\n');
+  if (!key.includes('BEGIN PRIVATE KEY') || !key.includes('END PRIVATE KEY')) return null;
+  return key;
+}
+
+/**
+ * True only when all three credentials are present *and* the key is usable. Checking
+ * the shape here means a malformed paste is reported as "not configured" — which every
+ * caller already handles by degrading gracefully — instead of passing every startup
+ * check and then throwing on the first request that touches Firestore.
+ */
 export function isFirebaseAdminConfigured(): boolean {
   if (process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY) {
     throw new Error('SECURITY VIOLATION: FIREBASE_PRIVATE_KEY must never use NEXT_PUBLIC_.');
   }
-  return Boolean(
-    process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY,
-  );
+  const raw = process.env.FIREBASE_PRIVATE_KEY;
+  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !raw) {
+    return false;
+  }
+  return normalisePrivateKey(raw) !== null;
 }
 
 let adminApp: App | null = null;
@@ -41,7 +67,8 @@ export function getFirebaseAdminApp(): App | null {
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID!,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+      // Same normalisation the check above used, so the two can never disagree.
+      privateKey: normalisePrivateKey(process.env.FIREBASE_PRIVATE_KEY!)!,
     }),
   });
   return adminApp;
