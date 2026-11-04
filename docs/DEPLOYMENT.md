@@ -66,9 +66,27 @@ reports `firebaseAdminConfigured`. If it is false, the key did not parse.
    Without the rules the collections are governed by whatever the project default is;
    `firestore.rules` and `firestore.indexes.json` are both in the repo root.
 
-2. Appoint the first administrator. There is no bootstrap token by design: set `role`
-   to `admin` on the account's `users/{uid}` document in the Firebase console. The
-   session resolver reads that document, so it applies on the next request.
+2. Appoint the first administrator. There is no bootstrap token and no setup screen by
+   design. Two routes work; **use the second one**, because it needs no Firebase Auth
+   account and therefore none of the `NEXT_PUBLIC_FIREBASE_*` variables:
+
+   **Route A, a Firebase Auth account.** Create the user in **Firebase Console →
+   Authentication**, sign in at `/login`. That path runs through the Firebase web SDK
+   and `/api/auth/firebase-session`, so it requires both the Admin credentials above
+   *and* the six web SDK variables from section 4.
+
+   **Route B, an ordinary account (recommended).** Register at `/register`, which
+   creates the profile in Firestore with `role: 'guest'`. Then open **Firestore →
+   `users` → that account's document** and change `role` to `admin`.
+
+   Either way the promotion is read from Firestore on the next request, with no
+   redeploy: `getSession()` calls `syncRoleFromFirestore()`, which compares the
+   document against the cached row and applies `applyConsoleRoleChange()` when they
+   differ (`src/lib/auth/session.ts`).
+
+   Verified end to end here: a fresh registration was refused at `/admin`
+   (redirected to `/account`), its `role` was changed to `admin` in the store, and
+   the same session then loaded the dashboard without a new sign-in.
 
 ---
 
@@ -116,6 +134,20 @@ add after the first deploy, but the feature is off until you do.
 The safest choice today is to leave all six unset. The app is designed to run on the
 server-side password path, and enabling the web SDK adds a second way in that the login
 form has to reconcile.
+
+**If you do enable it, set all six in the same change as the Admin credentials.** There
+is a specific failure waiting otherwise. With `NEXT_PUBLIC_FIREBASE_API_KEY` and
+`NEXT_PUBLIC_FIREBASE_PROJECT_ID` set but Admin missing, an account that exists in
+Firebase Auth but has no local password cannot sign in at all:
+
+1. The web SDK signs in and posts the ID token to `/api/auth/firebase-session`
+2. That route returns `501 firebase_not_configured`, because it needs the Admin SDK
+3. `login-form.tsx` falls through to `/api/auth/login`, which has no local hash
+4. Firebase rejects it as `auth/invalid-credential`, which the form treats as a wrong
+   password and stops — the fall-through to the local path never happens
+
+`measurementId` / `G-` IDs have no counterpart in this codebase. Nothing reads them and
+`getAnalytics` is never called, so leaving them out loses nothing.
 
 ---
 
