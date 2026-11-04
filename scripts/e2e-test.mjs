@@ -14,8 +14,6 @@ import path from 'node:path';
 const BASE = process.argv[2] || 'http://localhost:3000';
 const DATA_FILE = process.env.E2E_DATA_FILE ||
   (process.env.LEMMA_DATA_DIR ? path.join(process.env.LEMMA_DATA_DIR, 'lemma-db.json') : null);
-const SAMPLE_IDS = new Set(['apt-studio', 'apt-one_bed', 'apt-family']);
-const isSample = (id) => SAMPLE_IDS.has(id);
 
 async function verifyLocalGuest(email, session) {
   if (!DATA_FILE) return false;
@@ -87,19 +85,88 @@ async function book(body, session = null) {
 const run = async () => {
   console.log(`\nLemma Apartments — end-to-end check against ${BASE}\n`);
 
-  console.log('1. Staff sign-in');
+  console.log('1. Staff sign-in & clean initial state');
   const login = await call('/api/auth/login', { method: 'POST', body: { username: ADMIN_EMAIL, password: ADMIN_PASSWORD }, session: 'admin' });
   check('administrator can sign in', login.json?.ok === true, JSON.stringify(login.json).slice(0, 200));
-  const snap = await call('/api/session');
-  const apartments = snap.json?.data?.apartments ?? [];
-  check('apartment catalogue loads', apartments.length >= 3, `${apartments.length} units`);
-  const unit = apartments.find((a) => a.maxGuests >= 2) ?? apartments[0];
-  check('catalogue unit has six photographs', (unit.photos ?? []).length >= 6);
 
-  console.log('\n2. Public pages render the catalogue');
-  for (const path of ['/', '/apartments', `/apartments/${unit.slug}`, '/contact', '/policies']) {
-    const { status } = await call(path, { raw: true, session: null });
-    check(`GET ${path} → 200`, status === 200, `status ${status}`);
+  const dataStats = await call('/api/data');
+  check(
+    'register summary hides backend storage internals',
+    dataStats.json?.ok === true &&
+      !('backendMode' in (dataStats.json?.data ?? {})) &&
+      !('file' in (dataStats.json?.data ?? {})) &&
+      !('sizeBytes' in (dataStats.json?.data ?? {})),
+    JSON.stringify(dataStats.json?.data),
+  );
+
+  let snap = await call('/api/session');
+  check(
+    'session snapshot hides cloud & auth provider keys',
+    !('cloudinaryCloudName' in (snap.json?.data?.integrations ?? {})) &&
+      !('firebaseClientConfigured' in (snap.json?.data?.integrations ?? {})),
+    JSON.stringify(snap.json?.data?.integrations),
+  );
+
+  let apartments = snap.json?.data?.apartments ?? [];
+  if (apartments.length === 0) {
+    check('fresh database starts with zero fake apartments', apartments.length === 0);
+    const emptyHome = await fetch(`${BASE}/`).then((r) => r.text());
+    check('empty-state homepage renders LodgingBusiness JSON-LD', emptyHome.includes('"@type":"LodgingBusiness"'));
+    check('empty-state homepage has zero stock photos', !emptyHome.includes('/images/apartments/'));
+
+    // Configure test payment account numbers & create real apartments via Admin API for E2E checks
+    const existingMethods = snap.json?.data?.settings?.payments?.methods ?? [];
+    const configuredMethods = existingMethods.map((m) =>
+      m.id === 'airtel_money'
+        ? { ...m, accountNumber: '0970000111', mobileNumber: '0970000111', recipientName: 'Lemma Apartments', instructions: 'Send via Airtel Money to 0970000111 quoting your booking reference.' }
+        : m.id === 'mtn_money'
+          ? { ...m, accountNumber: '0960000222', mobileNumber: '0960000222', recipientName: 'Lemma Apartments', instructions: 'Send via MTN MoMo to 0960000222 quoting your booking reference.' }
+          : m,
+    );
+    await call('/api/settings', { method: 'PATCH', body: { payments: { methods: configuredMethods } } });
+
+    await call('/api/apartments', {
+      method: 'POST',
+      body: {
+        name: 'Barlaston Studio Suite',
+        tier: 'studio',
+        tagline: 'Self-catering ground-floor studio at Barlaston Park.',
+        description: 'Private furnished studio apartment with kitchen, backup power and Wi-Fi.',
+        maxGuests: 2,
+        bedrooms: 0,
+        bathrooms: 1,
+        sizeSqm: 38,
+        nightlyRate: 950,
+        amenities: ['Wi-Fi', 'Backup power', 'Fully fitted kitchen'],
+      },
+    });
+    await call('/api/apartments', {
+      method: 'POST',
+      body: {
+        name: 'Barlaston One-Bedroom Suite',
+        tier: 'deluxe',
+        tagline: 'Separate lounge and bedroom for longer Lusaka stays.',
+        description: 'Private one-bedroom apartment with full kitchen, backup power and Wi-Fi.',
+        maxGuests: 3,
+        bedrooms: 1,
+        bathrooms: 1,
+        sizeSqm: 54,
+        nightlyRate: 1350,
+        amenities: ['Wi-Fi', 'Backup power', 'Fully fitted kitchen', 'Washer'],
+      },
+    });
+
+    snap = await call('/api/session');
+    apartments = snap.json?.data?.apartments ?? [];
+  }
+
+  check('admin-created apartments load in the register', apartments.length >= 2, `${apartments.length} units`);
+  const unit = apartments.find((a) => a.maxGuests >= 2) ?? apartments[0];
+
+  console.log('\n2. Public pages & SEO routes render');
+  for (const routePath of ['/', '/apartments', `/apartments/${unit.slug}`, '/about', '/contact', '/policies', '/robots.txt', '/sitemap.xml', '/opengraph-image']) {
+    const { status } = await call(routePath, { raw: true, session: null });
+    check(`GET ${routePath} → 200`, status === 200, `status ${status}`);
   }
 
   console.log('\n3. Guest account');
@@ -180,21 +247,11 @@ const run = async () => {
   console.log('\n4b. Payment instructions follow the chosen method');
   const payInfo = booking.json?.data?.payment;
   const methodList = booking.json?.data?.methods ?? [];
-  if (isSample(unit.id)) {
-    check('an example listing remains an enquiry, even before confirmation', booking.json?.data?.status === 'inquiry');
-    check('an unconfirmed example does not provide payment instructions', !payInfo && methodList.length === 0);
-    const earlyClaim = await call('/api/payments/claims', {
-      method: 'POST', session: 'guest',
-      body: { reservationId, amount: 100, method: 'airtel_money', reference: 'TOO-EARLY' },
-    });
-    check('payment proof is blocked until reception confirms the example', earlyClaim.status === 409);
-  } else {
-    check('the booking returns payment instructions', Boolean(payInfo), JSON.stringify(payInfo));
-    check('the instructions match the chosen channel', payInfo?.method === 'airtel_money', payInfo?.method);
-    check('the destination is configured', Boolean(payInfo?.accountNumber), payInfo?.accountNumber);
-    check('the booking reference is the payment reference', payInfo?.reference === reference);
-    check('enabled Zambian payment channels are offered', methodList.length >= 3);
-  }
+  check('the booking returns payment instructions', Boolean(payInfo), JSON.stringify(payInfo));
+  check('the instructions match the chosen channel', payInfo?.method === 'airtel_money', payInfo?.method);
+  check('the destination is configured', Boolean(payInfo?.accountNumber), payInfo?.accountNumber);
+  check('the booking reference is the payment reference', payInfo?.reference === reference);
+  check('enabled Zambian payment channels are offered', methodList.length >= 3);
   const settingsSnap = await call('/api/session');
   const configured = settingsSnap.json?.data?.settings?.payments?.methods ?? [];
   const mtm = configured.find((m) => m.id === 'mtn_money');
@@ -211,10 +268,6 @@ const run = async () => {
     body: { kind: 'status', status: 'reserved', note: 'Deposit taken at the desk.' },
   });
   check('staff can confirm the booking', reserved.json?.ok === true, JSON.stringify(reserved.json).slice(0, 200));
-  if (isSample(unit.id)) {
-    const afterConfirmation = await call(`/api/payments/claims?reservationId=${reservationId}`, { session: 'guest' });
-    check('payment instructions become available after confirmation', afterConfirmation.json?.data?.quote?.methods?.length >= 3);
-  }
   const overlapAfter = await book({ ...bookingBody, checkIn: isoAdd(31), checkOut: isoAdd(34) });
   check(
     'overlapping dates are refused once the stay is confirmed',
@@ -392,9 +445,9 @@ const run = async () => {
   check('a visitor can book without an account', visitorBooking.json?.ok === true, JSON.stringify(visitorBooking.json).slice(0, 200));
   const visitorId = visitorBooking.json?.data?.id;
   const visitorTotal = visitorBooking.json?.data?.totalAmount;
-  if (visitorId && isSample(unit.id)) {
+  if (visitorId && visitorBooking.json?.data?.status === 'inquiry') {
     const confirmedVisitor = await call(`/api/reservations/${visitorId}/actions`, {
-      method: 'POST', body: { kind: 'status', status: 'reserved', note: 'Example confirmed for test.' },
+      method: 'POST', body: { kind: 'status', status: 'reserved', note: 'Confirmed for E2E test.' },
     });
     check('reception confirms the visitor enquiry', confirmedVisitor.json?.ok === true);
   }
@@ -650,7 +703,7 @@ const run = async () => {
 
   console.log('\n10. Homepage and public catalogue read the new data');
   const home = await fetch(`${BASE}/`).then((r) => r.text());
-  check('homepage lists the studio apartment', home.includes('Studio Apartment'));
+  check('homepage lists the published apartment', home.includes(unit.name));
   check('homepage quotes Kwacha rates', /K\d/.test(home));
 
   console.log('\n11. Amenities are opt-in');
@@ -664,6 +717,7 @@ const run = async () => {
   check('a ticked amenity appears on the public page', publicUnit.includes('Swimming pool'));
   check('a hand-written amenity appears too', publicUnit.includes('A private courtyard'));
   check('an unticked amenity is absent', !publicUnit.includes('Gym') && !publicUnit.includes('Washing machine'));
+  check('apartment detail page includes Apartment JSON-LD', publicUnit.includes('"@type":"Apartment"'));
   const guestAmenity = await call(`/api/apartments/${amenityUnit.id}`, {
     method: 'PATCH',
     session: 'guest',
@@ -673,11 +727,12 @@ const run = async () => {
   // Put the unit's own list back so the run leaves nothing odd behind.
   await call(`/api/apartments/${amenityUnit.id}`, { method: 'PATCH', body: { amenities: amenityUnit.amenities } });
 
-  console.log('\n12. Homepage hero and full-screen menu');
+  console.log('\n12. Homepage hero, clean copy and full-screen menu');
   const homeHtml = await fetch(`${BASE}/`).then((r) => r.text());
   check('the homepage renders the animated carousel', homeHtml.includes('aria-roledescription="carousel"'));
-  check('the hero offers apartment enquiry links', homeHtml.includes('Check availability') && homeHtml.includes('Send an enquiry'));
-  check('the hero frames use representative stock photography', /\/images\/apartments\//.test(homeHtml) && homeHtml.includes('Representative'));
+  check('the hero offers direct booking links', homeHtml.includes('Check availability') && homeHtml.includes('Request dates'));
+  check('zero fake stock photography or sample disclaimers appear', !/\/images\/apartments\//.test(homeHtml) && !homeHtml.includes('Representative') && !homeHtml.includes('Sample catalogue'));
+  check('zero infrastructure or vendor terms appear on public HTML', !/Brevo|Cloudinary|Firestore|Serverless/i.test(homeHtml));
   check('the menu uses a full-screen dialog', homeHtml.includes('aria-haspopup="dialog"'));
   check('the old short drawer is gone', !homeHtml.includes('max-h-[22rem]'));
   const staffHome = await fetch(`${BASE}/`, { headers: { cookie: `lemma_session=${jar.get('admin')}` } }).then((r) => r.text());

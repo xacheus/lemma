@@ -1,12 +1,8 @@
 # Operational boundaries
 
-- **Photographs and apartment details:** The three original units are examples, not
-  independently verified inventory. Their 18 Pexels images are representative stock
-  photographs, not photographs of Lemma Apartments. Confirm layouts, amenities,
-  availability and final prices with reception. Example enquiries require staff
-  confirmation before a guest is shown payment instructions. Replace the examples
-  with verified inventory and property photos when available; see
-  [PHOTOGRAPHY.md](PHOTOGRAPHY.md).
+- **Photographs and apartment inventory:** A new install contains no sample listings
+  or stock photography. Management publishes real apartments, nightly ZMW rates, and
+  verified property photographs from `/admin/apartments` and `/admin/media`.
 - **Persistence:** Cloud Firestore is the durable multi-instance production store.
   When Firebase Admin is not yet configured or Firestore has not been enabled, the app
   falls back to an atomic JSON store (`.data/` locally or `os.tmpdir()` on serverless)
@@ -17,11 +13,12 @@
   the current approach reads the property's collections together, so very large
   portfolios would need a more targeted data model.
 - **Live verification:** Unit tests cover document diffs, local rollback/serialization,
-  account ownership, sample status and signature inputs. The local HTTP suite exercises
-  booking, staff and payment flows. No service-account credentials or accessible Vercel
-  project were supplied in this workspace, so transaction behaviour on the **actual**
-  Firestore project and live Cloudinary uploads have **not** been verified here.
-  Follow the [deployment checklist](DEPLOYMENT.md) with an authorised operator.
+  account ownership, clean empty-store defaults, vector PDF generation, and signature
+  inputs. The local HTTP suite exercises booking, staff and payment flows. No
+  service-account credentials or accessible Vercel project were supplied in this
+  workspace, so transaction behaviour on the **actual** Firestore project and live
+  Cloudinary uploads have **not** been verified here. Follow the
+  [deployment checklist](DEPLOYMENT.md) with an authorised operator.
 - **Email and account recovery:** Registering creates an account even without an email
   provider, but an unverified email cannot claim historical visitor bookings or
   documents. Verification and password-reset links require a configured delivery
@@ -30,9 +27,9 @@
 - **Payments:** Airtel Money, MTN MoMo, bank transfers and cash are recorded as
   guest claims or staff entries; none is an automatic provider settlement. A person
   compares the reference or receipt with the provider statement and verifies it.
-  Attached payment proof is currently embedded in the claim (not uploaded to
-  Cloudinary) and must be under 500 KB to fit in one Firestore document; a text-only
-  reference can be submitted. No bank callback or automatic refund transfer
+  High-resolution mobile photos and screenshots attached as payment proof are
+  automatically downscaled and compressed in the browser before submission so they fit
+  cleanly within a single document; a text-only reference can also be submitted. No bank callback or automatic refund transfer
   is implemented.
 - **Messages and reminders:** Firebase Cloud Messaging, device-token registration,
   permission prompts, push delivery and announcement broadcasts are not yet implemented.

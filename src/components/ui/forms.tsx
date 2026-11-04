@@ -2,6 +2,7 @@
 
 import { AlertCircle, ChevronDown, Loader2, Search, X } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
+import { preparePaymentProofFile } from '@/lib/browser/compress-image';
 
 /* ------------------------------------------------------------------------- wrappers */
 
@@ -325,7 +326,7 @@ export function ProofUploader({
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.82rem] font-semibold text-navy-800">{value.fileName}</p>
             <p className="text-[0.75rem] text-navy-400">
-              {(value.sizeBytes / 1024).toFixed(0)} KB · attached to this receipt as evidence, not as confirmation
+              Attached as supporting payment slip
             </p>
           </div>
           <button type="button" className="btn-secondary btn-sm" onClick={() => onChange(null)}>
@@ -336,7 +337,7 @@ export function ProofUploader({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-[0.82rem] font-semibold text-navy-700">Attach proof of payment</p>
-            <p className="text-[0.75rem] text-navy-400">A photo of the Airtel/MTN SMS or the deposit slip. JPG or PNG up to {Math.round(maxBytes / 1000)} KB.</p>
+            <p className="text-[0.75rem] text-navy-400">A photo or screenshot of the mobile-money confirmation or deposit slip.</p>
           </div>
           <div className="flex items-center gap-2">
             {state === 'reading' ? <Loader2 size={14} className="animate-spin text-navy-400" /> : null}
@@ -350,29 +351,22 @@ export function ProofUploader({
       <input
         ref={input}
         type="file"
-        accept="image/png,image/jpeg"
+        accept="image/png,image/jpeg,image/webp,application/pdf"
         className="sr-only"
-        onChange={(e) => {
+        onChange={async (e) => {
           const file = e.target.files?.[0];
+          e.target.value = '';
           if (!file) return;
-          if (file.size > maxBytes) {
-            setState('error');
-            setMessage(`That image is ${(file.size / 1024).toFixed(0)} KB — proof is stored inline with the receipt, so it is capped at ${Math.round(maxBytes / 1000)} KB.`);
-            return;
-          }
           setState('reading');
           setMessage(null);
-          const reader = new FileReader();
-          reader.onload = () => {
-            onChange({ fileName: file.name, mimeType: file.type, dataUrl: String(reader.result), sizeBytes: file.size });
-            setState('idle');
-          };
-          reader.onerror = () => {
+          const prepared = await preparePaymentProofFile(file);
+          if (!prepared.ok) {
             setState('error');
-            setMessage('The file could not be read. Try another photo.');
-          };
-          reader.readAsDataURL(file);
-          e.target.value = '';
+            setMessage(prepared.error);
+            return;
+          }
+          onChange(prepared.file);
+          setState('idle');
         }}
       />
     </div>

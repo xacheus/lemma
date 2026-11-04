@@ -6,16 +6,13 @@ receipts, housekeeping and staff operations in one application.
 
 ## What a new install contains
 
-- **Local development** includes three editable **example listings**, each with six
-  licensed Pexels stock photographs. They remain public as requested, but the site
-  labels the listings and photographs as representative. They are not verified
-  property inventory, and guests are asked to confirm the unit and final price
-  with reception. Example enquiries do **not** display payment instructions until
-  staff confirm the stay. See [photography provenance](docs/PHOTOGRAPHY.md).
-- **A new Firestore project** starts with no apartments, accounts or bookings. Existing
-  Firestore documents, including earlier example units, remain in place and their
-  untouched example galleries gain the additional photographs. Staff should create
-  and verify real inventory as it becomes available.
+- **Zero fake data by default:** Both local development and a new Cloud Firestore
+  project start with **zero pre-seeded apartments, zero stock photographs, and zero
+  placeholder bookings**. Until an administrator publishes real apartments under
+  `/admin/apartments`, the public website displays clean Barlaston Park direct-contact
+  and enquiry cards rather than fabricated listings.
+- **Hospitality-first UI:** Public, guest, and staff interfaces never expose backend
+  storage mechanics, environment variable names, or third-party infrastructure providers.
 
 ## Run locally
 

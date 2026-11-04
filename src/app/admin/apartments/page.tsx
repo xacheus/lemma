@@ -126,7 +126,7 @@ export default function ApartmentsPage() {
         <EmptyState
           icon={Plus}
           title="No apartments yet"
-          body="The booking engine sells whatever is in this list, so start here: add each unit with its rate, capacity and photos. Until then the public site shows a contact card instead of a catalogue."
+          body="Add each apartment with its nightly Kwacha rate, guest capacity and photographs to open online availability. Until then, visitors see direct reception contact details."
           action={
             can('apartments.manage') ? (
               <button type="button" className="btn-primary btn-sm" onClick={() => setCreating(true)}>

@@ -21,13 +21,12 @@ existing Firestore apartment documents remain in place.
 
 The first four connect durable, cross-instance persistence and stable sessions.
 When Firebase Admin is not yet configured (or if Cloud Firestore has not been enabled
-yet), the site remains live and serves the labelled starter catalogue using a fallback
-store (`.data/` locally or `os.tmpdir()` on serverless platforms) with a bounded 4s
-timeout and 30s cooldown. Because serverless temporary storage resets on cold starts,
-configure Cloud Firestore and `LEMMA_SESSION_SECRET` before accepting real production
-bookings so accounts and reservations persist permanently across instances.
-Cloudinary is required for new production photo uploads; without it, checked-in
-representative stock photos and existing Cloudinary photographs continue to display.
+yet), the site remains live using a clean empty fallback store (`.data/` locally or
+`os.tmpdir()` on serverless platforms) with a bounded 4s timeout and 30s cooldown.
+Because serverless temporary storage resets on cold starts, configure Cloud Firestore
+and `LEMMA_SESSION_SECRET` before accepting real production bookings so accounts,
+apartments and reservations persist permanently across instances. Cloudinary is
+recommended for production apartment photo uploads.
 
 `FIREBASE_PRIVATE_KEY` comes from **Firebase Console → Project settings → Service
 accounts → Generate new private key**. Keep its BEGIN/END PRIVATE KEY lines. A
@@ -121,8 +120,8 @@ Settings → Environment Variables**, check that:
 
 After setting the variables, redeploy and, with test accounts only:
 
-1. Confirm `/`, `/apartments`, and an apartment detail page render without broken
-   images; the three sample units and stock photos must be clearly identified.
+1. Confirm `/`, `/apartments`, `/robots.txt`, `/sitemap.xml`, and `/opengraph-image`
+   render cleanly, and add your real apartment units and photographs in `/admin/apartments`.
 2. Register a new guest; sign out, restart/redeploy and sign in again. If the account
    disappears, the wrong Firestore project or credentials were used.
 3. Create an enquiry, confirm it as staff, check that overlapping confirmed stays

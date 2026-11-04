@@ -76,7 +76,7 @@ export function StaffImport({ onClose }: { onClose: () => void }) {
               const file = e.target.files?.[0];
               if (!file) return;
               if (file.size > 500_000) {
-                setError('That file is larger than 500 KB — split the list.');
+                setError('That CSV file is too large — please split the staff list into smaller batches.');
                 return;
               }
               setCsv(await file.text());

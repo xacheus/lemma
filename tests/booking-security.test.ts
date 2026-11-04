@@ -2,7 +2,7 @@ import { ownsGuestResource } from '../src/lib/domain/ownership';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEmptyDatabase } from '../src/lib/db/store';
-import { buildStartingCatalogue } from '../src/lib/db/starting-catalogue';
+import { buildTestApartments } from './helpers';
 import { createReservation, setReservationStatus } from '../src/lib/domain/operations';
 import { requestBookingCancellation, registerCustomerAccount } from '../src/lib/domain/production-ops';
 import { buildSnapshot } from '../src/lib/api/snapshot';
@@ -12,7 +12,7 @@ import { permissionsFor } from '../src/lib/domain/permissions';
 
 function setup() {
   const db = createEmptyDatabase('2026-11-04');
-  db.apartments = buildStartingCatalogue('2026-11-04').apartments;
+  db.apartments = buildTestApartments();
   const account = registerCustomerAccount(db, { email: 'owner@example.invalid', fullName: 'Account Owner', phoneNumber: '1234', password: 'Password123!' }).user;
   account.emailVerified = true;
   return { db, account };

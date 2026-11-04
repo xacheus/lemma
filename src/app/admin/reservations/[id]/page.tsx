@@ -8,6 +8,7 @@ import {
   Banknote,
   CalendarClock,
   CircleDollarSign,
+  MessageCircle,
   MessageSquare,
   PencilLine,
   Phone,
@@ -29,6 +30,7 @@ import { FolioPrintLink, MessageComposer, PaymentDialog, VerificationDialog } fr
 import { formatKwacha } from '@/lib/domain/money';
 import { formatDateTime, formatLongDate, relativeDayLabel } from '@/lib/domain/dates';
 import { BOOKING_STATUS_META, CLEANING_STATUS_META, PAYMENT_METHOD_META, PAYMENT_STATUS_META, SOURCE_META, VERIFICATION_META } from '@/lib/domain/status';
+import { buildGuestWhatsAppUrl } from '@/lib/domain/whatsapp';
 import type { Payment } from '@/lib/domain/types';
 
 export default function ReservationDetailPage() {
@@ -97,6 +99,16 @@ export default function ReservationDetailPage() {
   }
 
   const nightsLabel = `${r.nights} night${r.nights === 1 ? '' : 's'}`;
+  const guestWhatsAppHref = buildGuestWhatsAppUrl(
+    guest?.phone,
+    [
+      `Hello ${guest?.fullName?.split(' ')[0] ?? 'there'}, this is reception at ${snapshot.settings.property.name}.`,
+      `Regarding booking ${r.reference} (${formatLongDate(r.checkIn)} to ${formatLongDate(r.checkOut)}):`,
+      r.balanceDue > 0
+        ? `Your current balance is ${formatKwacha(r.balanceDue)}. Let us know if you need our payment details or arrival directions.`
+        : 'Your reservation balance is settled in full. We look forward to welcoming you.',
+    ].join(' '),
+  );
 
   return (
     <div className="space-y-4">
@@ -124,6 +136,16 @@ export default function ReservationDetailPage() {
               <ArrowLeft size={15} /> Register
             </Link>
             <FolioPrintLink reservationId={r.id} />
+            {guestWhatsAppHref ? (
+              <a
+                href={guestWhatsAppHref}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary h-10 px-3.5"
+              >
+                <MessageCircle size={15} /> WhatsApp
+              </a>
+            ) : null}
             {can('notifications.send') ? (
               <button onClick={() => setMessageOpen(true)} className="btn-secondary h-10 px-3.5">
                 <MessageSquare size={15} /> Message guest

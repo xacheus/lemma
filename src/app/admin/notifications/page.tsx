@@ -142,7 +142,9 @@ export default function NotificationsPage() {
       <Alert tone="info" title="Messaging and delivery">
         <div className="space-y-2">
           <p>
-            Reminder sweeps create drafts. A configured provider may accept messages sent from the composer; acceptance is not proof of delivery. Messages marked sent by staff are recorded separately as manual claims.
+            Reminder sweeps prepare outgoing drafts for upcoming arrivals, departures and balances.
+            Staff can send messages directly when a channel is active or open a prefilled WhatsApp,
+            SMS or email handoff in one click.
           </p>
           <div className="flex flex-wrap gap-2">
             {(['whatsapp', 'sms', 'email'] as NotificationChannel[]).map((c) => {
@@ -152,11 +154,11 @@ export default function NotificationsPage() {
                   {c === 'whatsapp' ? <MessageSquare size={12} /> : c === 'sms' ? <MessageCircle size={12} /> : <Mail size={12} />}
                   <span className="font-semibold capitalize text-navy-700">{c}</span>
                   <span className={setting.connected ? 'text-st-available' : 'text-navy-400'}>
-                    {setting.connected ? 'configured' : setting.enabled ? `not configured · ${setting.provider ?? 'no provider'}` : 'disabled'}
+                    {setting.connected ? 'direct send' : setting.enabled ? 'manual handoff' : 'off'}
                   </span>
                   {can('settings.manage') ? (
                     <Link href="/admin/settings" className="text-teal-700 hover:underline">
-                      configure
+                      settings
                     </Link>
                   ) : null}
                 </span>
@@ -238,7 +240,7 @@ export default function NotificationsPage() {
                           <Clock size={10} /> drafted {relativeDayLabel(n.createdAt.slice(0, 10), snapshot.today)} · {formatDateTime(n.createdAt).split(',')[1]?.trim() ?? formatDateTime(n.createdAt)}
                         </span>
                         {n.scheduledFor ? <span>due {formatDateTime(n.scheduledFor)}</span> : null}
-                        <span className="italic">{n.deliveryDetail}</span>
+                        {n.markedDeliveredBy ? <span>sent by {n.markedDeliveredBy}</span> : null}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
@@ -353,20 +355,20 @@ export default function NotificationsPage() {
           </p>
         </Panel>
 
-        <Panel title="Sample copy" subtitle="The tone guests receive, taken from a real row in the log" bodyClass="p-4">
+        <Panel title="Recent message preview" subtitle="The wording guests receive, taken from a recent entry in the log" bodyClass="p-4">
           {(() => {
-            const sample = all.find((n) => n.event === 'booking_confirmation') ?? all[0];
-            if (!sample) return <EmptyState title="No message to quote" body="Once a booking is confirmed, the copy shown to guests appears here." />;
+            const previewRow = all.find((n) => n.event === 'booking_confirmation') ?? all[0];
+            if (!previewRow) return <EmptyState title="No message to preview" body="Once a booking is confirmed, the wording shown to guests appears here." />;
             return (
               <div className="space-y-3">
                 <div className="rounded-xl rounded-tl-sm border border-sand-200 bg-sand-50 p-3">
-                  <p className="whitespace-pre-line text-[0.85rem] leading-relaxed text-navy-700">{sample.body}</p>
+                  <p className="whitespace-pre-line text-[0.85rem] leading-relaxed text-navy-700">{previewRow.body}</p>
                   <p className="mt-2 text-[0.72rem] text-navy-400">
-                    {sample.recipientName} · {sample.recipientContact} · {sample.channel.replace('_', ' ')}
+                    {previewRow.recipientName} · {previewRow.recipientContact} · {previewRow.channel.replace('_', ' ')}
                   </p>
                 </div>
                 <p className="text-[0.76rem] leading-relaxed text-navy-400">
-                  Names, references, amounts and dates are filled from the reservation being acted on — this is not a fixed template string.
+                  Names, references, amounts and dates are filled automatically from the reservation being acted on.
                 </p>
               </div>
             );

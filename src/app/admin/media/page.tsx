@@ -4,7 +4,6 @@ import { useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
-  Cloud,
   Eye,
   FileText,
   Pencil,
@@ -39,7 +38,6 @@ export default function AdminMediaPage() {
 
   if (!snapshot) return null;
   const canManage = can('media.manage');
-  const { integrations } = snapshot;
 
   const mediaItems = (snapshot.media ?? []).filter((m) => {
     if (aptFilter !== 'all' && m.apartmentId !== aptFilter) return false;
@@ -112,7 +110,7 @@ export default function AdminMediaPage() {
   }
 
   async function handleDelete(item: MediaRecord) {
-    if (!window.confirm(`Delete "${item.title}" from storage and remove all gallery references?`)) {
+    if (!window.confirm(`Delete "${item.title}" from the media library and remove it from apartment galleries?`)) {
       return;
     }
     const res = await request<{ detail: string }>(`/api/media/${item.id}`, { method: 'DELETE' });
@@ -146,19 +144,7 @@ export default function AdminMediaPage() {
           </p>
           <h1 className="text-[1.45rem] font-bold text-navy-900">Media Library</h1>
           <p className="text-[0.83rem] text-navy-500">
-            Manage apartment galleries, cover photographs, maintenance evidence, and property PDFs.
-          </p>
-        </div>
-
-        <div className="rounded-md border border-sand-200 bg-white px-3.5 py-2 text-[0.76rem] text-navy-700">
-          <div className="flex items-center gap-1.5 font-semibold text-navy-900">
-            <Cloud size={14} className="text-lemma-dark" />
-            {integrations.cloudinarySignedReady ? 'Photo storage connected' : 'Photo storage needs attention'}
-          </div>
-          <p className="mt-0.5 text-navy-500">
-            {integrations.cloudinarySignedReady
-              ? 'New uploads will be available on the website.'
-              : 'Contact the site administrator before adding photos.'}
+            Manage apartment galleries, cover photographs, maintenance photos, and property documents.
           </p>
         </div>
       </div>
@@ -416,9 +402,9 @@ export default function AdminMediaPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[1rem] font-semibold text-navy-900">{previewItem.title}</h3>
-                <p className="text-[0.76rem] text-navy-500">
-                  Public ID: <code>{previewItem.publicId}</code>
-                </p>
+                {previewItem.apartmentName ? (
+                  <p className="text-[0.76rem] text-navy-500">{previewItem.apartmentName}</p>
+                ) : null}
               </div>
               <button
                 type="button"

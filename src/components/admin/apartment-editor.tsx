@@ -151,7 +151,7 @@ export function ApartmentEditor({
       onClose={onClose}
       size="xl"
       title={draft.id ? `Edit ${draft.name}` : 'Add an apartment'}
-      subtitle="Rate, capacity and out-of-service status feed directly into the availability engine and the public site."
+      subtitle="Nightly ZMW rates, guest capacity and out-of-service status update online availability immediately."
       footer={
         <>
           <button type="button" className="btn-ghost h-10 px-3.5" onClick={onClose}>

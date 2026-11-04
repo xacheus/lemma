@@ -29,7 +29,6 @@ interface GuestBookingData {
   status: BookingStatus;
   paymentStatus: PaymentStatus;
   apartment: string;
-  sample?: boolean;
   totalAmount: number;
   verifiedPaid: number;
   pendingAmount?: number;
@@ -129,7 +128,6 @@ export function GuestBookingClient({
   }
 
   const statusMeta = BOOKING_STATUS_META[booking.status];
-  const pendingExample = booking.sample && booking.status === 'inquiry';
   const canPay =
     booking.balanceDue > 0 &&
     !['cancelled', 'checked_out', 'inquiry'].includes(booking.status) &&
@@ -174,9 +172,7 @@ export function GuestBookingClient({
         {/* Financial breakdown */}
         <dl className="grid grid-cols-1 gap-3 rounded-lg border border-sand-200 bg-sand-50 p-4 text-[0.85rem] tabular-nums sm:grid-cols-3">
           <div>
-            <dt className="text-[0.74rem] text-sand-600">
-              {pendingExample ? 'Indicative total' : 'Stay total'}
-            </dt>
+            <dt className="text-[0.74rem] text-sand-600">Stay total</dt>
             <dd className="mt-0.5 text-[1.05rem] font-bold text-navy-900">
               {formatKwacha(booking.totalAmount)}
             </dd>
@@ -195,13 +191,7 @@ export function GuestBookingClient({
           </div>
         </dl>
 
-        {pendingExample ? (
-          <div className="rounded-lg border border-sand-200 bg-white p-4 text-[0.84rem] leading-relaxed text-sand-700">
-            <strong className="font-semibold text-navy-900">Awaiting reception confirmation:</strong>{' '}
-            This request was made against an example listing. Reception will confirm the exact unit
-            and final ZMW quote before payment instructions open.
-          </div>
-        ) : booking.hasOpenClaim ? (
+        {booking.hasOpenClaim ? (
           <div className="flex items-start gap-2.5 rounded-lg border border-st-cleaning/30 bg-st-cleaningBg/60 p-4 text-[0.84rem] leading-relaxed text-navy-900">
             <Clock size={17} className="mt-0.5 shrink-0 text-st-cleaning" />
             <div>

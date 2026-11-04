@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       if (firebaseUid) {
         const found = (db.users ?? []).find((u) => u.uid === firebaseUid);
         if (!found) {
-          throw new OperationError('User profile not found for this Firebase account.', 404, 'not_found');
+          throw new OperationError('Account profile not found.', 404, 'not_found');
         }
         if (firebaseEmail && found.email.toLowerCase() !== firebaseEmail.toLowerCase()) {
           throw new OperationError('Account email does not match. Contact reception.', 403, 'account_conflict');
