@@ -66,7 +66,9 @@ export function ApartmentsCatalogueClient({
 
   return (
     <div className="space-y-8">
-      <div className="animate-fade-up">
+      {/* Anchor for the menu's "Check availability" entry (`/apartments#availability`):
+          jumping here puts the date pickers under the reader instead of the page title. */}
+      <div id="availability" className="animate-fade-up scroll-mt-24">
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
           Live Inventory &amp; ZMW Rates
         </p>
