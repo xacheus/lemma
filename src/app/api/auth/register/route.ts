@@ -1,3 +1,4 @@
+import { trustedEmailSiteOrigin } from '@/lib/notifications/site-origin';
 import { NextResponse } from 'next/server';
 import { sessionToken } from '@/lib/auth/session';
 import { runAtomicTransaction, StoreUnavailableError } from '@/lib/db/store';
@@ -73,8 +74,8 @@ export async function POST(req: Request) {
     // Firebase sign-up tokens have already proved the email. Local password
     // accounts get a verification link if an email provider is connected.
     let emailSent = false;
-    if (!user.emailVerified) {
-      const origin = new URL(req.url).origin;
+    const origin = trustedEmailSiteOrigin();
+    if (!user.emailVerified && origin) {
       const verifyUrl = `${origin}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
       const emailResult = await sendEmailNotification({
         to: user.email,

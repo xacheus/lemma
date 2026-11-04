@@ -1,3 +1,4 @@
+import { isBrevoEmailConfigured } from '@/lib/notifications/email-config';
 import { buildBrandedEmailHtml, sendEmailNotification } from '@/lib/notifications/providers';
 import { NextResponse } from 'next/server';
 import { addBookingAccess, bookingAccessLink, bookingCookie, createBookingAccessToken } from '@/lib/booking/access';
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
 
       if (!customerUid) {
         addBookingAccess(db, reservation.id, guestToken);
-        if (emailLink && process.env.RESEND_API_KEY) addBookingAccess(db, reservation.id, emailToken, 30 * 60);
+        if (emailLink && isBrevoEmailConfigured()) addBookingAccess(db, reservation.id, emailToken, 30 * 60);
       }
 
       /**
@@ -123,17 +124,14 @@ export async function POST(req: Request) {
     });
 
     // The reservation is already committed. Email failure must never undo it or
-    // be reported as successful delivery. Avoid a long provider stall on the form.
-    if (process.env.RESEND_API_KEY) {
+    // be reported as successful delivery. The provider call has a bounded timeout.
+    if (isBrevoEmailConfigured()) {
       const access = session?.user.role !== 'guest' && emailLink ? `\n\nSecure guest access (expires in 30 minutes): ${emailLink}` : '';
       const textBody = `We received your booking request ${created.reference}. Your request is ${created.status === 'inquiry' ? 'awaiting confirmation' : 'recorded'}. ${access}`;
-      await Promise.race([
-        sendEmailNotification({ to: input.email, subject: 'Your Lemma Apartments booking request', textBody,
-          htmlBody: buildBrandedEmailHtml({ subject: 'Your Lemma Apartments booking request', body: textBody,
-            ctaLabel: emailLink && session?.user.role !== 'guest' ? 'Access booking' : undefined,
-            ctaUrl: emailLink && session?.user.role !== 'guest' ? emailLink : undefined }) }),
-        new Promise((resolve) => setTimeout(resolve, 4000)),
-      ]).catch(() => undefined);
+      await sendEmailNotification({ to: input.email, subject: 'Your Lemma Apartments booking request', textBody,
+        htmlBody: buildBrandedEmailHtml({ subject: 'Your Lemma Apartments booking request', body: textBody,
+          ctaLabel: emailLink && session?.user.role !== 'guest' ? 'Access booking' : undefined,
+          ctaUrl: emailLink && session?.user.role !== 'guest' ? emailLink : undefined }) }).catch(() => undefined);
     }
     const response = NextResponse.json({ ok: true, data: created }, { status: 201 });
     if (session?.user.role !== 'guest') response.cookies.set(bookingCookie(created.id, guestToken));

@@ -76,8 +76,16 @@ Back up any data before changing project credentials.
   the server-side account/password sign-in. Existing local accounts are **not**
   linked to Firebase Auth accounts just because their emails match; this prevents
   somebody from claiming a staff account by creating an unverified Firebase user.
-- `RESEND_API_KEY` and a verified `EMAIL_FROM` sender enable verification and
-  password-reset emails. Without delivery, newly registered guests can sign in and
+- `BREVO_API_KEY` and a Brevo-verified `EMAIL_FROM` sender enable booking confirmations, guest-access recovery, verification and
+  password-reset emails (plus other transactional emails). `EMAIL_FROM` accepts an
+  address or `Name <address>`; `EMAIL_FROM_NAME` optionally overrides the name.
+  Set `NEXT_PUBLIC_SITE_URL` to the canonical HTTPS origin for guest-access, account
+  verification, password reset, and quotation links; messages containing those links
+  are not sent without it (development permits `http://localhost`).
+  The API key is server-only and must never use a `NEXT_PUBLIC_` prefix. Remove the old
+  `RESEND_API_KEY`: it is no longer used. Brevo must activate transactional sending
+  and verify the sender/domain. Provider acceptance does not guarantee inbox delivery.
+  Without delivery, newly registered guests can sign in and
   see bookings they make while signed in but cannot claim older visitor bookings
   merely by typing the same email; those require email verification. Password
   recovery cannot send a link without an email provider. Staff can help guests by

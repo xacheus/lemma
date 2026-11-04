@@ -1,3 +1,4 @@
+import { isBrevoEmailConfigured } from '../notifications/email-config';
 import type { Settings } from '../domain/types';
 
 /**
@@ -144,9 +145,9 @@ export const DEFAULT_SETTINGS: Settings = {
     },
     email: {
       enabled: true,
-      connected: Boolean(process.env.RESEND_API_KEY),
-      provider: process.env.RESEND_API_KEY ? 'Resend Transactional Email' : null,
-      note: 'Configure RESEND_API_KEY for automated email delivery; otherwise in-app + mailto compose.',
+      connected: isBrevoEmailConfigured(),
+      provider: isBrevoEmailConfigured() ? 'Brevo Transactional Email' : null,
+      note: 'Configure BREVO_API_KEY and a verified EMAIL_FROM for transactional email; configuration does not prove delivery.',
     },
     checkInReminderDays: 1,
     checkOutReminderDays: 1,

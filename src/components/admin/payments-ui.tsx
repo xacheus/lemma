@@ -324,8 +324,8 @@ export function MessageComposer({
 }) {
   const { snapshot, request, busy, toast } = useApp();
   const recipient = reservation?.guest?.fullName ?? initialRecipient ?? '';
-  const contact = reservation?.guest?.phone ?? initialContact ?? '';
   const [channel, setChannel] = useState<'whatsapp' | 'sms' | 'email' | 'in_app'>('whatsapp');
+  const contact = channel === 'email' ? (reservation?.guest?.email ?? initialContact ?? '') : (reservation?.guest?.phone ?? initialContact ?? '');
   const [body, setBody] = useState('');
   const [title, setTitle] = useState(reservation ? `Message to ${recipient.split(' ')[0] || 'guest'}` : 'New message');
   const [markSent, setMarkSent] = useState(false);
@@ -360,7 +360,7 @@ export function MessageComposer({
 
   async function save() {
     try {
-      await request('/api/notifications', {
+      const result = await request<{ notification: { deliveryStatus: string; deliveryDetail?: string | null } }>('/api/notifications', {
         method: 'POST',
         data: {
           reservationId: reservation?.id,
@@ -372,12 +372,11 @@ export function MessageComposer({
           markSent,
         },
       });
+      const status = result.notification.deliveryStatus;
       toast({
-        tone: 'success',
-        title: markSent ? 'Draft saved and marked sent' : 'Draft saved',
-        body: markSent
-          ? 'Your confirmation is recorded as a staff claim — no provider receipt backs it.'
-          : 'The message is queued in Notifications for whoever is at the desk.',
+        tone: status === 'failed' ? 'error' : 'success',
+        title: status === 'sent' ? 'Provider accepted message' : status === 'delivered_manually' ? 'Manual dispatch recorded' : status === 'failed' ? 'Dispatch not confirmed' : 'Message recorded',
+        body: status === 'sent' ? 'Provider acceptance does not confirm inbox delivery.' : result.notification.deliveryDetail ?? 'Check Notifications for the current status.',
       });
       onClose();
     } catch {
@@ -393,8 +392,8 @@ export function MessageComposer({
       title="Compose a guest message"
       subtitle={
         providerConnected
-          ? 'Delivery is confirmed by staff after they send it, because no provider is wired up.'
-          : 'Nothing is dispatched automatically: no WhatsApp, SMS or email provider is connected.'
+          ? 'The configured provider may accept this message; acceptance does not guarantee delivery.'
+          : 'This channel is not configured. The message can be recorded for manual dispatch.'
       }
       footer={
         <>
@@ -407,8 +406,8 @@ export function MessageComposer({
           <button type="button" className="btn-secondary h-10 px-4" onClick={onClose}>
             Discard
           </button>
-          <button type="button" className="btn-primary h-10 px-5" onClick={save} disabled={busy || body.trim().length < 10}>
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <Banknote size={15} className="hidden" />} Save draft
+          <button type="button" className="btn-primary h-10 px-5" onClick={save} disabled={busy || body.trim().length < 10 || contact.trim().length < 6}>
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <Banknote size={15} className="hidden" />} {markSent ? 'Record manual dispatch' : 'Send or save'}
           </button>
         </>
       }
@@ -416,7 +415,7 @@ export function MessageComposer({
       <div className="space-y-3.5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <TextInput label="Recipient" value={recipient} onChange={(e) => setTitle(`Message to ${e.target.value.split(' ')[0] || 'guest'}`)} disabled />
-          <TextInput label="Contact number" value={contact} onChange={() => {}} disabled hint={channel === 'email' ? 'Email address shown here is the guest’s mobile — switch channel to correct it' : undefined} />
+          <TextInput label={channel === 'email' ? 'Email address' : 'Contact number'} value={contact} onChange={() => {}} disabled hint={contact ? undefined : 'Add this contact to the guest record first.'} />
         </div>
         <SelectInput
           label="Channel"
@@ -441,7 +440,7 @@ export function MessageComposer({
         </div>
         {!providerConnected ? (
           <Alert tone="warn" title="No provider connected">
-            The draft is stored and can be copied or opened in WhatsApp. Until an aggregator account is configured in Settings, this system will never claim a message was delivered.
+            The message can be recorded for manual dispatch. Configure this provider on the server to send automatically.
           </Alert>
         ) : null}
       </div>

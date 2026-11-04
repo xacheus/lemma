@@ -105,11 +105,11 @@ export function draftNotification(db: Database, input: NotifyInput): Notificatio
     apartmentId: input.apartmentId ?? null,
     createdAt: nowISO(),
     scheduledFor: input.scheduledFor ?? null,
-    deliveryStatus: input.channel === 'in_app' ? 'in_app_only' : 'not_connected',
+    deliveryStatus: input.channel === 'in_app' ? 'in_app_only' : 'queued_for_manual_send',
     deliveryDetail:
       input.channel === 'in_app'
         ? 'Available in the app. No push delivery is implied.'
-        : 'No messaging provider is connected. Copy the text or open it in a handset, then mark it sent.',
+        : 'Drafted for manual dispatch; no provider submission has been attempted.',
     markedDeliveredAt: null,
     markedDeliveredBy: input.actor ?? null,
     readAt: null,
@@ -1862,7 +1862,7 @@ export function markNotification(db: Database, id: ID, patch: { read?: boolean; 
     n.markedDeliveredAt = nowISO();
     n.markedDeliveredBy = patch.actor ?? 'Reception';
     n.readAt = n.readAt ?? nowISO();
-    n.deliveryDetail = `Sent by ${n.markedDeliveredBy} from their own handset${patch.note ? ` — ${patch.note}` : ''}. No provider is connected to confirm delivery, so the timestamp is the staff claim, not a carrier receipt.`;
+    n.deliveryDetail = `Sent by ${n.markedDeliveredBy} from their own handset${patch.note ? ` — ${patch.note}` : ''}. The timestamp is a staff claim, not a provider or carrier receipt.`;
   }
   if (patch.note && !patch.delivered) n.deliveryDetail = patch.note;
   return n;

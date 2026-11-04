@@ -1,3 +1,4 @@
+import { getBrevoEmailConfig } from './email-config';
 import type { DeliveryStatus, NotificationChannel } from '../domain/types';
 
 /**
@@ -129,49 +130,51 @@ export async function dispatchExternalNotification(input: {
     }
   }
 
-  // 3. Transactional Email Integration Point (Resend)
+  // 3. Brevo transactional email. Provider acceptance is not inbox delivery.
   if (input.channel === 'email') {
-    const resendKey = process.env.RESEND_API_KEY;
-    const from = process.env.EMAIL_FROM || 'Lemma Apartments <lemmaheights@gmail.com>';
-    if (!resendKey) {
+    const config = getBrevoEmailConfig();
+    if (!config) {
       return {
         status: 'not_connected',
         providerMessageId: null,
-        detail: 'Transactional email provider (RESEND_API_KEY) is not configured. Notification stored in-app.',
+        detail: 'Brevo requires BREVO_API_KEY and a valid, verified EMAIL_FROM sender.',
       };
     }
     try {
-      const res = await fetch('https://api.resend.com/emails', {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${resendKey}`,
+          'api-key': config.apiKey,
           'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify({
-          from,
-          to: [input.recipientContact],
+          sender: config.sender,
+          to: [{ email: input.recipientContact }],
           subject: input.title,
-          html: input.htmlBody || buildBrandedEmailHtml({ subject: input.title, body: input.body }),
+          textContent: input.body,
+          htmlContent: input.htmlBody || buildBrandedEmailHtml({ subject: input.title, body: input.body }),
         }),
+        signal: AbortSignal.timeout(8000),
       });
-      const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-      if (res.ok && data.id) {
+      const data = (await res.json().catch(() => ({}))) as { messageId?: unknown };
+      if (res.ok && typeof data.messageId === 'string' && data.messageId.trim()) {
         return {
           status: 'sent',
-          providerMessageId: data.id,
-          detail: `Email provider confirmed dispatch (${data.id}).`,
+          providerMessageId: data.messageId,
+          detail: 'Brevo accepted the message for dispatch; delivery is not confirmed.',
         };
       }
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: data.message || `Email API returned HTTP ${res.status}.`,
+        detail: res.ok ? 'Brevo returned no message ID.' : `Brevo rejected the request (HTTP ${res.status}).`,
       };
-    } catch (err) {
+    } catch {
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: err instanceof Error ? err.message : 'Email dispatch network error.',
+        detail: 'Brevo request failed or timed out; dispatch could not be confirmed.',
       };
     }
   }

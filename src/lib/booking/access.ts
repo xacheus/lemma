@@ -1,3 +1,4 @@
+import { trustedEmailSiteOrigin } from '../notifications/site-origin';
 import { createHash, randomBytes } from 'node:crypto';
 import type { Database, Reservation } from '../domain/types';
 import type { Session } from '../auth/session';
@@ -45,11 +46,6 @@ export function bookingCookie(reservationId: string, token: string) {
 
 /** Email links must use an explicitly configured origin, never an untrusted Host header. */
 export function bookingAccessLink(token: string): string | null {
-  const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (!origin) return null;
-  try {
-    const url = new URL(origin);
-    if (url.username || url.password || (url.protocol !== 'https:' && !(process.env.NODE_ENV !== 'production' && url.hostname === 'localhost'))) return null;
-    return `${url.origin}/booking/access#token=${encodeURIComponent(token)}`;
-  } catch { return null; }
+  const origin = trustedEmailSiteOrigin();
+  return origin ? `${origin}/booking/access#token=${encodeURIComponent(token)}` : null;
 }

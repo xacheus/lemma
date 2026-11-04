@@ -257,12 +257,12 @@ export const DELIVERY_META: Record<DeliveryStatus, { label: string; chip: string
     icon: 'check',
   },
   sent: {
-    label: 'Sent (provider confirmed)',
+    label: 'Accepted by provider',
     chip: 'bg-st-availableBg text-st-available ring-1 ring-st-available/25',
     icon: 'check',
   },
   failed: {
-    label: 'Delivery failed',
+    label: 'Dispatch not confirmed',
     chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25',
     icon: 'alert',
   },
