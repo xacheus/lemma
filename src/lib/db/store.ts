@@ -259,11 +259,70 @@ function load(): Database {
 }
 
 /**
+ * How long one request will wait on Cloud Firestore before giving up.
+ *
+ * Every request path funnels through this hydration and through the batched write, so a
+ * slow or unreachable Firestore held the whole request open. gRPC retried the
+ * unreachable connection for two minutes, which is longer than any serverless function
+ * is allowed to live: the browser saw a request that never completed, and registration
+ * appeared to hang rather than fail.
+ *
+ * A single round trip against a healthy project is tens of milliseconds, so anything
+ * past a few seconds is an availability problem, not slowness. Bounding it here lets
+ * the app fall back to its local dataset and answer the user.
+ */
+const FIRESTORE_TIMEOUT_MS = 4_000;
+
+/**
+ * After a timeout, stop trying for a while.
+ *
+ * Without this, every request during an outage paid the full timeout again: the site
+ * stayed up but every page took seconds. A short cooldown means the first request
+ * discovers the problem and the rest are served immediately from the local dataset,
+ * which is what a guest notices.
+ */
+const FIRESTORE_TIMEOUT_COOLDOWN_MS = 30_000;
+let firestoreUnavailableUntil = 0;
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`firestore_timeout: ${label} exceeded ${FIRESTORE_TIMEOUT_MS}ms`));
+    }, FIRESTORE_TIMEOUT_MS);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+/**
  * Hydrates from Cloud Firestore once per server instance when Firebase Admin is configured.
  * Avoids repeated full-collection scans on subsequent requests.
  */
 export async function ensureCloudFirestoreHydrated(): Promise<void> {
-  if (firestoreHydrated || !isFirebaseAdminConfigured()) return;
+  if (!isFirebaseAdminConfigured()) return;
+  if (Date.now() < firestoreUnavailableUntil) return;
+  // Concurrent requests must share one attempt. Without this, every request that arrived
+  // while the first was still waiting started its own scan, so an outage multiplied the
+  // delay instead of being paid once. A rejected attempt is cleared so the next request
+  // can try again; a completed one is kept and never repeated for this instance.
+  if (!hydrateInFlight) {
+    hydrateInFlight = hydrateFromCloud();
+  }
+  await hydrateInFlight;
+}
+
+let hydrateInFlight: Promise<void> | null = null;
+
+async function hydrateFromCloud(): Promise<void> {
+  if (firestoreHydrated) return;
   const adminDb = getAdminFirestore();
   if (!adminDb) return;
   firestoreHydrated = true;
@@ -288,7 +347,7 @@ export async function ensureCloudFirestoreHydrated(): Promise<void> {
       gbpDoc,
       summaryDoc,
       countersDoc,
-    ] = await Promise.all([
+    ] = await withTimeout(Promise.all([
       adminDb.collection('apartments').limit(200).get(),
       adminDb.collection('users').limit(200).get(),
       adminDb.collection('guests').limit(200).get(),
@@ -307,7 +366,7 @@ export async function ensureCloudFirestoreHydrated(): Promise<void> {
       adminDb.collection('settings').doc('google_business').get(),
       adminDb.collection('settings').doc('dashboard_summary').get(),
       adminDb.collection('settings').doc('counters').get(),
-    ]);
+    ]), 'hydrate');
 
     const localDb = load();
 
@@ -348,6 +407,14 @@ export async function ensureCloudFirestoreHydrated(): Promise<void> {
     computeDashboardSummary(localDb);
     writeLocal(localDb);
   } catch (err) {
+    // Leave `firestoreHydrated` false only for a timeout, so the next request tries again
+    // instead of serving a partial view for the life of the instance. Any other failure
+    // (bad credentials, missing permissions) will not fix itself, so do not retry it.
+    if (err instanceof Error && err.message.startsWith('firestore_timeout')) {
+      firestoreHydrated = false;
+      hydrateInFlight = null;
+      firestoreUnavailableUntil = Date.now() + FIRESTORE_TIMEOUT_COOLDOWN_MS;
+    }
     console.warn('[firestore] Cloud hydration warning, continuing with cached dataset:', err);
   }
 }
@@ -413,7 +480,15 @@ async function persistSnapshotToCloudFirestore(db: Database): Promise<void> {
     for (const row of chunk) {
       batch.set(adminDb.collection(row.col).doc(row.id), JSON.parse(JSON.stringify(row.data)));
     }
-    await batch.commit();
+    try {
+      await withTimeout(batch.commit(), 'commit');
+    } catch (err) {
+      // A write that did not land must be retried by the next mutation, so drop the
+      // digests for this chunk. Leaving them cached would make the next run believe
+      // these documents were already stored and skip them silently.
+      for (const row of chunk) lastWrittenDigests.delete(`${row.col}/${row.id}`);
+      throw err;
+    }
   }
 }
 
@@ -449,6 +524,32 @@ export function mutate<T>(fn: (db: Database) => T): T {
 }
 
 /**
+ * Persists a committed change to Firestore without letting an outage undo it.
+ *
+ * The local write has already happened by the time this runs, so the user's action is
+ * not lost. Reporting a hard failure here would be a lie in the other direction: the
+ * account or booking exists, and the caller would tell the guest it did not. Warn, and
+ * let the next successful mutation carry the change up, because every write is a full
+ * diff-aware snapshot rather than a delta.
+ */
+async function persistOrWarn(db: Database, what: string): Promise<void> {
+  if (Date.now() < firestoreUnavailableUntil) {
+    // Known-unreachable: skip the attempt rather than making the user wait for it.
+    console.warn(`[firestore] ${what} persisted locally; cloud sync deferred (cooldown)`);
+    return;
+  }
+  try {
+    await persistSnapshotToCloudFirestore(db);
+    firestoreUnavailableUntil = 0;
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('firestore_timeout')) {
+      firestoreUnavailableUntil = Date.now() + FIRESTORE_TIMEOUT_COOLDOWN_MS;
+    }
+    console.warn(`[firestore] ${what} persisted locally, cloud sync pending:`, err);
+  }
+}
+
+/**
  * Serialized Atomic Transaction (`runAtomicTransaction`)
  *
  * Guarantees strict mutual exclusion for concurrent reservation / payment / role
@@ -466,7 +567,7 @@ export async function runAtomicTransaction<T>(
     computeDashboardSummary(db);
     writeLocal(db);
     if (isFirebaseAdminConfigured()) {
-      await persistSnapshotToCloudFirestore(db);
+      await persistOrWarn(db, 'Transaction');
     }
     return result;
   };

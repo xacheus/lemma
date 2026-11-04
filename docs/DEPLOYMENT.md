@@ -102,6 +102,41 @@ openssl rand -hex 32
 
 ---
 
+## 2b. What happens when Firestore is unreachable
+
+Worth knowing before you enable the Admin credentials, because the failure looks like a
+broken sign-up form rather than a database problem.
+
+Every write is a local write followed by a Firestore batch, and every request hydrates
+the local copy from Firestore once. Both were unbounded, so when Firestore could not be
+reached the SDK retried for about two minutes and a registration request never answered.
+Vercel kills the function first, so the guest saw a form that appeared to submit and then
+failed, or hung. There is now a bounded wait (4s for a batch of reads or a write, 3s for
+the per-request role read) and a 30s cooldown after a timeout, so the first request
+discovers the problem and the rest are served from the local copy immediately.
+
+Measured on a project with valid but unauthorised credentials, which reproduces the
+outage path:
+
+| | Before | After |
+| --- | --- | --- |
+| Registration | never completed (120s timeout) | succeeds |
+| First request after outage | 120s | 4.2s |
+| Later requests | 120s each | 60 to 70ms |
+
+Two limits remain and are not bugs:
+
+- **The local copy does not survive a cold start on Vercel.** The working directory is
+  read only, so `resolveDataDir` falls back to `/tmp`, which is per instance. Firestore is
+  the durable store; if it is unreachable, changes made during the outage are lost when
+  the instance recycles. The app warns on every such write.
+- **A change made while Firestore is down is still shown to the user.** The local write
+  has already succeeded, so reporting failure would be inaccurate. The cloud sync is
+  deferred and retried by the next successful mutation, since every write is a full
+  diff-aware snapshot rather than a delta.
+
+---
+
 ## 3. Required for features to work
 
 Each of these degrades to a stated behaviour rather than crashing, so they are safe to
@@ -144,7 +179,7 @@ Firebase Auth but has no local password cannot sign in at all:
 2. That route returns `501 firebase_not_configured`, because it needs the Admin SDK
 3. `login-form.tsx` falls through to `/api/auth/login`, which has no local hash
 4. Firebase rejects it as `auth/invalid-credential`, which the form treats as a wrong
-   password and stops — the fall-through to the local path never happens
+   password and stops, so the fall-through to the local path never happens
 
 `measurementId` / `G-` IDs have no counterpart in this codebase. Nothing reads them and
 `getAnalytics` is never called, so leaving them out loses nothing.

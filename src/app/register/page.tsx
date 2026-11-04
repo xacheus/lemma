@@ -87,9 +87,12 @@ export default function RegisterPage() {
         return;
       }
 
-      // The route signs the guest in as part of the response, so go straight to the
-      // account page rather than back to the sign-in form.
-      router.push('/account');
+      // The route sets the session cookie as part of its response, so the guest is
+      // already signed in: go straight to their account instead of a sign-in form.
+      // `replace` keeps the back button from returning to a form that has been used.
+      // The welcome flag lets the account page confirm the sign-up rather than
+      // dropping the guest onto an empty dashboard with no acknowledgement.
+      router.replace('/account?welcome=1');
       router.refresh();
     } catch {
       setError('We could not reach the server. Check your connection and try again.');

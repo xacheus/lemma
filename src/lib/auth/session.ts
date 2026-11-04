@@ -114,12 +114,28 @@ export interface Session {
  * actually differs. When Firebase Admin is not configured (local development) there
  * is no Console to read, so the stored record stands.
  */
+/**
+ * Give up on the role read after this long.
+ *
+ * This runs inside `getSession()`, so it is on the critical path of every authenticated
+ * page. An unreachable Firestore made gRPC retry for tens of seconds per document, which
+ * held page renders open until the platform killed them. A healthy single-document read
+ * is milliseconds; past a couple of seconds the answer is "unknown", and the stored
+ * record is a safe answer for this request.
+ */
+const ROLE_SYNC_TIMEOUT_MS = 3_000;
+
 async function syncRoleFromFirestore(uid: string): Promise<void> {
   if (!process.env.FIREBASE_PROJECT_ID) return;
   const adminDb = getAdminFirestore();
   if (!adminDb) return;
   try {
-    const snap = await adminDb.collection('users').doc(uid).get();
+    const snap = await Promise.race([
+      adminDb.collection('users').doc(uid).get(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('firestore_timeout: role sync')), ROLE_SYNC_TIMEOUT_MS),
+      ),
+    ]);
     if (!snap.exists) return;
     const data = snap.data() as { role?: unknown; accountStatus?: unknown; username?: unknown };
     const current = (getDb().users ?? []).find((u) => u.uid === uid);
