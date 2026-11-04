@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, UserPlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, UserPlus } from 'lucide-react';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { Role } from '@/lib/domain/types';
 import { getFirebaseClientAuth, isFirebaseClientConfigured } from '@/lib/firebase/client';
 import { BrandMark } from '@/components/public/brand-mark';
+import { Entrance, Reveal, StaggerGroup } from '@/components/ui/motion';
 
 function destinationForRole(role: Role, nextPath: string | null): string {
   if (nextPath && nextPath.startsWith('/')) {
@@ -33,6 +34,16 @@ export function LoginPage({
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorShake, setErrorShake] = useState(false);
+
+  // Shake the error banner once when a message appears, so a newly shown
+  // problem catches the eye without changing the message text.
+  useEffect(() => {
+    if (!error) return;
+    setErrorShake(true);
+    const timer = setTimeout(() => setErrorShake(false), 550);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -107,17 +118,20 @@ export function LoginPage({
         </Link>
 
         <div className="max-w-md space-y-6">
-          <div>
-            <h1 className="font-display text-[2.15rem] font-medium leading-[1.15] tracking-[-0.015em] text-white">
-              Your bookings, payment references &amp; ZMW receipts in one place.
-            </h1>
-            <p className="mt-3.5 text-[0.92rem] leading-relaxed text-sand-300">
-              Sign in to view upcoming stays, upload mobile-money or bank transfer references, and
-              download verified quotations, invoices and official receipts.
-            </p>
-          </div>
+          <Reveal variant="up" delay={20} className="mb-4">
+            <div>
+              <h1 className="font-display text-[2.15rem] font-medium leading-[1.15] tracking-[-0.015em] text-white">
+                Your bookings, payment references &amp; ZMW receipts in one place.
+              </h1>
+              <p className="mt-3.5 text-[0.92rem] leading-relaxed text-sand-300">
+                Sign in to view upcoming stays, upload mobile-money or bank transfer references, and
+                download verified quotations, invoices and official receipts.
+              </p>
+            </div>
+          </Reveal>
 
-          <ul className="space-y-3 border-t border-white/10 pt-5 text-[0.86rem] text-sand-200">
+          <Reveal variant="up" delay={90}>
+            <ul className="space-y-3 border-t border-white/10 pt-5 text-[0.86rem] text-sand-200">
             <li className="flex items-center gap-2.5">
               <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
               Live confirmation &amp; deposit verification status
@@ -131,6 +145,7 @@ export function LoginPage({
               Direct date-change or cancellation requests to reception
             </li>
           </ul>
+          </Reveal>
         </div>
 
         <p className="text-[0.75rem] text-sand-400">
@@ -139,7 +154,7 @@ export function LoginPage({
       </div>
 
       <div className="flex flex-col justify-center bg-sand-50 px-5 py-10 sm:px-10">
-        <div className="animate-fade-up mx-auto w-full max-w-[27rem]">
+        <Entrance variant="up" delay={40} className="mx-auto w-full max-w-[27rem]">
           <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
             <BrandMark tone="light" size="md" />
             <div>
@@ -158,88 +173,107 @@ export function LoginPage({
           </p>
 
           <form onSubmit={submit} className="card mt-6 p-6">
-            <label className="label mb-1.5 block" htmlFor="username">
-              Email address
-            </label>
-            <input
-              id="username"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="field"
-              placeholder="name@example.com"
-              required
-            />
-            <p className="mt-1 text-[0.72rem] text-sand-600">
-              Staff members may also enter their desk username.
-            </p>
+            <StaggerGroup spacing={0.08}>
+              <div>
+                <label className="label mb-1.5 block" htmlFor="username">
+                  Email address
+                </label>
+                <input
+                  id="username"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="field"
+                  placeholder="name@example.com"
+                  required
+                />
+                <p className="mt-1 text-[0.72rem] text-sand-600">
+                  Staff members may also enter their desk username.
+                </p>
+              </div>
 
-            <div className="mt-4 flex items-center justify-between">
-              <label className="label block" htmlFor="password">
-                Password
-              </label>
-              <Link
-                href="/forgot-password"
-                className="text-[0.76rem] font-medium text-lemma-dark hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative mt-1.5">
-              <input
-                id="password"
-                type={reveal ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="field pr-10"
-                placeholder="Enter your password"
-                required
-              />
+              <div>
+                <div className="mt-4 flex items-center justify-between">
+                  <label className="label block" htmlFor="password">
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-[0.76rem] font-medium text-lemma-dark hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative mt-1.5">
+                  <input
+                    id="password"
+                    type={reveal ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="field pr-10"
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setReveal((v) => !v)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-sand-500 hover:bg-sand-100 hover:text-navy-800"
+                    aria-label={reveal ? 'Hide password' : 'Show password'}
+                  >
+                    {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
               <button
-                type="button"
-                onClick={() => setReveal((v) => !v)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-sand-500 hover:bg-sand-100 hover:text-navy-800"
-                aria-label={reveal ? 'Hide password' : 'Show password'}
+                type="submit"
+                disabled={busy}
+                className="btn btn-primary mt-5 w-full justify-center py-2.5"
               >
-                {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
+                {busy ? (
+                  <>
+                    <Loader2 size={14} className="mr-2 animate-spin" />
+                    Signing in…
+                  </>
+                ) : (
+                  <>
+                    Sign in <ArrowRight size={15} />
+                  </>
+                )}
               </button>
-            </div>
+
+              <div className="mt-5 space-y-2.5 border-t border-sand-200 pt-4 text-[0.8rem] text-sand-700">
+                <div className="flex items-center justify-between">
+                  <span>New guest?</span>
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center gap-1.5 font-semibold text-navy-900 hover:text-lemma-dark"
+                  >
+                    <UserPlus size={14} /> Create guest account
+                  </Link>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Booked without an account?</span>
+                  <Link
+                    href="/booking/access"
+                    className="inline-flex items-center gap-1.5 font-medium text-lemma-dark hover:underline"
+                  >
+                    <KeyRound size={13} /> Find by reference
+                  </Link>
+                </div>
+              </div>
+            </StaggerGroup>
 
             {error ? (
-              <p className="mt-3 flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] font-medium text-st-cancelled">
+              <p
+                className={`mt-3 flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] font-medium text-st-cancelled slide-in-down ${errorShake ? 'shake' : ''}`}
+                role="alert"
+                aria-live="polite"
+              >
                 <AlertCircle size={15} className="mt-0.5 shrink-0" /> {error}
               </p>
             ) : null}
-
-            <button
-              type="submit"
-              disabled={busy}
-              className="btn btn-primary mt-5 w-full justify-center py-2.5"
-            >
-              {busy ? 'Signing in…' : 'Sign in'} <ArrowRight size={15} />
-            </button>
-
-            <div className="mt-5 space-y-2.5 border-t border-sand-200 pt-4 text-[0.8rem] text-sand-700">
-              <div className="flex items-center justify-between">
-                <span>New guest?</span>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-1.5 font-semibold text-navy-900 hover:text-lemma-dark"
-                >
-                  <UserPlus size={14} /> Create guest account
-                </Link>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Booked without an account?</span>
-                <Link
-                  href="/booking/access"
-                  className="inline-flex items-center gap-1.5 font-medium text-lemma-dark hover:underline"
-                >
-                  <KeyRound size={13} /> Find by reference
-                </Link>
-              </div>
-            </div>
           </form>
 
           <div className="mt-5 flex items-center justify-between text-[0.78rem] text-sand-600">
@@ -250,7 +284,7 @@ export function LoginPage({
               Booking terms
             </Link>
           </div>
-        </div>
+        </Entrance>
       </div>
     </main>
   );

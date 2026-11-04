@@ -450,3 +450,222 @@
   .permission-matrix-cards { display: none; }
   .permission-matrix-table { display: table; }
 }
+
+/* ---------------------------------------------------------------- refined motion */
+
+/*
+ * One-time entrance animations. They are applied by client components so the
+ * server-rendered HTML stays unchanged, yet every page load and client
+ * transition plays a polished entrance instead of snapping content into view.
+ */
+@keyframes lemma-fade-in {
+  to { opacity: 1; }
+}
+
+@keyframes lemma-slide-up {
+  from { opacity: 0; transform: translate3d(0, 20px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes lemma-slide-down {
+  from { opacity: 0; transform: translate3d(0, -14px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes lemma-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes lemma-pop-in {
+  0% { opacity: 0; transform: scale(0.85); }
+  70% { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes lemma-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translate3d(-6px, 0, 0); }
+  40% { transform: translate3d(6px, 0, 0); }
+  60% { transform: translate3d(-4px, 0, 0); }
+  80% { transform: translate3d(4px, 0, 0); }
+}
+
+@keyframes lemma-fade-out {
+  to { opacity: 0; transform: translate3d(0, -6px, 0); }
+}
+
+@keyframes lemma-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes lemma-skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes lemma-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: lemma-fade-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-in-fast {
+    animation: lemma-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .slide-in-up {
+    animation: lemma-slide-up 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .slide-in-down {
+    animation: lemma-slide-down 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .scale-in {
+    animation: lemma-scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .pop-in {
+    animation: lemma-pop-in 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+
+  .shake {
+    animation: lemma-shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
+  .fade-out {
+    animation: lemma-fade-out 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Staggered rows: each item enters a fraction of a second after the previous. */
+  .stagger-rows > * {
+    animation: lemma-slide-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .stagger-rows > *:nth-child(1) { animation-delay: 0.06s; }
+  .stagger-rows > *:nth-child(2) { animation-delay: 0.12s; }
+  .stagger-rows > *:nth-child(3) { animation-delay: 0.18s; }
+  .stagger-rows > *:nth-child(4) { animation-delay: 0.24s; }
+  .stagger-rows > *:nth-child(5) { animation-delay: 0.3s; }
+  .stagger-rows > *:nth-child(6) { animation-delay: 0.36s; }
+
+  /* Subtle pressed state on every button. */
+  .btn:where(:active):not(:disabled) {
+    transform: scale(0.996);
+  }
+
+  /* Skeleton placeholders for content that is still loading. */
+  .skeleton {
+    @apply rounded-md bg-sand-200;
+    overflow: hidden;
+    position: relative;
+    animation: lemma-skeleton-pulse 1.6s ease-in-out infinite;
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    animation: lemma-shimmer 1.8s infinite linear;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  }
+
+  .skeleton-line {
+    @apply bg-sand-200 rounded-full;
+    height: 1rem;
+  }
+
+  .skeleton-title {
+    @apply skeleton-line w-2/3;
+  }
+
+  .skeleton-text {
+    @apply skeleton-line w-3/4 mt-2;
+  }
+
+  .skeleton-avatar {
+    @apply skeleton-line h-12 w-12 rounded-lg;
+  }
+
+  /* Checkmark drawn inside the account-created badge. */
+  .checkmark-circle {
+    stroke-dasharray: 56px;
+    stroke-dashoffset: 56px;
+    animation: lemma-check-draw 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .checkmark-path {
+    stroke-dasharray: 48px;
+    stroke-dashoffset: 48px;
+    animation: lemma-check-draw 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+  }
+}
+
+/*
+ * The legacy `.stagger` class referenced a `fade-up` keyframe that did not
+ * exist, so staggered lists never animated. Point it at the real entrance.
+ */
+.stagger > * {
+  animation: lemma-slide-up 0.75s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-in-fast,
+  .slide-in-up,
+  .slide-in-down,
+  .scale-in,
+  .pop-in,
+  .shake,
+  .fade-out,
+  .hero-settle,
+  .hero-line,
+  .reveal,
+  .reveal-left,
+  .reveal-scale,
+  .stagger > *,
+  .stagger-rows > *,
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-fade-down,
+  .animate-scale-in,
+  .animate-slide-in-right {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .skeleton {
+    animation: none !important;
+    opacity: 0.65 !important;
+  }
+
+  .skeleton::after {
+    display: none !important;
+  }
+
+  .checkmark-circle,
+  .checkmark-path {
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+  }
+
+  .hover-lift:hover,
+  .img-zoom:hover img,
+  .group:hover .img-zoom img {
+    transform: none !important;
+  }
+
+  .menu-panel {
+    transition: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
