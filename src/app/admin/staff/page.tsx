@@ -1,12 +1,13 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { KeyRound, LogIn, Pencil, Plus, ShieldCheck, UserPlus } from 'lucide-react';
+import { KeyRound, LogIn, Pencil, Plus, ShieldCheck, Upload, UserPlus } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
 import { PageHeader } from '@/components/admin/shell';
 import { Alert, Avatar, DataTable, EmptyState, Panel, Skeleton, StatusChip, Toggle } from '@/components/ui';
 import { CheckboxRow, SelectInput, TextInput } from '@/components/ui/forms';
 import { ConfirmDialog, Modal } from '@/components/ui/overlays';
+import { StaffImport } from '@/components/admin/staff-import';
 import { ROLE_META } from '@/lib/domain/status';
 import { PERMISSION_GROUPS, ROLE_PERMISSIONS } from '@/lib/domain/permissions';
 import { formatMediumDate } from '@/lib/domain/dates';
@@ -44,6 +45,7 @@ export default function StaffPage() {
   const { snapshot, request, toast, can } = useApp();
   const [editing, setEditing] = useState<Draft | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [confirm, setConfirm] = useState<{ staff: StaffView; activate: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,9 +119,18 @@ export default function StaffPage() {
         title="Staff & permissions"
         description="Accounts, roles and the exact rights each role carries. Everything the interface hides is also refused by the API — permissions are enforced on the server."
         actions={
-          <button type="button" className="btn-gold h-9 px-3.5 text-[0.82rem]" onClick={() => setCreating(true)}>
-            <UserPlus size={15} /> Add account
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn-secondary h-9 px-3 text-[0.82rem]"
+              onClick={() => setImporting(true)}
+            >
+              <Upload size={14} /> Import list
+            </button>
+            <button type="button" className="btn-gold h-9 px-3.5 text-[0.82rem]" onClick={() => setCreating(true)}>
+              <UserPlus size={15} /> Add account
+            </button>
+          </div>
         }
       />
 
@@ -262,6 +273,16 @@ export default function StaffPage() {
           </Panel>
         </div>
       </div>
+
+      <Modal
+        open={importing}
+        onClose={() => setImporting(false)}
+        size="lg"
+        title="Import a staff list"
+        subtitle="Create several receptionist or cleaner accounts at once, each with its own password."
+      >
+        <StaffImport onClose={() => setImporting(false)} />
+      </Modal>
 
       <StaffEditor
         open={creating || !!editing}

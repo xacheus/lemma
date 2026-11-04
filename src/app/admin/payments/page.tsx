@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Banknote, CheckCircle2, Download, Paperclip, ShieldCheck, Wallet } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
+import { GuestClaimQueue } from '@/components/admin/guest-claim-queue';
+import { StatementImport } from '@/components/admin/statement-import';
 import { PageHeader } from '@/components/admin/shell';
 import { Alert, DataTable, EmptyState, Pagination, Panel, Skeleton, StatusChip, Tabs } from '@/components/ui';
 import { DateInput, SearchInput, Segmented, SelectInput } from '@/components/ui/forms';
@@ -14,14 +16,14 @@ import { PAYMENT_METHOD_META, BOOKING_STATUS_META, PAYMENT_STATUS_META, SOURCE_M
 import { downloadCsv } from '@/lib/browser/csv';
 import type { Payment, PaymentMethod, ReservationView } from '@/lib/domain/types';
 
-type Tab = 'queue' | 'ledger' | 'balances' | 'instructions';
+type Tab = 'claims' | 'queue' | 'ledger' | 'balances' | 'import' | 'instructions';
 type SortKey = 'paidAt' | 'amount' | 'guest';
 
 const PAGE_SIZE = 14;
 
 export default function PaymentsPage() {
   const { snapshot, can, toast } = useApp();
-  const [tab, setTab] = useState<Tab>('queue');
+  const [tab, setTab] = useState<Tab>('claims');
   const [query, setQuery] = useState('');
   const [method, setMethod] = useState<'all' | PaymentMethod>('all');
   const [verification, setVerification] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
@@ -118,10 +120,18 @@ export default function PaymentsPage() {
     toast({ tone: 'success', title: 'Export started', body: `${ledger.length} receipt rows written to CSV.` });
   }
 
+  const openClaims = (snapshot.paymentClaims ?? []).filter((c) => c.status === 'awaiting_verification');
+
   const tabs = [
+    {
+      value: 'claims' as const,
+      label: 'Guest submissions',
+      count: openClaims.length,
+    },
     { value: 'queue' as const, label: 'Verification queue', count: pendingRows.length },
     { value: 'ledger' as const, label: 'Receipt ledger', count: payments.length },
     { value: 'balances' as const, label: 'Open balances', count: outstandingRows.length },
+    { value: 'import' as const, label: 'Statement import' },
     { value: 'instructions' as const, label: 'Payment instructions' },
   ];
 
@@ -182,6 +192,9 @@ export default function PaymentsPage() {
           ))}
         </div>
       </div>
+
+      {tab === 'claims' ? <GuestClaimQueue /> : null}
+      {tab === 'import' ? <StatementImport /> : null}
 
       {tab === 'queue' ? (
         <Panel

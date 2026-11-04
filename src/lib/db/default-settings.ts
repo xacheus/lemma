@@ -120,6 +120,15 @@ export const DEFAULT_SETTINGS: Settings = {
         accountNumber: 'Front Office Till 1',
       },
     ],
+    /**
+     * Payment channels are chosen by the guest from this enabled list; the business
+     * sets which channels exist, their details and the default. Set
+     * lockMethodToAdmin to true to make reception choose the channel instead.
+     */
+    lockMethodToAdmin: false,
+    defaultMethod: 'airtel_money',
+    allowPartialPayments: true,
+    claimReviewHours: 24,
     proofUploadEnabled: true,
     requireVerification: true,
     receiptPrefix: 'RCP',

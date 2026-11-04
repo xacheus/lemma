@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/admin/shell';
 import { Alert, EmptyState, Panel, Skeleton, StatusChip, Toggle } from '@/components/ui';
 import { CheckboxRow, SelectInput, TextArea, TextInput } from '@/components/ui/forms';
 import { PAYMENT_METHOD_META } from '@/lib/domain/status';
-import type { Settings } from '@/lib/domain/types';
+import type { PaymentMethod, Settings } from '@/lib/domain/types';
 
 /** Which switches the running engine actually obeys. Everything else is policy copy. */
 const ENFORCED = new Set([
@@ -146,6 +146,34 @@ export default function SettingsPage() {
             <TextInput label="TPIN" value={draft.property.taxPayerId} onChange={(e) => set('property', { taxPayerId: e.target.value })} hint="ZRA tax payer ID" />
           </div>
           <TextArea label="Reception hours" value={draft.property.receptionHours} onChange={(e) => set('property', { receptionHours: e.target.value })} rows={2} maxLength={200} />
+          <div className="space-y-2 border-t border-sand-100 pt-3">
+            <p className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-navy-400">
+              Policy copy on /policies
+            </p>
+            <p className="text-[0.74rem] leading-relaxed text-navy-500">
+              Leave these blank to print the standard terms, which already include your deposit
+              percentage, check-in times and cancellation window. Type here to replace that wording
+              with your own — it appears on the public policy page immediately.
+            </p>
+            <TextArea
+              label="Your booking terms (optional)"
+              value={draft.property.bookingTerms ?? ''}
+              onChange={(e) => set('property', { bookingTerms: e.target.value })}
+              rows={4}
+              maxLength={4000}
+              counter
+              placeholder="Leave blank to print the standard booking terms."
+            />
+            <TextArea
+              label="Your privacy statement (optional)"
+              value={draft.property.privacyPolicy ?? ''}
+              onChange={(e) => set('property', { privacyPolicy: e.target.value })}
+              rows={4}
+              maxLength={4000}
+              counter
+              placeholder="Leave blank to print the standard privacy statement."
+            />
+          </div>
           <SectionFooter onSave={() => saveSection('property', 'Property details')} busy={saving === 'property'} dirty={dirty} />
         </Panel>
 
@@ -246,7 +274,42 @@ export default function SettingsPage() {
             </div>
           ))}
 
-          <div className="space-y-1.5 border-t border-sand-100 pt-3">
+          <div className="space-y-2 border-t border-sand-100 pt-3">
+            <p className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-navy-400">
+              Who chooses the channel
+            </p>
+            <CheckboxRow
+              label="Reception chooses the payment channel"
+              checked={Boolean(draft.payments.lockMethodToAdmin)}
+              onChange={(on) => set('payments', { lockMethodToAdmin: on })}
+              hint="Off (default) · the guest picks from the enabled channels above when they pay. On · reception assigns the channel and the guest only records what they paid."
+            />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SelectInput
+                label="Default channel for guests"
+                value={draft.payments.defaultMethod ?? 'airtel_money'}
+                onChange={(e) => set('payments', { defaultMethod: e.target.value as PaymentMethod })}
+                options={draft.payments.methods.map((m) => ({ value: m.id, label: m.label }))}
+                hint="Pre-selected on the guest payment form"
+              />
+              <TextInput
+                label="Review window (hours)"
+                type="number"
+                min={1}
+                max={168}
+                value={String(draft.payments.claimReviewHours ?? 24)}
+                onChange={(e) => set('payments', { claimReviewHours: Number(e.target.value) })}
+                hint="Unchecked guest claims are flagged after this"
+              />
+              <div className="flex items-end pb-1">
+                <CheckboxRow
+                  label="Accept part payments"
+                  checked={draft.payments.allowPartialPayments !== false}
+                  onChange={(on) => set('payments', { allowPartialPayments: on })}
+                  hint="Off · the guest must pay the suggested amount in one go"
+                />
+              </div>
+            </div>
             <CheckboxRow
               label="Allow proof-of-payment uploads"
               checked={draft.payments.proofUploadEnabled}

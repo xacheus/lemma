@@ -231,6 +231,8 @@ export const paymentCreateSchema = z.object({
   reference: z.string().max(64).optional(),
   paidAt: dateStr.optional(),
   note: z.string().max(600).optional(),
+  /** Bank a receipt that was submitted by the guest from their account. */
+  claimId: z.string().max(60).nullable().optional(),
   proof: z
     .object({
       fileName: z.string().max(120),
@@ -241,6 +243,56 @@ export const paymentCreateSchema = z.object({
     })
     .nullable()
     .optional(),
+});
+
+/**
+ * A guest's own payment submission. The channel is chosen by the guest from the
+ * methods the business has enabled; nothing here can bank money — it records a claim.
+ */
+export const guestPaymentClaimSchema = z.object({
+  reservationId: z.string().min(1, 'Choose the booking this payment is for.'),
+  amount: z.coerce.number().positive('Enter the amount you paid.'),
+  method: z.enum(['airtel_money', 'mtn_money', 'bank_transfer', 'cash']),
+  reference: z.string().min(3, 'Enter the transaction ID, SMS code or slip number.').max(64),
+  paidAt: dateStr.optional(),
+  note: z.string().max(400).optional(),
+  proof: z
+    .object({
+      fileName: z.string().max(120),
+      mimeType: z.string().max(60),
+      dataUrl: z.string().max(8_000_000),
+      publicId: z.string().max(240).optional(),
+      sizeBytes: z.coerce.number().min(0),
+    })
+    .nullable()
+    .optional(),
+});
+
+export const paymentImportSchema = z.object({
+  csv: z.string().min(10, 'Paste or upload the statement first.').max(2_000_000),
+  fallbackMethod: z.enum(['airtel_money', 'mtn_money', 'bank_transfer', 'cash']).default('bank_transfer'),
+  commit: z.boolean().optional(),
+  lines: z
+    .array(
+      z.object({
+        index: z.coerce.number().int(),
+        reservationId: z.string().min(1),
+        amount: z.coerce.number().positive(),
+        method: z.enum(['airtel_money', 'mtn_money', 'bank_transfer', 'cash']),
+        reference: z.string().min(1).max(64),
+        date: dateStr.nullable().optional(),
+        description: z.string().max(200).optional(),
+        note: z.string().max(300).optional(),
+        kind: z.enum(['deposit', 'part_payment', 'final_settlement']).default('part_payment'),
+        claimId: z.string().max(60).nullable().optional(),
+      }),
+    )
+    .optional(),
+});
+
+export const guestPaymentClaimReviewSchema = z.object({
+  status: z.enum(['rejected']),
+  note: z.string().min(4, 'Tell the guest why the payment was not found.').max(400),
 });
 
 export const paymentVerifySchema = z.object({
@@ -394,6 +446,10 @@ export const staffSchema = z.object({
   shift: z.enum(['morning', 'afternoon', 'evening']).nullable().optional(),
   password: z.string().min(6, 'Use at least six characters.').optional(),
   permissions: z.array(z.string()).nullable().optional(),
+});
+
+export const staffImportSchema = z.object({
+  csv: z.string().min(10, 'Paste or upload the staff list first.').max(500_000),
 });
 
 export const settingsSchema = z.object({
