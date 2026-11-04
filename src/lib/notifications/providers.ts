@@ -1,4 +1,5 @@
 import { getBrevoEmailConfig } from './email-config';
+import { normalizeBusinessName } from '../brand';
 import type { DeliveryStatus, NotificationChannel } from '../domain/types';
 
 export interface DispatchAttemptResult {
@@ -206,7 +207,7 @@ export function buildBrandedEmailHtml(opts: {
   ctaLabel?: string;
   ctaUrl?: string;
 }): string {
-  const businessName = opts.businessName || opts.propertyName || 'Lemma Apartments';
+  const businessName = normalizeBusinessName(opts.businessName || opts.propertyName);
   const subjectText = opts.subject || opts.heading || businessName;
   const bodyContent = opts.body || (opts.bodyLines ?? []).join('\n');
   const address = opts.address || 'Barlaston Park, Lusaka, Zambia';

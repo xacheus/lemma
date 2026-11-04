@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <title>LEMMA HEIGHTS APARTMENTS</title>
   <rect width="128" height="128" rx="16" fill="#FFFFFF"/>
   <path d="M18 82A48 48 0 0 1 52 36.5L48 44A40 40 0 0 0 22 82H18Z" fill="#707E91"/>
   <path d="M110 82A48 48 0 0 0 76 36.5L80 44A40 40 0 0 1 106 82H110Z" fill="#707E91"/>
@@ -18,5 +19,6 @@
   <rect x="74" y="74" width="3.5" height="3.5" fill="#707E91"/>
   <rect x="69" y="79" width="3.5" height="3.5" fill="#707E91"/>
   <rect x="74" y="79" width="3.5" height="3.5" fill="#707E91"/>
-  <text x="64" y="108" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="4" fill="#4E5B6E">LEMMA</text>
+  <text x="64" y="103" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="14" letter-spacing="3" fill="#4E5B6E">LEMMA</text>
+  <text x="64" y="117" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="500" font-size="5.5" letter-spacing="1" fill="#4E5B6E">HEIGHTS APARTMENTS</text>
 </svg>

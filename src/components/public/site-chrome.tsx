@@ -17,6 +17,7 @@ import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole } from '@/lib/domain/permissions';
 import { useScrolled } from '@/components/ui/motion';
+import { normalizeBusinessName } from '@/lib/brand';
 import { BrandMark } from './brand-mark';
 import { SiteMenu } from './site-menu';
 
@@ -46,7 +47,7 @@ export function PublicHeader({
     setMenuOpen(false);
   }, [activePath]);
 
-  const brandTitle = property.name || 'Lemma Apartments';
+  const brandTitle = normalizeBusinessName(property.name);
   const subline = [property.addressLine || property.city, property.city && property.addressLine ? property.city : property.country]
     .filter(Boolean)
     .join(', ');
@@ -178,7 +179,7 @@ export function PublicHeader({
 
 export function PublicFooter({ property }: { property: Settings['property'] }) {
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
-  const brandTitle = property.name || 'Lemma Apartments';
+  const brandTitle = normalizeBusinessName(property.name);
 
   return (
     <footer className="border-t border-sand-200 bg-charcoal-950 text-sand-200">
@@ -289,7 +290,7 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-[0.76rem] text-sand-400 sm:flex-row sm:px-6 lg:px-8">
           <p className="flex items-center gap-1.5">
-            <Building2 size={13} /> {property.legalName || property.name}
+            <Building2 size={13} /> {normalizeBusinessName(property.legalName || property.name)}
             {property.taxPayerId ? ` · TPIN ${property.taxPayerId}` : ''}
           </p>
           <div className="flex flex-wrap items-center gap-4">

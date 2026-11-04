@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * Vector architectural emblem from the Lemma brand mark (skyline + twin gables),
+ * Vector architectural emblem from the Lemma Heights Apartments brand mark (skyline + twin gables),
  * rendered without the tiny embedded wordmark so it stays razor-sharp at 36–48px
  * on both warm-light and dark surfaces.
  */

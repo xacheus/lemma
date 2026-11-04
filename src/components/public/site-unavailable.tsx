@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { MessageCircle, Phone, RotateCcw } from 'lucide-react';
 import { BrandMark } from './brand-mark';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 
 /** Error-boundary fallback with direct reception contact details and retry action. */
 export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
@@ -24,7 +25,7 @@ export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
           <Link href="/" className="flex items-center gap-3">
             <BrandMark tone="light" size="md" />
             <span className="font-display text-[1.05rem] font-semibold text-navy-900">
-              Lemma Apartments
+              {OFFICIAL_BRAND_NAME}
             </span>
           </Link>
         </div>
@@ -33,7 +34,7 @@ export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
       <main className="mx-auto flex w-full max-w-6xl flex-1 items-center px-5 py-16 sm:px-8">
         <div className="max-w-xl">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lemma-dark">
-            Lemma Apartments · Lusaka
+            {OFFICIAL_BRAND_NAME} · Lusaka
           </p>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
             Something went wrong loading this page.

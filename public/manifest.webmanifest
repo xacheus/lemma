@@ -1,7 +1,7 @@
 {
   "name": "Lemma Heights Apartments",
-  "short_name": "Lemma Heights",
-  "description": "Serviced apartment booking and hospitality property management platform in Lusaka, Zambia.",
+  "short_name": "Lemma Heights Apartments",
+  "description": "Direct apartment bookings at Lemma Heights Apartments, Barlaston Park, Lusaka, Zambia.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",

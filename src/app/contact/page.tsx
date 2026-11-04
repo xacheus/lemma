@@ -12,6 +12,7 @@ import {
 import { readPublicSiteData } from '@/lib/public/read-site-data';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { unreadForSession } from '@/lib/domain/inbox';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,7 +130,7 @@ export default async function ContactPage() {
                 </Link>
                 {waDigits ? (
                   <a
-                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments, I would like to request a stay quotation.')}`}
+                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${OFFICIAL_BRAND_NAME}, I would like to request a stay quotation.`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-secondary"

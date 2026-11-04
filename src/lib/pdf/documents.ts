@@ -8,6 +8,7 @@ import type {
   ReservationView,
   Settings,
 } from '../domain/types';
+import { normalizeBusinessName, OFFICIAL_BRAND_NAME } from '../brand';
 
 // Exact brand palette derived from logo.jpg
 const BRAND_CHARCOAL = rgb(0x1e / 255, 0x25 / 255, 0x30 / 255); // #1E2530
@@ -121,9 +122,9 @@ interface DocChromeOptions {
 
 async function createStandardA4Document(opts: DocChromeOptions) {
   const pdfDoc = await PDFDocument.create();
-  pdfDoc.setTitle(`${opts.documentTitle} ${opts.documentNumber} - ${opts.settings.property.name}`);
-  pdfDoc.setAuthor(opts.settings.property.legalName || opts.settings.property.name);
-  pdfDoc.setCreator(opts.settings.property.name);
+  pdfDoc.setTitle(`${opts.documentTitle} ${opts.documentNumber} - ${normalizeBusinessName(opts.settings.property.name)}`);
+  pdfDoc.setAuthor(normalizeBusinessName(opts.settings.property.legalName || opts.settings.property.name));
+  pdfDoc.setCreator(normalizeBusinessName(opts.settings.property.name));
 
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -145,7 +146,7 @@ async function createStandardA4Document(opts: DocChromeOptions) {
   const textStartX = margin + boxSize + 12;
 
   const prop = opts.settings.property;
-  page.drawText(safeAscii(prop.name).toUpperCase(), {
+  page.drawText(safeAscii(normalizeBusinessName(prop.name)).toUpperCase(), {
     x: textStartX,
     y,
     size: 12,
@@ -224,7 +225,7 @@ async function createStandardA4Document(opts: DocChromeOptions) {
 
   // Footer
   const footerText = safeAscii(
-    `${prop.legalName || prop.name} | ${prop.addressLine}, ${prop.city} | ${prop.website}`,
+    `${normalizeBusinessName(prop.legalName || prop.name)} | ${prop.addressLine}, ${prop.city} | ${prop.website}`,
   );
   page.drawLine({
     start: { x: margin, y: 46 },
@@ -731,7 +732,7 @@ export async function generateReceiptPdf(
   y -= 18;
   page.drawText(
     safeAscii(
-      'This receipt confirms verified settlement recorded in the Lemma Apartments property ledger.',
+      `This receipt confirms verified settlement recorded in the ${OFFICIAL_BRAND_NAME} property ledger.`,
     ),
     {
       x: margin,

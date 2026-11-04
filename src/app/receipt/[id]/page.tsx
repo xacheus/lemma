@@ -8,6 +8,7 @@ import { formatKwacha } from '@/lib/domain/money';
 import { formatMediumDate } from '@/lib/domain/dates';
 import { PAYMENT_METHOD_META } from '@/lib/domain/status';
 import { BrandMark } from '@/components/public/brand-mark';
+import { normalizeBusinessName } from '@/lib/brand';
 import { PrintTrigger } from './print-trigger';
 
 export const dynamic = 'force-dynamic';
@@ -87,7 +88,7 @@ export default async function GuestReceiptPage({ params }: { params: Promise<{ i
               <BrandMark tone="light" size="lg" />
               <div>
                 <p className="font-display text-[1.12rem] font-semibold text-navy-900">
-                  {property.name}
+                  {normalizeBusinessName(property.name)}
                 </p>
                 <p className="text-[0.74rem] leading-relaxed text-sand-600">
                   {property.addressLine}
@@ -142,7 +143,7 @@ export default async function GuestReceiptPage({ params }: { params: Promise<{ i
               invoice.
             </p>
             <p className="mt-1">
-              {property.legalName}
+              {normalizeBusinessName(property.legalName || property.name)}
               {property.taxPayerId ? ` · TPIN ${property.taxPayerId}` : ''} · {property.email}
             </p>
           </footer>

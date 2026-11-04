@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, UserPlus } from 'lucide-react';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { Role } from '@/lib/domain/types';
+import { normalizeBusinessName } from '@/lib/brand';
 import { getFirebaseClientAuth, isFirebaseClientConfigured } from '@/lib/firebase/client';
 import { BrandMark } from '@/components/public/brand-mark';
 import { Entrance, Reveal, StaggerGroup } from '@/components/ui/motion';
@@ -100,7 +101,7 @@ export function LoginPage({
     }
   }
 
-  const brandTitle = propertyName || 'Lemma Apartments';
+  const brandTitle = normalizeBusinessName(propertyName);
 
   return (
     <main className="grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">

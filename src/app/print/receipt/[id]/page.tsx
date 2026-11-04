@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getSession, verifyToken } from '@/lib/auth/session';
 import { getDb } from '@/lib/db/store';
+import { normalizeBusinessName } from '@/lib/brand';
 import { decorate } from '@/lib/domain/selectors';
 import { formatKwacha } from '@/lib/domain/money';
 import { formatDateTime, formatMediumDate } from '@/lib/domain/dates';
@@ -128,7 +129,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
               ? `This entry was rejected: ${payment.verificationNote || 'the transaction could not be matched to a payment in our account'}. No amount has been credited.`
               : 'Entered by a staff member and awaiting verification against the merchant account or bank statement.',
           `Recorded at the desk by ${payment.recordedByName}.`,
-          `${p.legalName} · TPIN ${p.taxPayerId} · ${p.addressLine}, ${p.city}`,
+          `${normalizeBusinessName(p.legalName || p.name)} · TPIN ${p.taxPayerId} · ${p.addressLine}, ${p.city}`,
           'This receipt acknowledges money received against the reservation above. It is not a tax invoice and does not constitute a confirmed booking on its own.',
         ]}
         signature="Authorised signatory"
