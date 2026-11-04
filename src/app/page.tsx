@@ -25,7 +25,7 @@ import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { formatKwacha } from '@/lib/domain/money';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
-import { Reveal } from '@/components/ui/motion';
+import { Entrance, Reveal } from '@/components/ui/motion';
 import { HomeHeroCarousel, type HeroSlide } from '@/components/public/home-hero-carousel';
 import { BrandMark } from '@/components/public/brand-mark';
 import { unreadForSession } from '@/lib/domain/inbox';
@@ -102,7 +102,7 @@ export default async function HomePage({
       ];
     }
 
-    return photos.slice(0, 2).map((photo, photoIndex) => ({
+    return photos.slice(0, 3).map((photo, photoIndex) => ({
       id: `${apt.id}-${photoIndex}`,
       slug: apt.slug,
       name: apt.name,
@@ -180,54 +180,96 @@ export default async function HomePage({
 
       <main className="flex-1">
         {/* Hero */}
-        {heroSlides.length > 0 ? (
-          <HomeHeroCarousel
-            slides={heroSlides}
-            stayQuery={stayQuery}
-            propertyName={property.name}
-            totalApartments={published.length}
-            addressLine={property.addressLine}
-            city={property.city}
-          />
-        ) : (
-          <section className="relative isolate overflow-hidden bg-[radial-gradient(circle_at_78%_22%,rgba(196,154,69,0.20),transparent_46%),linear-gradient(135deg,#0f151d_0%,#18222f_55%,#0d1117_100%)] text-white">
-            <div className="mx-auto flex min-h-[28rem] max-w-7xl flex-col justify-end px-4 py-14 sm:px-6 lg:min-h-[33rem] lg:px-8 lg:pb-16">
-              <div className="flex items-center gap-3 text-[0.8rem] font-medium text-white/80">
-                <BrandMark tone="dark" size="sm" />
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin size={13} className="text-gold-300" aria-hidden="true" />
-                  {property.addressLine} · {property.city}, {property.country}
-                </span>
+        <Entrance variant="up" delay={40} className="relative isolate overflow-hidden text-white">
+          {heroSlides.length > 0 ? (
+            <section className="bg-[radial-gradient(circle_at_78%_22%,rgba(196,154,69,0.20),transparent_46%),linear-gradient(135deg,#0f151d_0%,#18222f_55%,#0d1117_100%)]">
+              <HomeHeroCarousel
+                slides={heroSlides}
+                stayQuery={stayQuery}
+                propertyName={property.name}
+                totalApartments={published.length}
+                addressLine={property.addressLine}
+                city={property.city}
+              />
+            </section>
+          ) : (
+            <section className="bg-[radial-gradient(circle_at_78%_22%,rgba(196,154,69,0.20),transparent_46%),linear-gradient(135deg,#0f151d_0%,#18222f_55%,#0d1117_100%)]">
+              {/* Slow ken-burns brand background keeps the hero photographic before apartments are published */} 
+              <div className="absolute inset-0 -z-10">
+                <div
+                  className="hero-bg-scale opacity-55"
+                  style={{
+                    backgroundImage: `url("${property.logoUrl ?? '/brand/logo.jpg'}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                  aria-hidden="true"
+                />
               </div>
-              <h1 className="mt-4 max-w-2xl font-display text-[2.2rem] font-medium leading-[1.08] tracking-[-0.02em] sm:text-[2.95rem]">
-                Furnished apartments in Lusaka,{' '}
-                <span className="text-white/75">booked directly with our front desk.</span>
-              </h1>
-              <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-white/75">
-                Self-catering stays at {property.addressLine} with backup power, work-ready Wi-Fi
-                and gated compound parking—quoted transparently in Zambian Kwacha.
-              </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  href={`/apartments?${stayQuery}#availability`}
-                  className="btn bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-950 hover:bg-sand-100"
-                >
-                  Check availability <ArrowRight size={15} aria-hidden="true" />
-                </Link>
-                {waDigits ? (
-                  <a
-                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${property.name}, I would like to check apartment availability for ${checkIn} to ${checkOut}.`)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn border border-white/30 bg-white/5 px-4 py-2.5 text-[0.86rem] text-white backdrop-blur-sm transition-colors hover:border-white/65 hover:bg-white/10"
-                  >
-                    <MessageCircle size={15} /> WhatsApp reception
-                  </a>
-                ) : null}
+              <div className="mx-auto flex min-h-[28rem] max-w-7xl flex-col justify-end px-4 py-14 sm:px-6 lg:min-h-[33rem] lg:px-8 lg:pb-16">
+                {/* Animated brand photo stack — real project imagery */}
+                <div className="mb-6 flex items-end gap-[-0.75rem] md:gap-[-1rem]">
+                  <div className="photo-stack">
+                    <div className="photo-stack-item photo-stack-item-1 w-40 h-40 md:w-56 md:h-56 rounded-[1.2rem]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/brand/logo.jpg" alt="" aria-hidden="true" className="h-full w-full object-cover" />
+                    </div>
+                    <div className="photo-stack-item photo-stack-item-2 w-32 h-32 md:w-44 md:h-44 -mt-10 md:-mt-12 ml-[-1rem] md:ml-[-1.25rem] rounded-[1rem]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/brand/logo.jpg" alt="" aria-hidden="true" className="h-full w-full object-cover" />
+                    </div>
+                    <div className="photo-stack-item photo-stack-item-3 w-28 h-28 md:w-36 md:h-36 -mt-14 md:-mt-16 ml-[-0.5rem] md:ml-[-0.75rem] rounded-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/brand/logo.jpg" alt="" aria-hidden="true" className="h-full w-full object-cover" />
+                    </div>
+                  </div>
+                </div>
+                <Reveal variant="up" delay={100} className="mb-4">
+                  <div className="flex items-center gap-3 text-[0.8rem] font-medium text-white/80">
+                    <BrandMark tone="dark" size="sm" />
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin size={13} className="text-gold-300" aria-hidden="true" />
+                      {property.addressLine} · {property.city}, {property.country}
+                    </span>
+                  </div>
+                </Reveal>
+                <Reveal variant="up" delay={160}>
+                  <h1 className="mt-4 max-w-2xl font-display text-[2.2rem] font-medium leading-[1.08] tracking-[-0.02em] sm:text-[2.95rem]">
+                    Furnished apartments in Lusaka,{' '}
+                    <span className="text-white/75">booked directly with our front desk.</span>
+                  </h1>
+                </Reveal>
+                <Reveal variant="up" delay={220}>
+                  <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-white/75">
+                    Self-catering stays at {property.addressLine} with backup power, work-ready Wi-Fi
+                    and gated compound parking—quoted transparently in Zambian Kwacha.
+                  </p>
+                </Reveal>
+                <Reveal variant="up" delay={280}>
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    <Link
+                      href={`/apartments?${stayQuery}#availability`}
+                      className="btn bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-950 hover:bg-sand-100"
+                    >
+                      Check availability <ArrowRight size={15} aria-hidden="true" />
+                    </Link>
+                    {waDigits ? (
+                      <a
+                        href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${property.name}, I would like to check apartment availability for ${checkIn} to ${checkOut}.`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn border border-white/30 bg-white/5 px-4 py-2.5 text-[0.86rem] text-white backdrop-blur-sm transition-colors hover:border-white/65 hover:bg-white/10"
+                      >
+                        <MessageCircle size={15} /> WhatsApp reception
+                      </a>
+                    ) : null}
+                  </div>
+                </Reveal>
               </div>
-            </div>
-          </section>
-        )}
+            </section>
+          )
+        }
+        </Entrance>
 
         {/* Availability Search Bar */}
         <section className="border-b border-sand-200 bg-white">

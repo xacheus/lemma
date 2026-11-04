@@ -25,6 +25,20 @@ npm run test:unit
 npm run build
 ```
 
+### Local sign-in
+
+On a fresh local install (no Firebase configured) the database starts empty, so a
+default administrator is seeded automatically so the desk can sign in straight away:
+
+- **Email:** `admin@lemma.local` (desk username: `admin`)
+- **Password:** `LemmaAdmin2026!`
+- **Role:** `admin` — lands on `/admin`
+
+This account is created only when `FIREBASE_PROJECT_ID` is unset and no accounts exist,
+and is flagged `demoPassword`. Rotate or replace it before any production use;
+management assigns further staff roles from `/admin/staff`. Production logins go
+through Firebase Auth and never use this local credential.
+
 Local data and locally uploaded media are saved under ignored `.data/`. Do not put a
 real property's records there for a production deployment. To exercise HTTP booking
 and staff flows against a **disposable local dataset**, use:

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import { ZodError } from 'zod';
 import os from 'node:os';
 import path from 'node:path';
-import type { Database } from '../domain/types';
+import { hashPassword } from '../auth/passwords';
+import type { Database, UserRecord } from '../domain/types';
 import { businessToday } from '../domain/dates';
 import { getAdminFirestore } from '../firebase/admin';
 import type { Firestore, Transaction, QuerySnapshot, DocumentSnapshot } from 'firebase-admin/firestore';
@@ -259,11 +260,48 @@ function load(): Database {
 
   db.__today = today;
   db = ensureSchemaCollections(db);
+  db = seedLocalAdmin(db);
   computeDashboardSummary(db);
   localCache = db;
   localCacheForDate = today;
   localCacheFile = file;
   writeLocal(db);
+  return db;
+}
+
+/**
+ * Local-only bootstrap: a brand-new local database (no Firebase configured) has no
+ * accounts at all, so there is nothing to log in to. Seed a single administrator so
+ * the desk can sign in straight away; management assigns further staff roles from
+ * /admin/staff and should replace this credential.
+ *
+ * Never runs when Firebase Admin is configured, and never replaces an existing
+ * account. The record is flagged `demoPassword` so tooling can distinguish it from
+ * real credentials — rotate or remove it before any production use.
+ */
+function seedLocalAdmin(db: Database): Database {
+  if (process.env.FIREBASE_PROJECT_ID) return db;
+  if ((db.users ?? []).length > 0) return db;
+  const now = new Date().toISOString();
+  const admin: UserRecord = {
+    uid: 'usr-local-admin',
+    fullName: 'Desk Administrator',
+    email: 'admin@lemma.local',
+    phoneNumber: '+260 574 556 207',
+    profilePhoto: '',
+    role: 'admin',
+    accountStatus: 'active',
+    emailVerified: true,
+    passwordHash: hashPassword('LemmaAdmin2026!'),
+    sessionVersion: 1,
+    createdAt: now,
+    updatedAt: now,
+    lastLoginAt: null,
+    username: 'admin',
+    jobTitle: 'Front Desk Administrator',
+    demoPassword: true,
+  };
+  db.users = [admin];
   return db;
 }
 
