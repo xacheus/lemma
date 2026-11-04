@@ -1,5 +1,5 @@
 import { addISO, dayDiff, eachISO, format, parseISO, startOfMonth, endOfMonth, startOfWeek, subMonths } from './dates';
-import { nightsBetween, isConfirmed, reservationCovers, snapshotForNight } from './availability';
+import { nightsBetween, isConfirmed, reservationCovers, snapshotForNight, rangesOverlap, holdsInventory } from './availability';
 import type {
   Database,
   Guest,
@@ -101,7 +101,8 @@ export function recomputeReservation(db: Database, reservationId: ID): Reservati
    * here.
    */
   const depositSatisfied = f.verifiedPaid + 0.001 >= f.depositDue && f.depositDue > 0;
-  if ((r.status === 'inquiry' || r.status === 'pending_confirmation') && depositSatisfied) {
+  const inventoryAvailable = !db.reservations.some((other) => other.id !== r.id && other.apartmentId === r.apartmentId && holdsInventory(other) && rangesOverlap(r.checkIn, r.checkOut, other.checkIn, other.checkOut));
+  if ((r.status === 'inquiry' || r.status === 'pending_confirmation') && depositSatisfied && inventoryAvailable) {
     r.status = 'reserved';
     r.holdExpiresAt = null;
   }

@@ -146,6 +146,10 @@ export function findOrCreateGuest(
     email?: string;
     nationalId?: string;
     idType?: Guest['idType'];
+    nationality?: string;
+    countryOfResidence?: string;
+    countryOfOrigin?: string;
+    residentialAddress?: string;
     city?: string;
     company?: string;
     specialRequests?: string;
@@ -153,6 +157,7 @@ export function findOrCreateGuest(
     source?: Guest['source'];
   },
   onDuplicate: 'merge' | 'skip' = 'merge',
+  identity?: { publicSubmission: true; userId: ID | null },
 ): Guest {
   if (input.guestId) {
     const existing = db.guests.find((g) => g.id === input.guestId);
@@ -165,15 +170,21 @@ export function findOrCreateGuest(
   if (!phone && !email) {
     throw new OperationError('Capture at least a phone number or an email so reception can reach the guest.', 422, 'validation');
   }
-  const dupe = db.guests.find(
-    (g) => (phone && g.phone.replace(/\s/g, '') === phone.replace(/\s/g, '')) || (email && g.email.toLowerCase() === email),
-  );
+  // Public contact details are not proof of ownership. Reuse only a profile
+  // already owned by the authenticated account; staff can still deduplicate as before.
+  const dupe = identity
+    ? (identity.userId ? db.guests.find((g) => g.userId === identity.userId) : undefined)
+    : db.guests.find((g) => (phone && g.phone.replace(/\s/g, '') === phone.replace(/\s/g, '')) || (email && g.email.toLowerCase() === email));
   if (dupe) {
     if (onDuplicate === 'skip') return dupe;
     const patch: Partial<Guest> = {};
     if (input.nationalId && !dupe.nationalId) patch.nationalId = input.nationalId;
     if (input.city && !dupe.city) patch.city = input.city;
     if (input.specialRequests) patch.specialRequests = input.specialRequests;
+    if (input.nationality) patch.nationality = input.nationality;
+    if (input.countryOfResidence) patch.countryOfResidence = input.countryOfResidence;
+    if (input.countryOfOrigin) patch.countryOfOrigin = input.countryOfOrigin;
+    if (input.residentialAddress) patch.residentialAddress = input.residentialAddress;
     if (Object.keys(patch).length) Object.assign(dupe, patch);
     return dupe;
   }
@@ -184,7 +195,11 @@ export function findOrCreateGuest(
     email: email || '',
     nationalId: input.nationalId?.trim() || '',
     idType: input.idType ?? 'nrc',
-    nationality: 'Zambian',
+    nationality: input.nationality?.trim() || '',
+    countryOfResidence: input.countryOfResidence?.trim() || '',
+    countryOfOrigin: input.countryOfOrigin?.trim() || '',
+    residentialAddress: input.residentialAddress?.trim() || '',
+    ...(identity?.userId ? { userId: identity.userId } : {}),
     city: input.city?.trim() || '',
     company: input.company?.trim() || '',
     vip: false,
@@ -239,6 +254,8 @@ export interface ReservationInput {
   arrivalTime?: string;
   /** Public submissions are requests until reception accepts them. */
   asInquiry?: boolean;
+  publicSubmission?: boolean;
+  purposeOfVisit?: Reservation['purposeOfVisit'];
   initialDeposit?: { amount: number; method: PaymentMethod; reference?: string } | null;
 }
 
@@ -308,7 +325,8 @@ export function today(db: Database): string {
 export function createReservation(db: Database, actorId: ID, input: ReservationInput): Reservation {
   const apartment = db.apartments.find((a) => a.id === input.apartmentId);
   if (!apartment) throw new OperationError('Select an apartment.', 422, 'validation');
-  const guest = findOrCreateGuest(db, input.guest ?? { guestId: input.guestId });
+  const guest = findOrCreateGuest(db, input.guest ?? { guestId: input.guestId }, 'merge',
+    input.publicSubmission ? { publicSubmission: true, userId: input.userId ?? null } : undefined);
   const nights = nightsBetween(input.checkIn, input.checkOut);
   if (nights <= 0) throw new OperationError('Check-out must be after check-in.', 422, 'validation');
   if (input.guestCount < 1) throw new OperationError('A booking needs at least one guest.', 422, 'validation');
@@ -348,10 +366,10 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
   const holdMins = db.settings.booking.holdDurationMinutes ?? 240;
   // An email supplied on a public booking is not proof of account ownership.
   // Signed-in submissions pass their UID; confirmed guest profiles have userId.
-  const linkedUserId = input.userId ?? guest.userId ?? null;
+  const linkedUserId = input.publicSubmission ? (input.userId ?? null) : (input.userId ?? guest.userId ?? null);
 
   const reservation: Reservation = {
-    id: nextId('rv'),
+    id: `rv-${randomUUID()}`,
     reference,
     userId: linkedUserId,
     guestId: guest.id,
@@ -372,6 +390,7 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
     paymentStatus: 'unpaid',
     source: input.source,
     arrivalTime: input.arrivalTime || db.settings.booking.checkInTime,
+    purposeOfVisit: input.purposeOfVisit ?? '',
     notes: input.notes ?? '',
     holdExpiresAt:
       status === 'pending_confirmation'
@@ -579,6 +598,10 @@ export function setReservationStatus(
     );
   }
   const beforeStatus = r.status;
+  if (['reserved', 'fully_paid', 'pending_confirmation'].includes(status)) {
+    assertAvailability(db, { apartmentId: r.apartmentId, checkIn: r.checkIn, checkOut: r.checkOut,
+      guestCount: r.guestCount, excludeReservationId: r.id, source: r.source });
+  }
   r.status = status;
   if (status === 'reserved' && ['inquiry', 'pending_confirmation'].includes(beforeStatus)) {
     notifyGuest(db, r, 'booking_confirmation', `Booking confirmed · ${r.reference}`, 'Your booking has been confirmed. View your booking for the details.');
@@ -659,6 +682,8 @@ export function checkOutReservation(db: Database, actorId: ID, reservationId: ID
   );
   openTurnoverTask(db, r, actorId);
   recomputeReservation(db, r.id);
+  appendAuditLog(db, { category: 'booking', action: 'booking.checked_out', actorUid: actorId,
+    targetType: 'booking', targetId: r.id, summary: `Checked out ${r.reference}.` });
   return r;
 }
 
@@ -873,7 +898,7 @@ export function submitPaymentClaim(
     }
   } else if (r.userId !== input.userId) {
     const guestRecord = db.guests.find((g) => g.id === r.guestId);
-    if (guestRecord?.userId !== input.userId) {
+    if (r.userId || guestRecord?.userId !== input.userId) {
       throw new OperationError('That booking does not belong to your account.', 403, 'forbidden');
     }
   }

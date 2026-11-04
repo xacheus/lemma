@@ -1,3 +1,4 @@
+import { ownsGuestResource } from './ownership';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type {
   AccountStatus,
@@ -600,14 +601,7 @@ export function requestBookingCancellation(
   if (!r) throw new OperationError('Booking not found.', 404, 'not_found');
 
   const user = (db.users ?? []).find((u) => u.uid === actorUid);
-  const ownsBooking =
-    r.userId === actorUid ||
-    (user &&
-      db.guests.some(
-        (g) =>
-          g.id === r.guestId &&
-          (g.userId === actorUid || (user.emailVerified && g.email && g.email.toLowerCase() === user.email.toLowerCase())),
-      ));
+  const ownsBooking = Boolean(user && ownsGuestResource(db, actorUid, user.emailVerified ? user.email : '', { reservationId: r.id }));
 
   if (!ownsBooking && !['super_admin', 'admin', 'receptionist'].includes(user?.role ?? 'guest')) {
     throw new OperationError('You can only request cancellation for your own bookings.', 403, 'forbidden');

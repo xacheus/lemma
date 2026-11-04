@@ -1,3 +1,4 @@
+import { ownsGuestResource } from '@/lib/domain/ownership';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Download, ShieldCheck } from 'lucide-react';
@@ -32,12 +33,9 @@ export default async function GuestReceiptPage({ params }: { params: Promise<{ i
   if (!receipt) notFound();
 
   const isStaff = ['super_admin', 'admin', 'receptionist'].includes(session.user.role);
-  const email = (session.user.email ?? '').toLowerCase();
-  const guest = db.guests.find((g) => g.id === receipt.guestId);
-  const owns =
-    receipt.userId === session.uid ||
-    (guest && guest.userId === session.uid) ||
-    (email && (receipt.customerEmail ?? '').toLowerCase() === email);
+  const owns = ownsGuestResource(db, session.uid, session.userRecord.emailVerified ? session.user.email : '', {
+    userId: receipt.userId, guestId: receipt.guestId, reservationId: receipt.reservationId, docEmail: receipt.customerEmail,
+  });
   if (!isStaff && !owns) notFound();
 
   const property = db.settings.property;

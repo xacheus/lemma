@@ -28,6 +28,8 @@ export const GET = publicRoute(({ search, req }) => {
   const result = searchAvailability(db, { checkIn, checkOut, guests, apartmentId, today: db.__today });
   return {
     ...result,
+    // Maintenance descriptions are internal staff notes, not public availability data.
+    hits: result.hits.map((hit) => ({ ...hit, advisories: hit.available ? hit.advisories : [] })),
     nights: result.nights,
     currency: 'ZMW',
     policy: {

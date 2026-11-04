@@ -172,6 +172,7 @@ export function createEmptyDatabase(today: string): Database {
     auditLogs: [],
     notifications: [],
     paymentClaims: [],
+    bookingAccess: [],
     settings: cloneDefaults(),
     sequences: {
       reservation: 1000,
@@ -226,6 +227,7 @@ function ensureSchemaCollections(db: Database): Database {
   db.auditLogs = db.auditLogs ?? [];
   db.notifications = db.notifications ?? [];
   db.paymentClaims = db.paymentClaims ?? [];
+  db.bookingAccess = db.bookingAccess ?? [];
   db.settings = {
     ...fresh.settings,
     ...db.settings,

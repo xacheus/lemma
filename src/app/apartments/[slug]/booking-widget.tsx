@@ -97,6 +97,15 @@ export function ApartmentBookingWidget({
   const [phone, setPhone] = useState(prefillUser?.phone || '+260 ');
   const [email, setEmail] = useState(prefillUser?.email || '');
   const [notes, setNotes] = useState('');
+  const [countryOfResidence, setCountryOfResidence] = useState('');
+  const [nationality, setNationality] = useState('');
+  const [residentialAddress, setResidentialAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [countryOfOrigin, setCountryOfOrigin] = useState('');
+  const [idType, setIdType] = useState<'nrc' | 'passport'>('nrc');
+  const [nationalId, setNationalId] = useState('');
+  const [purposeOfVisit, setPurposeOfVisit] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('');
   const [agreedPolicy, setAgreedPolicy] = useState(true);
 
   const [availState, setAvailState] = useState<'checking' | 'available' | 'unavailable'>('checking');
@@ -160,6 +169,8 @@ export function ApartmentBookingWidget({
           fullName,
           phone,
           email,
+          countryOfResidence, nationality, residentialAddress, city, countryOfOrigin,
+          idType, nationalId, purposeOfVisit, arrivalTime,
           apartmentId: apartment.id,
           checkIn,
           checkOut,
@@ -178,7 +189,7 @@ export function ApartmentBookingWidget({
       }
       setCreated(json.data);
     } catch {
-      setError('Network error while submitting your reservation.');
+      setError('The connection was interrupted. Your request may have been received; check with reception before submitting again.');
     } finally {
       setBusy(false);
     }
@@ -411,7 +422,7 @@ export function ApartmentBookingWidget({
       <div className="space-y-3 border-t border-sand-200 pt-3">
         <div>
           <label className="label mb-1 block" htmlFor="bw-name">
-            Full name
+            Full legal name <span className="text-st-cancelled">*</span>
           </label>
           <input
             id="bw-name"
@@ -438,7 +449,7 @@ export function ApartmentBookingWidget({
           </div>
           <div>
             <label className="label mb-1 block" htmlFor="bw-email">
-              Email address
+              Email address <span className="text-st-cancelled">*</span>
             </label>
             <input
               id="bw-email"
@@ -447,12 +458,30 @@ export function ApartmentBookingWidget({
               onChange={(e) => setEmail(e.target.value)}
               className="field"
               placeholder="name@company.co.zm"
+              required
             />
           </div>
         </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div><label className="label mb-1 block" htmlFor="bw-residence">Country of residence *</label><input id="bw-residence" value={countryOfResidence} onChange={(e) => setCountryOfResidence(e.target.value)} maxLength={100} className="field" required /></div>
+          <div><label className="label mb-1 block" htmlFor="bw-nationality">Nationality *</label><input id="bw-nationality" value={nationality} onChange={(e) => setNationality(e.target.value)} maxLength={100} className="field" required /></div>
+        </div>
+        <details className="rounded-md border border-sand-200 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-navy-800">Additional guest details (optional)</summary>
+          <p className="mt-2 text-xs leading-relaxed text-navy-500">Identification helps reception prepare for check-in. You may leave it blank and present it securely at arrival. Only authorised staff can access it.</p>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div><label className="label mb-1 block" htmlFor="bw-id-type">Identification type</label><select id="bw-id-type" className="field" value={idType} onChange={(e) => setIdType(e.target.value as 'nrc' | 'passport')}><option value="nrc">NRC</option><option value="passport">Passport</option></select></div>
+            <div><label className="label mb-1 block" htmlFor="bw-id">NRC / passport number</label><input id="bw-id" className="field" value={nationalId} onChange={(e) => setNationalId(e.target.value)} maxLength={32} /></div>
+            <div><label className="label mb-1 block" htmlFor="bw-address">Residential address</label><input id="bw-address" className="field" value={residentialAddress} onChange={(e) => setResidentialAddress(e.target.value)} maxLength={250} /></div>
+            <div><label className="label mb-1 block" htmlFor="bw-city">City or town</label><input id="bw-city" className="field" value={city} onChange={(e) => setCity(e.target.value)} maxLength={100} /></div>
+            <div><label className="label mb-1 block" htmlFor="bw-origin">Country of origin</label><input id="bw-origin" className="field" value={countryOfOrigin} onChange={(e) => setCountryOfOrigin(e.target.value)} maxLength={100} /></div>
+            <div><label className="label mb-1 block" htmlFor="bw-purpose">Purpose of visit</label><select id="bw-purpose" className="field" value={purposeOfVisit} onChange={(e) => setPurposeOfVisit(e.target.value)}><option value="">Not specified</option><option value="business">Business</option><option value="holiday">Holiday</option><option value="family_visit">Family visit</option><option value="work">Work</option><option value="other">Other</option></select></div>
+            <div><label className="label mb-1 block" htmlFor="bw-arrival">Estimated arrival time</label><input id="bw-arrival" type="time" className="field" value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)} /></div>
+          </div>
+        </details>
         <div>
           <label className="label mb-1 block" htmlFor="bw-notes">
-            Arrival time or special requests (optional)
+            Special requests (optional)
           </label>
           <textarea
             id="bw-notes"
@@ -460,7 +489,7 @@ export function ApartmentBookingWidget({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="field"
-            placeholder="Estimated arrival time, airport transfer, or corporate billing note…"
+            placeholder="Airport transfer, accessibility needs or other requests…"
           />
         </div>
         <label className="flex items-start gap-2 text-[0.78rem] text-navy-600">
@@ -475,6 +504,11 @@ export function ApartmentBookingWidget({
         </label>
       </div>
 
+      <div className="rounded-md border border-sand-200 p-3 text-sm text-navy-700" aria-label="Booking summary">
+        <p className="font-semibold text-navy-900">Booking summary</p>
+        <p>{apartment.name} · {guestCount} {guestCount === 1 ? 'guest' : 'guests'}</p>
+        <p>{checkIn} to {checkOut} · {formatKwacha(pricing.totalAmount)}</p>
+      </div>
       {error ? (
         <p className="flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] text-st-cancelled">
           <AlertCircle size={15} className="mt-0.5 shrink-0" /> {error}
@@ -634,7 +668,7 @@ function BookingConfirmation({
       }
       setSubmitted({ amount: value, reference: txnRef.trim() });
     } catch {
-      setError('Network error — the proof was not submitted. Please try again.');
+      setError('Network error — we could not confirm whether the proof was submitted. Check your booking or contact reception before trying again.');
     } finally {
       setBusy(false);
     }
@@ -655,7 +689,7 @@ function BookingConfirmation({
         {prefillUser ? (
           <Link href="/account" className="btn btn-primary justify-center">View my account</Link>
         ) : (
-          <Link href="/contact" className="btn btn-primary justify-center">Contact reception</Link>
+          <Link href={`/booking/${encodeURIComponent(booking.id)}`} className="btn btn-primary justify-center">View my enquiry</Link>
         )}
         {waDigits ? (
           <a href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello, please confirm my enquiry ${booking.reference}.`)}`}
@@ -682,6 +716,7 @@ function BookingConfirmation({
         </div>
       </div>
 
+      {!prefillUser ? <p className="text-sm text-navy-600"><Link className="link" href={`/booking/${encodeURIComponent(booking.id)}`}>View this guest booking</Link> · <Link className="link" href="/booking/access">Recover access later</Link></p> : null}
       {submitted ? (
         <div className="space-y-3">
           <div className="rounded-md border border-st-available/40 bg-st-availableBg/50 p-3.5 text-[0.84rem] leading-relaxed text-navy-800">

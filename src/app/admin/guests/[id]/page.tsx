@@ -125,6 +125,11 @@ export default function GuestDetailPage({ params }: { params: Promise<{ id: stri
               <ContactLine icon={Phone} label="Phone / WhatsApp" value={guest.phone} href={`tel:${guest.phone.replace(/\s/g, '')}`} />
               <ContactLine icon={Mail} label="Email" value={guest.email || 'Not provided'} href={guest.email ? `mailto:${guest.email}` : undefined} />
               <ContactLine icon={Building2} label="Company" value={guest.company || '—'} />
+              <ContactLine icon={Building2} label="Country of residence" value={guest.countryOfResidence || 'Not provided'} />
+              <ContactLine icon={Building2} label="Nationality" value={guest.nationality || 'Not provided'} />
+              <ContactLine icon={Building2} label="Residential address" value={guest.residentialAddress || 'Not provided'} />
+              <ContactLine icon={Building2} label="City or town" value={guest.city || 'Not provided'} />
+              <ContactLine icon={Building2} label="Country of origin" value={guest.countryOfOrigin || 'Not provided'} />
               <ContactLine icon={ShieldAlert} label={guest.idType === 'passport' ? 'Passport' : 'NRC'} value={guest.nationalId ? maskId(guest.nationalId) : can('guests.viewPii') ? 'Not on file' : 'Hidden for your role'} hint={guest.nationalId ? 'Last four digits shown; the full number is only readable by roles with PII rights.' : 'Collect at check-in.'} />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sand-100 pt-3">

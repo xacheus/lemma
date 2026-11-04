@@ -1,3 +1,4 @@
+import { buildSnapshot } from '@/lib/api/snapshot';
 import type { Database } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 
@@ -11,28 +12,10 @@ import type { Session } from '@/lib/auth/session';
 export function unreadForSession(db: Database, session: Session | null): number {
   if (!session) return 0;
   const role = session.user.role;
-  const email = db.users?.some((u) => u.uid === session.uid && u.emailVerified)
-    ? (session.user.email ?? '').toLowerCase()
-    : '';
-
-  if (role !== 'guest') {
-    return db.notifications.filter(
-      (n) => !n.readAt && (n.recipientContact === 'in-app' || n.channel === 'in_app'),
-    ).length;
+  if (role === 'guest') {
+    return (buildSnapshot(db, session).notifications ?? []).filter((n) => !n.readAt).length;
   }
-
-  const myGuestIds = new Set(
-    db.guests.filter((g) => g.userId === session.uid || (email && g.email.toLowerCase() === email)).map((g) => g.id),
-  );
-  const myReservationIds = new Set(
-    db.reservations
-      .filter((r) => r.userId === session.uid || myGuestIds.has(r.guestId))
-      .map((r) => r.id),
-  );
   return db.notifications.filter(
-    (n) =>
-      !n.readAt &&
-      ((n.reservationId && myReservationIds.has(n.reservationId)) ||
-        (n.guestId && myGuestIds.has(n.guestId))),
+    (n) => !n.readAt && !n.recipientUid && (n.recipientContact === 'in-app' || n.channel === 'in_app'),
   ).length;
 }

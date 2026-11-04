@@ -1,3 +1,4 @@
+import { ownsGuestResource } from '@/lib/domain/ownership';
 import { apiRoute, HttpError, publicRoute, readBody } from '@/lib/api/http';
 import { quotationActionSchema } from '@/lib/api/schemas';
 import { ensureCloudFirestoreHydrated, getDb, runAtomicTransaction } from '@/lib/db/store';
@@ -20,13 +21,11 @@ export const GET = publicRoute(async ({ params, search, session }) => {
   const shareToken = search.get('token');
   const allowedByToken = Boolean(shareToken && quotation.shareToken === shareToken);
   const allowedByStaff = Boolean(session && session.permissions.has('quotations.view'));
-  const allowedByOwner = Boolean(
-    session &&
-      (quotation.userId === session.uid ||
-        (db.users?.some((u) => u.uid === session.uid && u.emailVerified) &&
-          quotation.customerEmail &&
-          quotation.customerEmail.toLowerCase() === session.user.email.toLowerCase())),
-  );
+  const allowedByOwner = Boolean(session && ownsGuestResource(db, session.uid,
+    session.userRecord.emailVerified ? session.user.email : '', {
+      userId: quotation.userId, reservationId: quotation.reservationId,
+      guestId: quotation.guestId, docEmail: quotation.customerEmail,
+    }));
 
   if (!allowedByToken && !allowedByStaff && !allowedByOwner) {
     throw new HttpError('Not authorised to view this quotation.', 403, 'forbidden');

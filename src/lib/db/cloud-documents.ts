@@ -16,6 +16,7 @@ export const CLOUD_COLLECTIONS = [
   { collection: 'media', field: 'media', key: 'id' },
   { collection: 'notifications', field: 'notifications', key: 'id' },
   { collection: 'payment_claims', field: 'paymentClaims', key: 'id' },
+  { collection: 'booking_access', field: 'bookingAccess', key: 'id' },
   { collection: 'audit_logs', field: 'auditLogs', key: 'id' },
 ] as const;
 
