@@ -48,11 +48,12 @@
   settlement, and a multi-property data model are outside this release.
 - **Guest booking access:** The booking browser receives an HTTP-only capability cookie;
   losing it requires the reference and booking email to request a one-time access link.
-  Confirmation and recovery email require `RESEND_API_KEY`, an authorised `EMAIL_FROM`,
+  Confirmation and recovery email require `BREVO_API_KEY`, a Brevo-verified `EMAIL_FROM`,
   and an explicit HTTPS `NEXT_PUBLIC_SITE_URL` (localhost HTTP is allowed in development).
   Email provider acceptance is not proof of delivery. Without configuration or delivery,
   contact reception. Email delivery and link exchange have not been tested against a live
-  provider. The current process-local rate limiter is not a distributed abuse defense;
+  provider. Brevo acceptance is not proof of inbox delivery. No live Brevo credentials
+  or delivery tests are available in this workspace. The current process-local rate limiter is not a distributed abuse defense;
   deploy a shared edge/IP and recipient throttle before exposing recovery publicly.
   Matching requests wait for the provider while mismatches do not, so response timing may
   also reveal whether a reference/email pair matched; move delivery to a durable,

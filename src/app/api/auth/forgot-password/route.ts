@@ -1,3 +1,4 @@
+import { trustedEmailSiteOrigin } from '@/lib/notifications/site-origin';
 import { NextResponse } from 'next/server';
 import { publicRoute, readBody } from '@/lib/api/http';
 import { forgotPasswordSchema, resetPasswordSchema } from '@/lib/api/schemas';
@@ -14,8 +15,8 @@ export const POST = publicRoute(async ({ req }) => {
     propertyName: db.settings.property.name,
   }));
 
-  if (resetToken) {
-    const origin = new URL(req.url).origin;
+  const origin = trustedEmailSiteOrigin();
+  if (resetToken && origin) {
     const resetUrl = `${origin}/forgot-password?token=${encodeURIComponent(resetToken)}`;
     await sendEmailNotification({
       to: email,

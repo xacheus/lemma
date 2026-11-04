@@ -1,3 +1,4 @@
+import { isBrevoEmailConfigured } from '../notifications/email-config';
 import { ownsGuestResource } from '../domain/ownership';
 import { DEFAULT_SETTINGS } from '../db/default-settings';
 import { publicPaymentMethod } from '../domain/payment-details';
@@ -115,7 +116,7 @@ export function getIntegrationStatus(): IntegrationStatusView {
       process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID,
     ),
     smsProviderConfigured: Boolean(process.env.SMS_WEBHOOK_URL),
-    emailProviderConfigured: Boolean(process.env.RESEND_API_KEY),
+    emailProviderConfigured: isBrevoEmailConfigured(),
   };
 }
 
@@ -433,9 +434,18 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
     account,
     permissions: [...permissions],
     today,
-    settings: isCleaner
-      ? { ...db.settings, payments: { ...db.settings.payments, methods: [] } }
-      : db.settings,
+    // Credentials are deployment configuration, not persisted property settings.
+    // Derive the email provider badge at read time without rewriting old settings.
+    settings: {
+      ...db.settings,
+      ...(isCleaner ? { payments: { ...db.settings.payments, methods: [] } } : {}),
+      notifications: {
+        ...db.settings.notifications,
+        email: { ...db.settings.notifications.email, connected: integrations.emailProviderConfigured,
+          provider: integrations.emailProviderConfigured ? 'Brevo Transactional Email' : null,
+          note: 'Configure BREVO_API_KEY and a verified EMAIL_FROM for transactional email; configuration does not prove delivery.' },
+      },
+    },
     apartments,
     cleaningState: db.cleaningState,
     guests,

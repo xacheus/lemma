@@ -133,7 +133,7 @@ export default function SettingsPage() {
 
       <Alert tone="info" title="How to read the labels">
         A switch marked <span className="font-semibold">enforced</span> changes how the software behaves right now. Everything else is policy copy — it prints on folios and confirms what
-        reception tells guests, but this build does not yet police it. External integrations (mobile-money APIs, SMS aggregators, SMTP) are deliberately not connected.
+        reception tells guests, but this build does not yet police it. Provider credentials are configured on the server; a configured provider has not necessarily delivered a message.
       </Alert>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -338,9 +338,8 @@ export default function SettingsPage() {
         </Panel>
 
         <Panel title="Guest messaging" subtitle="Drafts, delivery claims and reminder timing" bodyClass="p-4 space-y-3">
-          <Alert tone="warn" title="No provider is connected — on purpose">
-            WhatsApp, SMS and email are all shown as <span className="font-semibold">not connected</span>. The system drafts the copy, opens it in the staff member's own app, and records who
-            claims to have sent it. It will never print a delivery you cannot prove.
+          <Alert tone="info" title="Message providers">
+            A configured provider can accept messages, but acceptance is not proof of delivery. Reminder sweeps create drafts; manually sent messages are recorded separately.
           </Alert>
 
           {(['whatsapp', 'sms', 'email'] as const).map((channel) => {
@@ -348,11 +347,11 @@ export default function SettingsPage() {
             return (
               <div key={channel} className="flex flex-wrap items-center gap-3 rounded-xl border border-sand-200 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[0.85rem] font-semibold text-navy-800 capitalize">{channel === 'sms' ? 'SMS' : channel === 'whatsapp' ? 'WhatsApp Business' : 'Email (SMTP)'}</p>
+                  <p className="text-[0.85rem] font-semibold text-navy-800 capitalize">{channel === 'sms' ? 'SMS' : channel === 'whatsapp' ? 'WhatsApp Business' : 'Email (Brevo)'}</p>
                   <p className="mt-0.5 text-[0.76rem] leading-snug text-navy-400">{value.note}</p>
                 </div>
                 <StatusChip className={value.connected ? 'bg-st-availableBg text-st-available' : 'bg-sand-200 text-navy-500'} dot="bg-current">
-                  {value.connected ? 'connected' : 'not connected'}
+                  {value.connected ? 'configured' : 'not configured'}
                 </StatusChip>
                 <Toggle
                   label={value.enabled ? 'Drafting enabled' : 'Drafting off'}

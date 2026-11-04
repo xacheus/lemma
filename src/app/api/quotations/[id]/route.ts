@@ -1,3 +1,4 @@
+import { trustedEmailSiteOrigin } from '@/lib/notifications/site-origin';
 import { ownsGuestResource } from '@/lib/domain/ownership';
 import { apiRoute, HttpError, publicRoute, readBody } from '@/lib/api/http';
 import { quotationActionSchema } from '@/lib/api/schemas';
@@ -48,7 +49,8 @@ export const POST = apiRoute({
         throw new HttpError('Enter a recipient email address to send the quotation.', 422, 'validation');
       }
 
-      const origin = new URL(req.url).origin;
+      const origin = trustedEmailSiteOrigin();
+      if (!origin) throw new HttpError('Configure a trusted NEXT_PUBLIC_SITE_URL before sending a quotation.', 503, 'email_config');
       const pdfUrl = `${origin}/api/documents/quotation/${quotation.id}/pdf?token=${encodeURIComponent(quotation.shareToken)}`;
       const sendRes = await sendEmailNotification({
         to: targetEmail,

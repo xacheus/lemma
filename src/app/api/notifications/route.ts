@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 /**
  * Composes and dispatches a notification. Only marks `sent` when a real external
- * provider (WhatsApp Cloud API, SMS Webhook, or Resend) returns HTTP 2xx with a
+ * provider (WhatsApp Cloud API, SMS Webhook, or Brevo) returns HTTP 2xx with a
  * provider message ID; otherwise records `not_connected`, `in_app_only`, or
  * `delivered_manually` honestly.
  */
@@ -17,7 +17,8 @@ export const POST = apiRoute({
   permission: 'notifications.send',
   handler: async ({ req, session }) => {
     const input = await readBody(req, notificationSendSchema);
-    const providerAttempt = await dispatchExternalNotification({
+    // A manual-send claim must not also trigger an automatic delivery.
+    const providerAttempt = input.markSent ? null : await dispatchExternalNotification({
       channel: input.channel,
       recipientContact: input.recipientContact,
       title: input.title,
@@ -42,7 +43,7 @@ export const POST = apiRoute({
         actor: session.user.name,
       });
 
-      if (providerAttempt.status === 'sent') {
+      if (providerAttempt?.status === 'sent') {
         record.deliveryStatus = 'sent';
         record.providerMessageId = providerAttempt.providerMessageId;
         record.sentAt = new Date().toISOString();
@@ -53,8 +54,8 @@ export const POST = apiRoute({
         record.markedDeliveredBy = session.user.name;
         record.deliveryDetail = `Dispatched manually by ${session.user.name} from handset.`;
       } else {
-        record.deliveryStatus = providerAttempt.status;
-        record.deliveryDetail = providerAttempt.detail;
+        record.deliveryStatus = providerAttempt?.status ?? 'not_connected';
+        record.deliveryDetail = providerAttempt?.detail ?? 'No provider dispatch was attempted.';
       }
 
       return { notification: record, snapshot: buildSnapshot(db, session) };

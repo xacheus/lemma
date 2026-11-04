@@ -67,7 +67,7 @@ export default function NotificationsPage() {
       .filter((n) => {
         if (filter === 'unread' && n.readAt) return false;
         if (filter === 'awaiting' && n.deliveryStatus !== 'not_connected' && n.deliveryStatus !== 'queued_for_manual_send') return false;
-        if (filter === 'sent' && n.deliveryStatus !== 'delivered_manually') return false;
+        if (filter === 'sent' && n.deliveryStatus !== 'delivered_manually' && n.deliveryStatus !== 'sent') return false;
         if (filter === 'failed' && n.deliveryStatus !== 'failed') return false;
         if (channel !== 'all' && n.channel !== channel) return false;
         if (needle && ![n.title, n.body, n.recipientName, n.recipientContact].join(' ').toLowerCase().includes(needle)) return false;
@@ -139,12 +139,10 @@ export default function NotificationsPage() {
         }
       />
 
-      <Alert tone="warn" title="No messaging provider is connected">
+      <Alert tone="info" title="Messaging and delivery">
         <div className="space-y-2">
           <p>
-            WhatsApp, SMS and email rows are drafts: the copy is written, addressed and ready, but nothing leaves the building by itself. A row only becomes{' '}
-            <span className="font-semibold">sent</span> when a member of staff clicks <span className="font-semibold">Mark sent</span> after dispatching it from their own handset — and the log says so
-            in those words, because a staff claim is not a carrier receipt.
+            Reminder sweeps create drafts. A configured provider may accept messages sent from the composer; acceptance is not proof of delivery. Messages marked sent by staff are recorded separately as manual claims.
           </p>
           <div className="flex flex-wrap gap-2">
             {(['whatsapp', 'sms', 'email'] as NotificationChannel[]).map((c) => {
@@ -154,7 +152,7 @@ export default function NotificationsPage() {
                   {c === 'whatsapp' ? <MessageSquare size={12} /> : c === 'sms' ? <MessageCircle size={12} /> : <Mail size={12} />}
                   <span className="font-semibold capitalize text-navy-700">{c}</span>
                   <span className={setting.connected ? 'text-st-available' : 'text-navy-400'}>
-                    {setting.connected ? 'connected' : setting.enabled ? `off · ${setting.provider ?? 'no provider'}` : 'disabled'}
+                    {setting.connected ? 'configured' : setting.enabled ? `not configured · ${setting.provider ?? 'no provider'}` : 'disabled'}
                   </span>
                   {can('settings.manage') ? (
                     <Link href="/admin/settings" className="text-teal-700 hover:underline">

@@ -1,3 +1,4 @@
+import { isBrevoEmailConfigured } from '@/lib/notifications/email-config';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { addBookingAccess, bookingAccessLink, exchangeBookingAccess, bookingCookie, bookingCookieName, createBookingAccessToken, hasBookingAccess } from '@/lib/booking/access';
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
   // Do not reveal whether a reference/email pair exists or whether an email was sent.
   const token = createBookingAccessToken();
   const link = bookingAccessLink(token);
-  if (link && process.env.RESEND_API_KEY) {
+  if (link && isBrevoEmailConfigured()) {
     const match = await runAtomicTransaction((db) => {
       const booking = db.reservations.find((r) => r.reference.toLowerCase() === request.data.reference.toLowerCase());
       const guest = booking && db.guests.find((g) => g.id === booking.guestId);
