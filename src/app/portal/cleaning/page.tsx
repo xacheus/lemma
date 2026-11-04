@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Building2, CheckCircle2, ClipboardList, Clock, LogOut, Play, ShieldAlert, SprayCan, Wrench } from 'lucide-react';
+import { BrandMark } from '@/components/public/brand-mark';
 import { useApp } from '@/components/providers/app';
 import { Alert, EmptyState, Skeleton, StatusChip } from '@/components/ui';
 import { Modal } from '@/components/ui/overlays';
@@ -84,7 +85,7 @@ export default function CleaningPortalPage() {
     <div className="mx-auto max-w-lg pb-16">
       <header className="sticky top-0 z-20 border-b border-sand-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
-          <img src="/brand/logo.jpg" alt="Lemma Apartments" className="h-9 w-9 rounded-lg object-cover ring-1 ring-sand-300" />
+          <BrandMark tone="light" size="sm" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.92rem] font-semibold text-navy-800">Cleaning list</p>
             <p className="truncate text-[0.74rem] text-navy-400">

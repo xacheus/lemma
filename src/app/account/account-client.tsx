@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarDays,
   CheckCircle2,
+  Clock,
   CreditCard,
   Download,
   FileText,
@@ -18,49 +19,97 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { SnapshotView } from '@/lib/view-types';
-import { BOOKING_STATUS_META, PAYMENT_STATUS_META } from '@/lib/domain/status';
+import { ROLE_META } from '@/lib/domain/status';
 import type { PaymentStage } from '@/lib/domain/types';
 import { formatKwacha } from '@/lib/domain/money';
+import { formatMediumDate } from '@/lib/domain/dates';
 import { isSampleListing } from '@/lib/domain/sample-listings';
 import { GuestNotifications } from './guest-notifications';
 import { GuestPaymentPanel } from './guest-payment-panel';
 
-/**
- * The six payment words promised to the guest, with the tone each one deserves.
- * "Proof submitted" is deliberately not green: nothing has been verified yet.
- */
-const STAGE_META: Record<PaymentStage, { label: string; chip: string; note: string }> = {
-  awaiting_payment: {
-    label: 'Awaiting payment',
-    chip: 'bg-st-cancelledBg text-st-cancelled',
-    note: 'No payment has been verified for this stay yet.',
-  },
-  proof_submitted: {
-    label: 'Proof submitted',
-    chip: 'bg-sand-100 text-navy-700',
-    note: 'We have your receipt — reception has not opened it yet.',
-  },
-  under_verification: {
-    label: 'Under verification',
-    chip: 'bg-st-cleaningBg text-st-cleaning',
-    note: 'Reception is matching your payment against the statement.',
-  },
-  part_paid: {
-    label: 'Part paid',
-    chip: 'bg-st-reservedBg text-st-reserved',
-    note: 'Part of the stay is settled; the remaining balance is below.',
-  },
-  approved: {
-    label: 'Approved',
-    chip: 'bg-st-availableBg text-st-available',
-    note: 'Verified. Your receipt is available to view, print or download.',
-  },
-  rejected: {
-    label: 'Payment rejected',
-    chip: 'bg-st-cancelledBg text-st-cancelled',
-    note: 'The last proof could not be matched. Submit a corrected reference or call reception.',
-  },
+const STAGE_NOTE: Record<PaymentStage, string> = {
+  awaiting_payment: 'No payment has been verified for this stay yet.',
+  proof_submitted:
+    'We received your payment reference. Reception will check it against our statement shortly.',
+  under_verification:
+    'Reception is currently matching your payment reference against our statement.',
+  part_paid: 'Your deposit is verified and dates are held. The remaining balance is shown above.',
+  approved: 'Payment verified in full. Your official ZMW receipt is ready to view or download.',
+  rejected:
+    'The last payment reference could not be matched on our statement. Please submit a corrected reference or message reception.',
 };
+
+type GuestReservationRow = NonNullable<SnapshotView['reservations']>[number];
+
+function unifiedBookingStatus(r: GuestReservationRow, pendingExample: boolean): {
+  label: string;
+  chip: string;
+  step: 0 | 1 | 2 | 3 | 4;
+} {
+  if (r.status === 'cancelled') {
+    return { label: 'Cancelled', chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25', step: 0 };
+  }
+  if (r.status === 'cancellation_requested') {
+    return {
+      label: 'Cancellation requested',
+      chip: 'bg-st-cleaningBg text-st-cleaning ring-1 ring-st-cleaning/25',
+      step: 0,
+    };
+  }
+  if (r.status === 'checked_out') {
+    return { label: 'Stay completed', chip: 'bg-sand-200 text-sand-700', step: 4 };
+  }
+  if (r.status === 'checked_in') {
+    return { label: 'Checked in', chip: 'bg-st-occupiedBg text-st-occupied ring-1 ring-st-occupied/25', step: 4 };
+  }
+  if (pendingExample) {
+    return {
+      label: 'Enquiry sent · awaiting unit confirmation',
+      chip: 'bg-sand-100 text-navy-800 ring-1 ring-sand-300',
+      step: 1,
+    };
+  }
+  if (r.paymentStage === 'proof_submitted' || r.paymentStage === 'under_verification') {
+    return {
+      label: 'Payment under review',
+      chip: 'bg-st-cleaningBg text-st-cleaning ring-1 ring-st-cleaning/25',
+      step: 2,
+    };
+  }
+  if (r.paymentStage === 'rejected') {
+    return {
+      label: 'Payment reference not matched',
+      chip: 'bg-st-cancelledBg text-st-cancelled ring-1 ring-st-cancelled/25',
+      step: 1,
+    };
+  }
+  if (r.status === 'fully_paid' || r.paymentStatus === 'fully_paid') {
+    return {
+      label: 'Confirmed · paid in full',
+      chip: 'bg-st-availableBg text-st-available ring-1 ring-st-available/25',
+      step: 3,
+    };
+  }
+  if (r.status === 'reserved' && r.verifiedPaid > 0) {
+    return {
+      label: 'Confirmed · deposit verified',
+      chip: 'bg-st-availableBg text-st-available ring-1 ring-st-available/25',
+      step: 3,
+    };
+  }
+  if (r.status === 'reserved') {
+    return {
+      label: 'Reserved · awaiting deposit',
+      chip: 'bg-st-reservedBg text-st-reserved ring-1 ring-st-reserved/25',
+      step: 2,
+    };
+  }
+  return {
+    label: 'Request received · awaiting deposit',
+    chip: 'bg-sand-100 text-navy-800 ring-1 ring-sand-300',
+    step: 1,
+  };
+}
 
 export function GuestAccountClient({
   initialSnapshot,
@@ -71,10 +120,11 @@ export function GuestAccountClient({
 }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<SnapshotView>(initialSnapshot);
-  const [tab, setTab] = useState<'bookings' | 'notifications' | 'documents' | 'profile'>('bookings');
-  // The sign-up redirect carries ?welcome=1. Acknowledge it once, then take it out of the
-  // address bar so a refresh or a bookmark does not replay the greeting.
+  const [tab, setTab] = useState<'bookings' | 'notifications' | 'documents' | 'profile'>(
+    'bookings',
+  );
   const [showWelcome, setShowWelcome] = useState(justRegistered);
+
   useEffect(() => {
     if (!justRegistered) return;
     const url = new URL(window.location.href);
@@ -82,21 +132,16 @@ export function GuestAccountClient({
     window.history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
   }, [justRegistered]);
 
-  // Profile form state
   const [fullName, setFullName] = useState(snapshot.account?.fullName || snapshot.user.name);
-  const [phoneNumber, setPhoneNumber] = useState(snapshot.account?.phoneNumber || snapshot.user.phone);
+  const [phoneNumber, setPhoneNumber] = useState(
+    snapshot.account?.phoneNumber || snapshot.user.phone,
+  );
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
 
-  /**
-   * Links elsewhere on the site address account sections by hash (`/account#payments`
-   * from the site menu, `/account#notifications` from the header bell). The sections
-   * are tabs rather than anchor targets, so the hash decides which tab opens; a hash
-   * that maps to nothing simply leaves the default tab in place.
-   */
   const selectTabFromHash = useCallback(() => {
     const hash = window.location.hash.replace('#', '');
     if (hash === 'payments') setTab('bookings');
@@ -111,26 +156,33 @@ export function GuestAccountClient({
     return () => window.removeEventListener('hashchange', selectTabFromHash);
   }, [selectTabFromHash]);
 
-  // Payment submission modal
   const [payTarget, setPayTarget] = useState<{ id: string; reference: string } | null>(null);
 
-  // Cancellation request modal state
   const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelErr, setCancelErr] = useState<string | null>(null);
 
   const reservations = snapshot.reservations ?? [];
-  const payable = reservations.filter(
-    (r) => r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status) &&
-      !(r.status === 'inquiry' && isSampleListing({ id: r.apartmentId })),
+  const actionablePayable = reservations.filter(
+    (r) =>
+      r.balanceDue > 0 &&
+      !['cancelled', 'checked_out'].includes(r.status) &&
+      !(r.status === 'inquiry' && isSampleListing({ id: r.apartmentId })) &&
+      r.paymentStage !== 'proof_submitted' &&
+      r.paymentStage !== 'under_verification',
   );
-  const owed = payable.reduce((sum, r) => sum + r.balanceDue, 0);
+  const owed = actionablePayable.reduce((sum, r) => sum + r.balanceDue, 0);
   const quotations = snapshot.quotations ?? [];
   const invoices = snapshot.invoices ?? [];
   const receipts = snapshot.receipts ?? [];
-  const receiptsFor = (reservationId: string) => receipts.filter((rc) => rc.reservationId === reservationId);
+  const receiptsFor = (reservationId: string) =>
+    receipts.filter((rc) => rc.reservationId === reservationId);
   const waDigits = snapshot.settings.property.whatsapp.replace(/[^0-9]/g, '');
+  const roleLabel =
+    snapshot.user.role === 'guest'
+      ? 'Guest Account'
+      : ROLE_META[snapshot.user.role]?.label || snapshot.user.role;
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -200,16 +252,14 @@ export function GuestAccountClient({
       {/* Header */}
       <div className="card flex flex-wrap items-center justify-between gap-4 p-6">
         <div>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-lemma-dark">
-            Guest Portal · {snapshot.user.role.replace(/_/g, ' ')}
-          </p>
-          <h1 className="mt-1 text-[1.55rem] font-bold text-navy-900">
+          <p className="text-[0.78rem] font-medium text-lemma-dark">{roleLabel}</p>
+          <h1 className="mt-0.5 font-display text-[1.65rem] font-medium text-navy-900">
             Welcome, {snapshot.account?.fullName || snapshot.user.name}
           </h1>
-          <p className="text-[0.84rem] text-navy-500">{snapshot.user.email}</p>
+          <p className="text-[0.84rem] text-sand-600">{snapshot.user.email}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {snapshot.user.role !== 'guest' ? (
             <Link
               href={snapshot.user.role === 'cleaner' ? '/portal/cleaning' : '/admin'}
@@ -219,7 +269,7 @@ export function GuestAccountClient({
             </Link>
           ) : null}
           <Link href="/apartments" className="btn btn-secondary py-1.5 text-[0.8rem]">
-            New Booking
+            Book a stay
           </Link>
           {waDigits ? (
             <a
@@ -228,13 +278,13 @@ export function GuestAccountClient({
               rel="noreferrer"
               className="btn btn-secondary py-1.5 text-[0.8rem]"
             >
-              <MessageCircle size={14} /> Contact Reception
+              <MessageCircle size={14} /> WhatsApp reception
             </a>
           ) : null}
           <button
             type="button"
             onClick={handleLogout}
-            className="btn btn-secondary py-1.5 text-[0.8rem]"
+            className="btn btn-ghost py-1.5 text-[0.8rem]"
           >
             <LogOut size={14} /> Sign out
           </button>
@@ -242,21 +292,21 @@ export function GuestAccountClient({
       </div>
 
       {showWelcome ? (
-        <div className="flex items-start gap-3 rounded-lg border border-st-paid/30 bg-st-paidBg px-4 py-3">
-          <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-st-paid" />
+        <div className="flex items-start gap-3 rounded-xl border border-st-paid/30 bg-st-paidBg px-4 py-3.5">
+          <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-st-paid" />
           <div className="min-w-0">
             <p className="text-[0.88rem] font-semibold text-navy-900">
-              Your account is ready.
+              Your guest account is ready.
             </p>
-            <p className="mt-0.5 text-[0.82rem] text-navy-600">
-              You are signed in. Browse the apartments when you are ready to book; your
-              stays, payments and documents will collect here.
+            <p className="mt-0.5 text-[0.82rem] text-sand-700">
+              Browse available apartments when you are ready—your bookings, payment references and
+              official ZMW receipts will appear here.
             </p>
           </div>
           <button
             type="button"
             onClick={() => setShowWelcome(false)}
-            className="ml-auto rounded p-1 text-navy-400 hover:bg-white/60"
+            className="ml-auto rounded p-1 text-sand-500 hover:bg-white/60"
             aria-label="Dismiss"
           >
             <XCircle size={15} />
@@ -265,36 +315,39 @@ export function GuestAccountClient({
       ) : null}
 
       {owed > 0 ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-sand-300 bg-sand-50 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sand-300 bg-white px-5 py-4 shadow-card">
           <div>
-            <p className="text-[0.86rem] font-semibold text-navy-900">
-              {formatKwacha(owed)} outstanding on your stay
+            <p className="text-[0.9rem] font-semibold text-navy-900">
+              {formatKwacha(owed)} balance remaining across your upcoming stays
             </p>
-            <p className="mt-0.5 text-[0.8rem] text-navy-600">
-              Pay by Airtel Money, MTN Mobile Money, bank transfer or cash, then record it here so
-              reception can check it. Your balance updates once it is confirmed.
+            <p className="mt-0.5 text-[0.81rem] text-sand-700">
+              Pay via Airtel Money, MTN Mobile Money, bank transfer or cash, then record the
+              reference here for staff verification.
             </p>
           </div>
           <button
             type="button"
             className="btn btn-primary py-2 text-[0.82rem]"
             onClick={() => {
-              const target = payable[0];
+              const target = actionablePayable[0];
               if (target) setPayTarget({ id: target.id, reference: target.reference });
             }}
           >
-            <CreditCard size={14} /> Pay now
+            <CreditCard size={14} /> Submit payment
           </button>
         </div>
       ) : null}
 
       {/* Tabs */}
-      <div id="account-sections" className="flex scroll-mt-24 flex-wrap gap-2 border-b border-sand-200 pb-2">
+      <div
+        id="account-sections"
+        className="flex scroll-mt-24 flex-wrap gap-2 border-b border-sand-200 pb-2"
+      >
         {[
-          { id: 'bookings', label: `My Bookings (${reservations.length})`, icon: CalendarDays },
+          { id: 'bookings', label: `My Stays (${reservations.length})`, icon: CalendarDays },
           {
             id: 'notifications',
-            label: `Notifications${
+            label: `Updates${
               (snapshot.notifications ?? []).filter((n) => !n.readAt).length
                 ? ` (${(snapshot.notifications ?? []).filter((n) => !n.readAt).length})`
                 : ''
@@ -303,10 +356,10 @@ export function GuestAccountClient({
           },
           {
             id: 'documents',
-            label: `Quotations, Invoices & Receipts (${quotations.length + invoices.length + receipts.length})`,
+            label: `Receipts & Documents (${quotations.length + invoices.length + receipts.length})`,
             icon: FileText,
           },
-          { id: 'profile', label: 'Profile & Security', icon: User },
+          { id: 'profile', label: 'Profile & Password', icon: User },
         ].map((t) => (
           <button
             key={t.id}
@@ -315,7 +368,7 @@ export function GuestAccountClient({
             className={`inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[0.83rem] font-medium transition ${
               tab === t.id
                 ? 'bg-navy-900 text-white'
-                : 'text-navy-600 hover:bg-sand-100 hover:text-navy-900'
+                : 'text-sand-700 hover:bg-sand-100 hover:text-navy-900'
             }`}
           >
             <t.icon size={15} />
@@ -335,125 +388,175 @@ export function GuestAccountClient({
       {tab === 'bookings' ? (
         <div className="space-y-4">
           {reservations.length === 0 ? (
-            <div className="card p-8 text-center">
-              <p className="text-[0.95rem] font-medium text-navy-800">
-                You do not have any bookings yet.
+            <div className="card p-10 text-center">
+              <p className="font-display text-[1.2rem] font-medium text-navy-900">
+                No bookings on your account yet
               </p>
-              <p className="mt-1 text-[0.84rem] text-navy-500">
-                Browse our available Lusaka serviced apartments to reserve your stay.
+              <p className="mx-auto mt-1.5 max-w-md text-[0.85rem] leading-relaxed text-sand-700">
+                Compare available apartments and request dates online—no card payment is asked for
+                on the website.
               </p>
-              <Link href="/apartments" className="btn btn-primary mt-4 inline-flex">
-                Browse Apartments
+              <Link href="/apartments" className="btn btn-primary mt-5 inline-flex">
+                Explore apartments
               </Link>
             </div>
           ) : (
             reservations.map((r) => {
               const myReceipts = receiptsFor(r.id);
-              const pendingExample = r.status === 'inquiry' && isSampleListing({ id: r.apartmentId });
-              const bMeta = BOOKING_STATUS_META[r.status];
-              const pMeta = PAYMENT_STATUS_META[r.paymentStatus];
-              const canRequestCancel = ['inquiry', 'pending_confirmation', 'reserved', 'fully_paid'].includes(
-                r.status,
-              );
+              const pendingExample =
+                r.status === 'inquiry' && isSampleListing({ id: r.apartmentId });
+              const statusBadge = unifiedBookingStatus(r, pendingExample);
+              const claimUnderReview =
+                r.paymentStage === 'proof_submitted' || r.paymentStage === 'under_verification';
+              const canSubmitPayment =
+                r.balanceDue > 0 &&
+                !['cancelled', 'checked_out'].includes(r.status) &&
+                !pendingExample &&
+                !claimUnderReview;
+              const canRequestCancel = [
+                'inquiry',
+                'pending_confirmation',
+                'reserved',
+                'fully_paid',
+              ].includes(r.status);
+
               return (
-                <div key={r.id} className="card p-5 space-y-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                <div key={r.id} className="card space-y-4 p-5 sm:p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-[0.82rem] font-bold text-navy-900">
                           {r.reference}
                         </span>
-                        <span className={`chip ${bMeta?.chip ?? ''}`}>
-                          {bMeta?.label ?? r.status}
-                        </span>
-                        <span className={`chip ${pMeta?.chip ?? ''}`}>
-                          {pMeta?.label ?? r.paymentStatus}
-                        </span>
-                        <span className={`chip ${STAGE_META[r.paymentStage]?.chip ?? ''}`}>
-                          {STAGE_META[r.paymentStage]?.label ?? r.paymentStage}
-                        </span>
+                        <span className={`chip ${statusBadge.chip}`}>{statusBadge.label}</span>
                       </div>
-                      <h2 className="mt-1.5 text-[1.1rem] font-semibold text-navy-900">
+                      <h2 className="mt-1.5 font-display text-[1.22rem] font-medium text-navy-900">
                         {r.apartment
                           ? `Apartment ${r.apartment.number} · ${r.apartment.name}`
                           : 'Assigned Apartment'}
                       </h2>
-                      <p className="text-[0.84rem] text-navy-600">
-                        Check-in <strong>{r.checkIn}</strong> · Check-out <strong>{r.checkOut}</strong>{' '}
-                        ({r.nights} {r.nights === 1 ? 'night' : 'nights'}, {r.guestCount}{' '}
-                        {r.guestCount === 1 ? 'guest' : 'guests'})
+                      <p className="mt-0.5 text-[0.85rem] text-sand-700">
+                        {formatMediumDate(r.checkIn)} → {formatMediumDate(r.checkOut)} · {r.nights}{' '}
+                        {r.nights === 1 ? 'night' : 'nights'}, {r.guestCount}{' '}
+                        {r.guestCount === 1 ? 'guest' : 'guests'}
                       </p>
                     </div>
 
-                    <div className="text-right tabular-nums">
-                      <p className="text-[0.74rem] uppercase tracking-[0.1em] text-navy-500">
-                        Stay Total
+                    <div className="text-left tabular-nums sm:text-right">
+                      <p className="text-[0.73rem] text-sand-600">
+                        {pendingExample ? 'Indicative total' : 'Stay total'}
                       </p>
-                      <p className="text-[1.15rem] font-bold text-navy-900">
-                        K{r.totalAmount.toLocaleString('en-US')}
+                      <p className="text-[1.18rem] font-bold text-navy-900">
+                        {formatKwacha(r.totalAmount)}
                       </p>
-                      <p className="text-[0.78rem] text-st-available">
-                        Verified Paid: K{r.verifiedPaid.toLocaleString('en-US')}
-                      </p>
-                      {r.pendingVerification > 0 ? (
-                        <p className="text-[0.76rem] text-st-cleaning">
-                          Pending Verification: K{r.pendingVerification.toLocaleString('en-US')}
+                      {r.verifiedPaid > 0 ? (
+                        <p className="text-[0.78rem] font-medium text-st-available">
+                          Verified paid: {formatKwacha(r.verifiedPaid)}
                         </p>
                       ) : null}
-                      {r.balanceDue > 0 ? (
+                      {r.pendingVerification > 0 ? (
+                        <p className="text-[0.77rem] font-medium text-st-cleaning">
+                          Under review: {formatKwacha(r.pendingVerification)}
+                        </p>
+                      ) : null}
+                      {r.balanceDue > 0 && !pendingExample ? (
                         <p className="text-[0.8rem] font-semibold text-navy-800">
-                          {pendingExample ? 'Indicative total' : 'Balance Due'}: K{r.balanceDue.toLocaleString('en-US')}
+                          Balance remaining: {formatKwacha(r.balanceDue)}
                         </p>
                       ) : null}
                     </div>
                   </div>
 
-                  <div className="rounded-md border border-sand-200 bg-sand-50/70 px-3 py-2 text-[0.79rem] leading-relaxed text-navy-700">
-                    <p>{pendingExample
-                      ? 'This is an example listing. Reception will confirm the actual unit and final rate. Please do not pay yet.'
-                      : (STAGE_META[r.paymentStage]?.note ?? '')}</p>
+                  {/* Visual progress bar for active stays */}
+                  {statusBadge.step > 0 ? (
+                    <ol
+                      aria-label="Booking progress"
+                      className="grid grid-cols-2 gap-1.5 rounded-lg border border-sand-200 bg-sand-50 p-2 text-[0.72rem] sm:grid-cols-4"
+                    >
+                      {[
+                        { step: 1, label: '1. Requested' },
+                        { step: 2, label: '2. Deposit review' },
+                        { step: 3, label: '3. Confirmed' },
+                        { step: 4, label: '4. Check-in' },
+                      ].map((item) => {
+                        const done = statusBadge.step > item.step;
+                        const current = statusBadge.step === item.step;
+                        return (
+                          <li
+                            key={item.step}
+                            className={`rounded px-2.5 py-1.5 text-center font-medium ${
+                              current
+                                ? 'bg-navy-900 font-semibold text-white'
+                                : done
+                                  ? 'bg-white text-st-available ring-1 ring-sand-200'
+                                  : 'text-sand-500'
+                            }`}
+                          >
+                            {item.label}
+                            {done ? ' ✓' : ''}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  ) : null}
+
+                  <div className="rounded-lg border border-sand-200 bg-sand-50/70 px-3.5 py-2.5 text-[0.81rem] leading-relaxed text-sand-700">
+                    <p>
+                      {pendingExample
+                        ? 'Example listing enquiry — reception will confirm the actual unit and final ZMW rate before opening payment instructions.'
+                        : STAGE_NOTE[r.paymentStage] ?? ''}
+                    </p>
                     {r.latestClaim ? (
-                      <p className="mt-0.5 text-[0.75rem] text-navy-500">
-                        {r.latestClaim.status === 'rejected' ? 'Declined' : 'Submitted'}{' '}
-                        {formatKwacha(r.latestClaim.amount)} · ref{' '}
-                        <span className="font-mono">{r.latestClaim.reference}</span> ·{' '}
+                      <p className="mt-1 text-[0.76rem] text-sand-600">
+                        Last submission:{' '}
+                        <strong className="text-navy-800">
+                          {r.latestClaim.status === 'rejected' ? 'Declined' : 'Submitted'}{' '}
+                          {formatKwacha(r.latestClaim.amount)}
+                        </strong>{' '}
+                        · ref <span className="font-mono">{r.latestClaim.reference}</span> ·{' '}
                         {new Date(r.latestClaim.createdAt).toLocaleDateString('en-GB')}
                       </p>
                     ) : null}
                     {myReceipts.length > 0 ? (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <div className="mt-2 flex flex-wrap gap-1.5">
                         {myReceipts.map((rc) => (
-                          <a
+                          <Link
                             key={rc.id}
-                            href={`/api/documents/receipt/${rc.id}/pdf?download=1`}
-                            className="inline-flex items-center gap-1 rounded border border-sand-300 bg-white px-2 py-1 text-[0.72rem] font-medium text-navy-800 hover:border-navy-900"
+                            href={`/receipt/${rc.id}`}
+                            className="inline-flex items-center gap-1 rounded border border-sand-300 bg-white px-2.5 py-1 text-[0.74rem] font-medium text-navy-900 hover:border-navy-900"
                           >
-                            <Receipt size={11} /> {rc.receiptNumber} · {formatKwacha(rc.amount)}
-                          </a>
+                            <Receipt size={12} /> {rc.receiptNumber} · {formatKwacha(rc.amount)}
+                          </Link>
                         ))}
                       </div>
                     ) : null}
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-200 pt-3.5">
-                    <div className="flex flex-wrap gap-2">
-                      {r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status) && !pendingExample ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canSubmitPayment ? (
                         <button
                           type="button"
                           onClick={() => setPayTarget({ id: r.id, reference: r.reference })}
-                          className="btn btn-primary py-1.5 text-[0.78rem]"
+                          className="btn btn-primary py-1.5 text-[0.79rem]"
                         >
                           <CreditCard size={13} />
-                          {r.verifiedPaid > 0 ? 'Pay the balance' : 'Pay deposit'}
+                          {r.verifiedPaid > 0 ? 'Pay remaining balance' : 'Pay deposit / submit ref'}
                           <span className="tabular-nums">· {formatKwacha(r.balanceDue)}</span>
                         </button>
+                      ) : claimUnderReview ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-st-cleaning/30 bg-st-cleaningBg/60 px-3 py-1.5 text-[0.78rem] font-medium text-st-cleaning">
+                          <Clock size={13} /> Verification in progress
+                        </span>
                       ) : null}
-                      {!pendingExample ? <a
-                        href={`/api/documents/confirmation/${r.id}/pdf?download=1`}
-                        className="btn btn-secondary py-1.5 text-[0.78rem]"
-                      >
-                        <Download size={13} /> Booking Confirmation PDF
-                      </a> : null}
+                      {!pendingExample ? (
+                        <a
+                          href={`/api/documents/confirmation/${r.id}/pdf?download=1`}
+                          className="btn btn-secondary py-1.5 text-[0.78rem]"
+                        >
+                          <Download size={13} /> Booking PDF
+                        </a>
+                      ) : null}
                       {r.quotationId ? (
                         <a
                           href={`/api/documents/quotation/${r.quotationId}/pdf?download=1`}
@@ -482,7 +585,7 @@ export function GuestAccountClient({
                         }}
                         className="inline-flex items-center gap-1.5 rounded-md border border-sand-300 px-3 py-1.5 text-[0.78rem] font-medium text-st-cancelled hover:bg-st-cancelledBg"
                       >
-                        <XCircle size={13} /> Request Cancellation
+                        <XCircle size={13} /> Request cancellation
                       </button>
                     ) : null}
                   </div>
@@ -496,12 +599,12 @@ export function GuestAccountClient({
       {/* Tab 2: Quotations, Invoices & Verified Receipts */}
       {tab === 'documents' ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="card p-5 space-y-3">
+          <div className="card space-y-3 p-5">
             <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
               <FileText size={16} className="text-lemma-dark" /> Quotations ({quotations.length})
             </h2>
             {quotations.length === 0 ? (
-              <p className="text-[0.82rem] text-navy-500">No quotations on your account.</p>
+              <p className="text-[0.82rem] text-sand-600">No quotations on your account.</p>
             ) : (
               quotations.map((q) => (
                 <div
@@ -510,13 +613,13 @@ export function GuestAccountClient({
                 >
                   <div>
                     <p className="font-semibold text-navy-900">{q.quotationNumber}</p>
-                    <p className="text-navy-500">
-                      {q.apartmentName} · K{q.totalAmount.toLocaleString('en-US')}
+                    <p className="text-sand-600">
+                      {q.apartmentName} · {formatKwacha(q.totalAmount)}
                     </p>
                   </div>
                   <a
                     href={`/api/documents/quotation/${q.id}/pdf?download=1`}
-                    className="btn btn-secondary py-1 px-2.5 text-[0.75rem]"
+                    className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
                   >
                     <Download size={12} /> PDF
                   </a>
@@ -525,12 +628,12 @@ export function GuestAccountClient({
             )}
           </div>
 
-          <div className="card p-5 space-y-3">
+          <div className="card space-y-3 p-5">
             <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
               <FileText size={16} className="text-lemma-dark" /> Invoices ({invoices.length})
             </h2>
             {invoices.length === 0 ? (
-              <p className="text-[0.82rem] text-navy-500">No invoices issued yet.</p>
+              <p className="text-[0.82rem] text-sand-600">No invoices issued yet.</p>
             ) : (
               invoices.map((inv) => (
                 <div
@@ -539,14 +642,13 @@ export function GuestAccountClient({
                 >
                   <div>
                     <p className="font-semibold text-navy-900">{inv.invoiceNumber}</p>
-                    <p className="text-navy-500">
-                      Total K{inv.totalAmount.toLocaleString('en-US')} · Due K
-                      {inv.balanceDue.toLocaleString('en-US')}
+                    <p className="text-sand-600">
+                      Total {formatKwacha(inv.totalAmount)} · Due {formatKwacha(inv.balanceDue)}
                     </p>
                   </div>
                   <a
                     href={`/api/documents/invoice/${inv.id}/pdf?download=1`}
-                    className="btn btn-secondary py-1 px-2.5 text-[0.75rem]"
+                    className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
                   >
                     <Download size={12} /> PDF
                   </a>
@@ -555,12 +657,12 @@ export function GuestAccountClient({
             )}
           </div>
 
-          <div className="card p-5 space-y-3">
+          <div className="card space-y-3 p-5">
             <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
               <Receipt size={16} className="text-lemma-dark" /> Official Receipts ({receipts.length})
             </h2>
             {receipts.length === 0 ? (
-              <p className="text-[0.82rem] text-navy-500">
+              <p className="text-[0.82rem] text-sand-600">
                 Official receipts appear automatically once payments are verified.
               </p>
             ) : (
@@ -571,22 +673,22 @@ export function GuestAccountClient({
                 >
                   <div>
                     <p className="font-semibold text-navy-900">{rc.receiptNumber}</p>
-                    <p className="text-st-available font-medium">
-                      Verified K{rc.amount.toLocaleString('en-US')} ({rc.paidAt})
+                    <p className="font-medium text-st-available">
+                      Verified {formatKwacha(rc.amount)} ({formatMediumDate(rc.paidAt)})
                     </p>
                   </div>
                   <div className="flex gap-1.5">
                     <Link
                       href={`/receipt/${rc.id}`}
-                      className="btn btn-secondary py-1 px-2.5 text-[0.75rem]"
-                      title="View, print or download this receipt"
+                      className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
+                      title="View or print receipt"
                     >
                       <Receipt size={12} /> View
                     </Link>
                     <a
                       href={`/api/documents/receipt/${rc.id}/pdf?download=1`}
-                      className="btn btn-ghost py-1 px-2.5 text-[0.75rem]"
-                      title="Download the PDF"
+                      className="btn btn-ghost px-2.5 py-1 text-[0.75rem]"
+                      title="Download PDF"
                     >
                       <Download size={12} /> PDF
                     </a>
@@ -601,12 +703,12 @@ export function GuestAccountClient({
       {/* Tab 3: Profile & Password */}
       {tab === 'profile' ? (
         <form onSubmit={saveProfile} className="card max-w-xl space-y-4 p-6">
-          <h2 className="text-[1.08rem] font-semibold text-navy-900">
-            Update Contact Profile &amp; Password
+          <h2 className="font-display text-[1.2rem] font-medium text-navy-900">
+            Contact details &amp; password
           </h2>
           <div>
             <label className="label mb-1 block" htmlFor="pf-name">
-              Full Name
+              Full name
             </label>
             <input
               id="pf-name"
@@ -618,7 +720,7 @@ export function GuestAccountClient({
           </div>
           <div>
             <label className="label mb-1 block" htmlFor="pf-phone">
-              Phone / WhatsApp Number
+              Phone / WhatsApp number
             </label>
             <input
               id="pf-phone"
@@ -629,13 +731,13 @@ export function GuestAccountClient({
             />
           </div>
 
-          <div className="border-t border-sand-200 pt-4 space-y-3">
+          <div className="space-y-3 border-t border-sand-200 pt-4">
             <p className="text-[0.82rem] font-semibold text-navy-800">
-              Change Password (leave blank to keep current password)
+              Change password (leave blank to keep current password)
             </p>
             <div>
               <label className="label mb-1 block" htmlFor="pf-curpw">
-                Current Password
+                Current password
               </label>
               <input
                 id="pf-curpw"
@@ -647,7 +749,7 @@ export function GuestAccountClient({
             </div>
             <div>
               <label className="label mb-1 block" htmlFor="pf-newpw">
-                New Password
+                New password
               </label>
               <input
                 id="pf-newpw"
@@ -672,12 +774,11 @@ export function GuestAccountClient({
           ) : null}
 
           <button type="submit" disabled={profileBusy} className="btn btn-primary">
-            {profileBusy ? 'Saving...' : 'Save Profile'}
+            {profileBusy ? 'Saving…' : 'Save changes'}
           </button>
         </form>
       ) : null}
 
-      {/* Cancellation Request Modal */}
       {payTarget ? (
         <GuestPaymentPanel
           reservationId={payTarget.id}
@@ -689,13 +790,16 @@ export function GuestAccountClient({
 
       {cancelTargetId ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/50 p-4">
-          <form onSubmit={submitCancelRequest} className="card my-auto w-full max-w-md space-y-4 p-4 sm:p-6">
-            <h3 className="text-[1.08rem] font-semibold text-navy-900">
-              Request Booking Cancellation
+          <form
+            onSubmit={submitCancelRequest}
+            className="card my-auto w-full max-w-md space-y-4 p-5 sm:p-6"
+          >
+            <h3 className="font-display text-[1.2rem] font-medium text-navy-900">
+              Request booking cancellation
             </h3>
-            <p className="text-[0.82rem] text-navy-600">
-              Your cancellation request will be sent to reception for review in accordance with our
-              stay policy.
+            <p className="text-[0.83rem] leading-relaxed text-sand-700">
+              Your cancellation request is sent directly to reception for review in line with our
+              booking terms.
             </p>
             <div>
               <label className="label mb-1 block" htmlFor="cancel-reason">
@@ -707,23 +811,21 @@ export function GuestAccountClient({
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 className="field"
-                placeholder="e.g. Travel dates postponed by company..."
+                placeholder="e.g. Travel dates postponed…"
                 required
               />
             </div>
-            {cancelErr ? (
-              <p className="text-[0.8rem] text-st-cancelled">{cancelErr}</p>
-            ) : null}
+            {cancelErr ? <p className="text-[0.8rem] text-st-cancelled">{cancelErr}</p> : null}
             <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setCancelTargetId(null)}
                 className="btn btn-secondary"
               >
-                Keep Booking
+                Keep booking
               </button>
               <button type="submit" disabled={cancelBusy} className="btn btn-primary">
-                {cancelBusy ? 'Submitting...' : 'Submit Request'}
+                {cancelBusy ? 'Submitting…' : 'Send request'}
               </button>
             </div>
           </form>

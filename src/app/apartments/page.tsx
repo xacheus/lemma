@@ -21,7 +21,7 @@ export default async function ApartmentsPage({
   const checkOut =
     sp.checkOut && /^\d{4}-\d{2}-\d{2}$/.test(sp.checkOut) && sp.checkOut > checkIn
       ? sp.checkOut
-      : addISO(checkIn, 3);
+      : addISO(checkIn, 2);
   const guests = Math.max(1, Math.min(12, Number(sp.guests || 2)));
   const selectedTier = sp.tier || 'all';
 

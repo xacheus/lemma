@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
+import { BrandMark } from '@/components/public/brand-mark';
 
 function ForgotPasswordInner() {
   const searchParams = useSearchParams();
@@ -67,17 +68,12 @@ function ForgotPasswordInner() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-sand-50 px-5 py-12">
       <div className="w-full max-w-[26rem]">
         <Link href="/" className="mb-6 flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo.jpg"
-            alt="Lemma Apartments"
-            className="h-10 w-10 rounded-md object-cover ring-1 ring-sand-300"
-          />
+          <BrandMark tone="light" size="md" />
           <div>
-            <p className="text-[0.95rem] font-semibold tracking-[0.12em] text-navy-900">
-              LEMMA APARTMENTS
+            <p className="font-display text-[1.05rem] font-semibold text-navy-900">
+              Lemma Apartments
             </p>
-            <p className="text-[0.66rem] uppercase tracking-[0.16em] text-navy-500">
+            <p className="text-[0.7rem] text-sand-600">
               Account Security
             </p>
           </div>

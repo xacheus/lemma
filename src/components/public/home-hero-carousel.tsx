@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Bath, BedDouble, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { ArrowRight, Bath, BedDouble, ChevronLeft, ChevronRight, MapPin, Users } from 'lucide-react';
 import { formatKwacha } from '@/lib/domain/money';
 import { optimizeImageUrl, representativePhotoUrl } from '@/lib/cloudinary/urls';
 
@@ -23,34 +23,22 @@ export interface HeroSlide {
   availabilityNote: string;
 }
 
-const INTERVAL_MS = 7000;
-const FADE_MS = 1400;
+const INTERVAL_MS = 7500;
+const FADE_MS = 1200;
 
-/**
- * Homepage hero.
- *
- * Large apartment photographs cross-fade on a CSS opacity transition with a
- * very slow scale on the active frame — no animation loop, no layout thrash, and the
- * browser can composite it on the GPU. The first frame loads eagerly (it is the
- * largest contentful paint); the rest are lazy.
- *
- * Auto-advance pauses on hover, on focus, while the tab is hidden and whenever the
- * visitor prefers reduced motion. Arrows, photograph selectors, keyboard arrows
- * and swipe all work, so nothing depends on the timer.
- *
- * The copy stays deliberately short: one headline, one line of supporting text, and the
- * active apartment's facts. Anything longer fights the photograph it sits on.
- */
 export function HomeHeroCarousel({
   slides,
   stayQuery,
   propertyName,
-  totalApartments,
+  addressLine,
+  city,
 }: {
   slides: HeroSlide[];
   stayQuery: string;
   propertyName: string;
-  totalApartments: number;
+  totalApartments?: number;
+  addressLine?: string;
+  city?: string;
 }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -98,6 +86,7 @@ export function HomeHeroCarousel({
 
   if (count === 0) return null;
   const active = slides[Math.min(index, count - 1)];
+  const locationLabel = [addressLine, city || 'Lusaka'].filter(Boolean).join(', ');
 
   return (
     <section
@@ -127,8 +116,7 @@ export function HomeHeroCarousel({
         touchX.current = null;
       }}
     >
-      {/* Frames. Height is set once here so a slow image never shifts the page. */}
-      <div className="relative h-[74svh] min-h-[26rem] w-full sm:h-[68svh] lg:h-[76svh]">
+      <div className="relative min-h-[29rem] w-full sm:h-[68svh] lg:h-[74svh]">
         {slides.map((slide, i) => {
           const isActive = i === index;
           return (
@@ -145,7 +133,6 @@ export function HomeHeroCarousel({
               <img
                 src={representativePhotoUrl(slide.photo, 'hero') ?? optimizeImageUrl(slide.photo, 'hero')}
                 onError={(event) => {
-                  // A local copy is shipped for offline or CDN-blocked connections.
                   if (slide.representative && !event.currentTarget.src.endsWith(slide.photo)) {
                     event.currentTarget.src = slide.photo;
                   }
@@ -156,7 +143,7 @@ export function HomeHeroCarousel({
                 decoding="async"
                 className="h-full w-full object-cover"
                 style={{
-                  transform: isActive && !reducedMotion ? 'scale(1.07)' : 'scale(1)',
+                  transform: isActive && !reducedMotion ? 'scale(1.05)' : 'scale(1)',
                   transition: `transform ${reducedMotion ? 0 : INTERVAL_MS + FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
                 }}
               />
@@ -164,137 +151,136 @@ export function HomeHeroCarousel({
           );
         })}
 
-        {/* Legibility scrims — bottom for the copy, left for the headline. */}
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(10,13,17,0.93)_0%,rgba(10,13,17,0.55)_38%,rgba(10,13,17,0.12)_70%,rgba(10,13,17,0.35)_100%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(10,13,17,0.72)_0%,rgba(10,13,17,0.25)_55%,transparent_100%)]" />
+        {/* Warm dark scrims for natural contrast */}
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(14,18,22,0.92)_0%,rgba(14,18,22,0.52)_42%,rgba(14,18,22,0.16)_75%,rgba(14,18,22,0.32)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(14,18,22,0.74)_0%,rgba(14,18,22,0.28)_58%,transparent_100%)]" />
 
-        {/* Copy */}
-        <div className="absolute inset-0 flex items-end">
-          <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 sm:pb-10 lg:px-8 lg:pb-14">
-            <div className="max-w-2xl">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-white/65">
-                {propertyName} <span aria-hidden="true">/</span> Lusaka
-              </p>
+        <div className="relative z-10 mx-auto flex h-full min-h-[29rem] max-w-7xl flex-col justify-end px-4 pb-10 pt-20 sm:px-6 sm:pb-12 lg:px-8 lg:pb-14">
+          <div className="max-w-2xl">
+            <p className="inline-flex items-center gap-1.5 text-[0.8rem] font-medium text-white/80">
+              <MapPin size={13} className="text-gold-300" aria-hidden="true" />
+              <span>{propertyName} · {locationLabel}</span>
+            </p>
 
-              <h1 className="mt-4 max-w-2xl text-[2rem] font-semibold leading-[1.06] tracking-[-0.025em] text-white sm:text-[2.6rem] lg:text-[3.1rem]">
-                Serviced apartments
-                <span className="block text-white/65">booked by the night.</span>
-              </h1>
+            <h1 className="mt-3 font-display text-[2.1rem] font-medium leading-[1.08] tracking-[-0.02em] text-white sm:text-[2.75rem] lg:text-[3.25rem]">
+              Furnished apartments in Lusaka,{' '}
+              <span className="text-white/80">set up for a night or a month.</span>
+            </h1>
 
-              <p className="mt-4 max-w-md text-[0.95rem] leading-relaxed text-white/70">
-                {totalApartments} apartment option{totalApartments === 1 ? '' : 's'} in Lusaka.
-                Check dates and ask reception to confirm your stay.
-              </p>
+            <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-white/80">
+              Self-catering studios, one-bedroom and family units with backup power, reliable Wi-Fi
+              and secure compound parking—priced clearly in Zambian Kwacha and managed directly at our front desk.
+            </p>
 
-              <div className="mt-6 flex flex-wrap items-center gap-2.5">
-                <Link
-                  href={`/apartments?${stayQuery}#availability`}
-                  className="btn bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-900 transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/90"
-                >
-                  Check availability <ArrowRight size={15} aria-hidden="true" />
-                </Link>
-                <Link
-                  href={`/apartments/${active.slug}?${stayQuery}#book`}
-                  className="btn border border-white/35 px-4 py-2.5 text-[0.86rem] text-white transition-colors hover:border-white/70 hover:bg-white/10"
-                >
-                  View {active.name}
-                </Link>
-              </div>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link
+                href={`/apartments?${stayQuery}#availability`}
+                className="btn bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-950 transition-colors hover:bg-sand-100"
+              >
+                Check availability <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <Link
+                href={`/apartments/${active.slug}?${stayQuery}#book`}
+                className="btn border border-white/35 bg-charcoal-950/30 px-4 py-2.5 text-[0.86rem] text-white backdrop-blur-sm transition-colors hover:border-white/70 hover:bg-white/10"
+              >
+                View {active.name}
+              </Link>
+            </div>
+          </div>
 
-              {/* The active apartment's facts, on one quiet line. */}
-              <div className="mt-6 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[0.78rem] text-white/70">
+          {/* Structured bottom bar for the currently shown apartment */}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/15 pt-4 text-[0.79rem] text-white/80">
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
+              <span className="font-semibold text-white">{active.name}</span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.7rem] font-medium ${
+                  active.available ? 'bg-[#124230]/90 text-[#b4f0cf]' : 'bg-white/15 text-white/80'
+                }`}
+              >
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${
-                    active.available ? 'bg-[#0f3d2b]/85 text-[#a9ecc6]' : 'bg-white/12 text-white/70'
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${active.available ? 'bg-[#5ed69b]' : 'bg-white/50'}`}
-                  />
-                  {active.availabilityNote}
+                  className={`h-1.5 w-1.5 rounded-full ${active.available ? 'bg-[#66dc9f]' : 'bg-white/55'}`}
+                />
+                {active.availabilityNote}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Users size={13} aria-hidden="true" /> Sleeps {active.maxGuests}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <BedDouble size={13} aria-hidden="true" />
+                {active.bedrooms === 0 ? 'Studio' : `${active.bedrooms} bed`}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Bath size={13} aria-hidden="true" /> {active.bathrooms} bath
+              </span>
+              <span className="font-semibold text-white tabular-nums">
+                {formatKwacha(active.nightlyRate)}
+                <span className="font-normal text-white/65"> / night</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 text-[0.72rem] text-white/65">
+              {active.representative || active.sample ? (
+                <span>
+                  {active.representative ? 'Representative stock photo' : ''}
+                  {active.representative && active.sample ? ' · ' : ''}
+                  {active.sample ? 'Example unit (confirm with reception)' : ''}
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Users size={13} aria-hidden="true" /> {active.maxGuests}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <BedDouble size={13} aria-hidden="true" />
-                  {active.bedrooms === 0 ? 'Studio' : `${active.bedrooms} bed`}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Bath size={13} aria-hidden="true" /> {active.bathrooms} bath
-                </span>
-                <span className="font-medium text-white">
-                  {formatKwacha(active.nightlyRate)}
-                  <span className="font-normal text-white/55"> / night</span>
-                </span>
-                {active.representative ? (
-                  <span className="text-[0.68rem] tracking-[0.02em] text-white/70">
-                    Representative stock photo · not of the property
+              ) : null}
+              {count > 1 ? (
+                <div className="hidden items-center gap-1.5 sm:flex">
+                  <button
+                    type="button"
+                    onClick={() => go(index - 1)}
+                    aria-label="Previous photo"
+                    className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white transition hover:bg-charcoal-950/80"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  <span className="px-1 tabular-nums text-white/75">
+                    {index + 1} / {count}
                   </span>
-                ) : null}
-                {active.sample ? <span className="text-[0.68rem] text-white/80">Example listing · confirm details</span> : null}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => go(index + 1)}
+                    aria-label="Next photo"
+                    className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white transition hover:bg-charcoal-950/80"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
 
-        {/* Controls. The arrows sit low and to the edges, clear of the headline, and the
-            apartment switcher is a labelled index rather than anonymous dots. */}
+        {/* Slide progress / selector strip */}
         {count > 1 ? (
-          <>
-            <button
-              type="button"
-              onClick={() => go(index - 1)}
-              aria-label="Previous photo"
-              className="absolute bottom-9 left-4 hidden h-9 w-9 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/75 lg:grid xl:left-6"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => go(index + 1)}
-              aria-label="Next photo"
-              className="absolute bottom-9 right-4 hidden h-9 w-9 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/75 lg:grid xl:right-6"
-            >
-              <ChevronRight size={18} />
-            </button>
-
-            <span className="absolute right-4 top-3 rounded-full bg-charcoal-950/45 px-2 py-1 text-[0.66rem] font-medium tabular-nums text-white/80 backdrop-blur-sm sm:right-5 sm:top-5">
-              {String(index + 1).padStart(2, '0')} / {String(count).padStart(2, '0')}
-            </span>
-
-            {/* Auto-advance indicator: a thin bar per frame that fills over the interval,
-                so the motion reads as a clock rather than a surprise. It is keyed on the
-                index so the animation restarts whenever the frame changes. Each bar is
-                also the control for its frame, which is why this lives on the bottom
-                edge of the whole hero rather than on the photograph. */}
-            <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1.5 px-4 pb-3 sm:px-6 lg:px-8">
-              {slides.map((slide, i) => (
-                <button
-                  key={slide.id}
-                  type="button"
-                  onClick={() => go(i)}
-                  aria-label={`Show ${slide.name}`}
-                  aria-current={i === index}
-                  className="group h-5 flex-1"
-                >
-                  <span className="mt-2 block h-[3px] w-full overflow-hidden rounded-full bg-white/25 transition-colors group-hover:bg-white/40">
-                    {i === index ? (
-                      <span
-                        key={`${slide.id}-${index}`}
-                        className="block h-full origin-left rounded-full bg-white"
-                        style={
-                          reducedMotion
-                            ? { transform: 'scaleX(1)' }
-                            : { animation: `hero-progress ${INTERVAL_MS}ms linear forwards` }
-                        }
-                      />
-                    ) : null}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
+          <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1.5 px-4 pb-2.5 sm:px-6 lg:px-8">
+            {slides.map((slide, i) => (
+              <button
+                key={slide.id}
+                type="button"
+                onClick={() => go(i)}
+                aria-label={`Show ${slide.name}`}
+                aria-current={i === index}
+                className="group h-4 flex-1"
+              >
+                <span className="mt-2 block h-[2.5px] w-full overflow-hidden rounded-full bg-white/20 transition-colors group-hover:bg-white/40">
+                  {i === index ? (
+                    <span
+                      key={`${slide.id}-${index}`}
+                      className="block h-full origin-left rounded-full bg-white"
+                      style={
+                        reducedMotion
+                          ? { transform: 'scaleX(1)' }
+                          : { animation: `hero-progress ${INTERVAL_MS}ms linear forwards` }
+                      }
+                    />
+                  ) : null}
+                </span>
+              </button>
+            ))}
+          </div>
         ) : null}
       </div>
 

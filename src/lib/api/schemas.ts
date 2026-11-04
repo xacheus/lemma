@@ -535,11 +535,11 @@ export const notificationSendSchema = z.object({
 
 export const publicBookingSchema = z
   .object({
-    fullName: z.string().trim().min(2, 'Please tell us your full legal name.').max(100),
+    fullName: z.string().trim().min(2, 'Please enter your full name.').max(100),
     phone: z.string().trim().max(28).refine((v) => /^[+() .\d-]+$/.test(v) && v.replace(/\D/g, '').length >= 9 && v.replace(/\D/g, '').length <= 15, 'Enter a valid phone number including its country code.'),
     email: z.string().trim().toLowerCase().email('Enter a valid email address.'),
-    countryOfResidence: z.string().trim().min(1, 'Enter your country of residence.').max(100),
-    nationality: z.string().trim().min(1, 'Enter your nationality.').max(100),
+    countryOfResidence: z.string().trim().max(100).optional(),
+    nationality: z.string().trim().max(100).optional(),
     residentialAddress: z.string().trim().max(250).optional(),
     city: z.string().trim().max(100).optional(),
     countryOfOrigin: z.string().trim().max(100).optional(),

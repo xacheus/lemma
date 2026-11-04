@@ -5,6 +5,7 @@ import { addBookingAccess, bookingAccessLink, exchangeBookingAccess, bookingCook
 import { getSession } from '@/lib/auth/session';
 import { getDb, ensureCloudFirestoreHydrated, runAtomicTransaction } from '@/lib/db/store';
 import { paymentQuote } from '@/lib/domain/operations';
+import { isSampleListing } from '@/lib/domain/sample-listings';
 import { take } from '@/lib/api/rate-limit';
 import { buildBrandedEmailHtml, sendEmailNotification } from '@/lib/notifications/providers';
 
@@ -61,8 +62,11 @@ export async function GET(req: NextRequest) {
   const quote = paymentQuote(db, booking);
   return NextResponse.json({ ok: true, data: {
     id: booking.id, reference: booking.reference, checkIn: booking.checkIn, checkOut: booking.checkOut,
-    guests: booking.guestCount, status: booking.status, paymentStatus: booking.paymentStatus,
+    nights: booking.nights, guests: booking.guestCount, status: booking.status, paymentStatus: booking.paymentStatus,
     apartment: db.apartments.find((a) => a.id === booking.apartmentId)?.name ?? 'Apartment',
-    totalAmount: quote.totalAmount, verifiedPaid: quote.verifiedPaid, balanceDue: quote.balanceDue,
+    sample: isSampleListing({ id: booking.apartmentId }),
+    totalAmount: quote.totalAmount, verifiedPaid: quote.verifiedPaid,
+    pendingAmount: quote.pendingAmount, hasOpenClaim: Boolean(quote.openClaim),
+    balanceDue: quote.balanceDue,
   } }, { headers: { 'cache-control': 'no-store' } });
 }

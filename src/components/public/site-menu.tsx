@@ -27,6 +27,7 @@ import {
 import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole, NAV_SECTIONS, permissionsFor } from '@/lib/domain/permissions';
+import { BrandMark } from './brand-mark';
 
 /**
  * Full-screen site menu.
@@ -55,15 +56,17 @@ interface MenuLink {
 }
 
 const PUBLIC_LINKS: MenuLink[] = [
-  { href: '/', label: 'Home', icon: Home, note: 'Apartments, rates and availability' },
-  { href: '/apartments', label: 'Apartments', icon: Building2, note: 'Every unit, with photographs' },
-  { href: '/apartments#availability', label: 'Check availability', icon: CalendarDays, note: 'Pick your dates' },
-  { href: '/account', label: 'My bookings', icon: CalendarCheck, note: 'Stays, receipts and balances' },
-  { href: '/about', label: 'About us', icon: Info },
-  { href: '/contact', label: 'Contact', icon: MapPin, note: 'Lusaka, Zambia' },
+  { href: '/', label: 'Home', icon: Home, note: 'Overview, rates and how booking works' },
+  { href: '/apartments', label: 'Apartments', icon: Building2, note: 'Compare layouts and ZMW rates' },
+  { href: '/apartments#availability', label: 'Check availability', icon: CalendarDays, note: 'Search by arrival and departure dates' },
+  { href: '/booking/access', label: 'Find a guest booking', icon: CalendarCheck, note: 'Look up a stay with your reference' },
+  { href: '/policies', label: 'Booking info & policies', icon: ShieldCheck, note: 'Deposit, cancellation and house rules' },
+  { href: '/about', label: 'About the property', icon: Info },
+  { href: '/contact', label: 'Contact & location', icon: MapPin, note: 'Barlaston Park, Lusaka' },
 ];
 
 const GUEST_EXTRA: MenuLink[] = [
+  { href: '/account', label: 'My bookings & receipts', icon: CalendarCheck, note: 'Stays, PDF receipts and balances' },
   { href: '/account#payments', label: 'Pay for a stay', icon: CreditCard, note: 'Mobile money, transfer or cash' },
   { href: '/account#notifications', label: 'Notifications', icon: Bell },
 ];
@@ -206,17 +209,13 @@ export function SiteMenu({
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-sand-200 bg-sand-50/95 px-4 py-3 backdrop-blur-sm sm:px-5">
           <div className="flex items-center gap-2.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/logo.jpg"
-              alt=""
-              aria-hidden="true"
-              className="h-9 w-9 rounded-md object-cover ring-1 ring-sand-300"
-            />
+            <BrandMark tone="light" size="sm" />
             <div>
-              <p className="text-[0.8rem] font-bold tracking-[0.12em] text-navy-900">LEMMA APARTMENTS</p>
-              <p className="text-[0.62rem] uppercase tracking-[0.14em] text-navy-500">
-                {property.city || 'Lusaka'} · Menu
+              <p className="font-display text-[0.95rem] font-semibold text-navy-900">
+                {property.name || 'Lemma Apartments'}
+              </p>
+              <p className="text-[0.68rem] text-sand-600">
+                {property.city || 'Lusaka'} · Navigation
               </p>
             </div>
           </div>

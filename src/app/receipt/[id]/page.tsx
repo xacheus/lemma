@@ -7,6 +7,7 @@ import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
 import { formatKwacha } from '@/lib/domain/money';
 import { formatMediumDate } from '@/lib/domain/dates';
 import { PAYMENT_METHOD_META } from '@/lib/domain/status';
+import { BrandMark } from '@/components/public/brand-mark';
 import { PrintTrigger } from './print-trigger';
 
 export const dynamic = 'force-dynamic';
@@ -83,18 +84,17 @@ export default async function GuestReceiptPage({ params }: { params: Promise<{ i
         <article className="rounded-lg border border-sand-200 bg-white p-6 shadow-card sm:p-9 print:rounded-none print:border-0 print:p-0 print:shadow-none">
           <header className="flex flex-wrap items-start justify-between gap-4 border-b border-sand-200 pb-5">
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/logo.jpg" alt="" className="h-12 w-12 rounded-md object-cover ring-1 ring-sand-300" />
+              <BrandMark tone="light" size="lg" />
               <div>
-                <p className="text-[1rem] font-bold tracking-[0.1em] text-navy-900">
-                  {property.name.toUpperCase()}
+                <p className="font-display text-[1.12rem] font-semibold text-navy-900">
+                  {property.name}
                 </p>
-                <p className="text-[0.72rem] leading-relaxed text-navy-500">
+                <p className="text-[0.74rem] leading-relaxed text-sand-600">
                   {property.addressLine}
                   {property.city ? `, ${property.city}` : ''}
                   {property.country ? `, ${property.country}` : ''}
                 </p>
-                <p className="text-[0.72rem] text-navy-500">
+                <p className="text-[0.74rem] text-sand-600">
                   {property.phone} · {property.email}
                 </p>
               </div>

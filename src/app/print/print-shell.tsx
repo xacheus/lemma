@@ -1,6 +1,7 @@
 'use client';
 
 import { Printer, X } from 'lucide-react';
+import { BrandMark } from '@/components/public/brand-mark';
 
 /**
  * Shared chrome for the printable documents (receipts and folios). On screen it looks
@@ -20,11 +21,11 @@ export function PrintSheet({
     <div className="min-h-dvh bg-sand-100/70 print:bg-white">
       <div className="no-print sticky top-0 z-10 border-b border-sand-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-[52rem] flex-wrap items-center gap-3 px-4 py-2.5">
-          <span className="flex min-w-0 flex-1 items-center gap-2">
-            <img src="/brand/logo.jpg" alt="" className="h-7 w-7 rounded-md object-cover ring-1 ring-sand-300" />
+          <span className="flex min-w-0 flex-1 items-center gap-2.5">
+            <BrandMark tone="light" size="sm" className="h-7 w-7" />
             <span className="min-w-0">
               <span className="block truncate text-[0.82rem] font-semibold text-navy-800">{title}</span>
-              <span className="block text-[0.72rem] text-navy-400">Lemma Apartments · document view</span>
+              <span className="block text-[0.72rem] text-sand-600">Lemma Apartments · document view</span>
             </span>
           </span>
           <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto">{toolbar}</div>
@@ -59,18 +60,34 @@ export function PrintHeader({
   documentNumber: string;
   issuedOn: string;
 }) {
+  const legalLine = [
+    property.legalName || property.name,
+    property.taxPayerId?.trim() ? `TPIN ${property.taxPayerId.trim()}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const contactLine = [
+    property.phone,
+    property.email,
+    property.website ? property.website.replace(/^https?:\/\//, '') : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <header className="flex flex-wrap items-start justify-between gap-5 border-b-2 border-navy-800 pb-5">
       <div className="flex min-w-0 items-start gap-3">
-        <img src="/brand/logo.jpg" alt={`${property.name} logo`} className="h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-sand-300" />
+        <BrandMark tone="light" size="lg" className="h-12 w-12" />
         <div className="min-w-0">
-          <p className="font-display text-[1.35rem] leading-tight text-navy-900">{property.name}</p>
-          <p className="mt-0.5 text-[0.76rem] leading-snug text-navy-500">
-            {property.legalName} · TPIN {property.taxPayerId}
+          <p className="font-display text-[1.35rem] font-medium leading-tight text-navy-900">
+            {property.name}
+          </p>
+          <p className="mt-0.5 text-[0.76rem] leading-snug text-sand-600">
+            {legalLine}
             <br />
-            {property.addressLine}, {property.city}, {property.country}
+            {[property.addressLine, property.city, property.country].filter(Boolean).join(', ')}
             <br />
-            {property.phone} · {property.email} · {property.website.replace(/^https?:\/\//, '')}
+            {contactLine}
           </p>
         </div>
       </div>
