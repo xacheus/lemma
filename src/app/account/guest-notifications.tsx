@@ -1,7 +1,8 @@
 'use client';
 
 import { Bell, CheckCheck } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import type { NotificationRecord } from '@/lib/domain/types';
 
 /**
@@ -18,30 +19,33 @@ export function GuestNotifications({
 }) {
   const [rows, setRows] = useState<NotificationRecord[]>(notifications);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => setRows(notifications), [notifications]);
 
   const unread = useMemo(() => rows.filter((n) => !n.readAt).length, [rows]);
 
-  async function markRead(ids: string[]) {
-    const targets = rows.filter((n) => ids.includes(n.id) && !n.readAt);
+  async function setRead(ids: string[], read: boolean) {
+    const targets = rows.filter((n) => ids.includes(n.id) && Boolean(n.readAt) !== read);
     if (!targets.length) return;
     setBusy('read');
-    // Optimistic: the server is the source of truth on the next refresh.
-    setRows((current) =>
-      current.map((n) => (ids.includes(n.id) ? { ...n, readAt: n.readAt ?? new Date().toISOString() } : n)),
-    );
+    setError('');
+    let updated = rows;
     try {
       for (const n of targets) {
-        await fetch(`/api/notifications/${n.id}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ read: true }),
+        const response = await fetch(`/api/notifications/${n.id}`, {
+          method: 'PATCH', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ read }),
         });
+        if (!response.ok) throw new Error('Unable to update notification');
+        const data = await response.json();
+        updated = updated.map((item) => item.id === n.id ? { ...item, readAt: data.data.notification.readAt } : item);
+        setRows(updated);
+        onChanged?.(updated);
       }
     } catch {
-      setRows(notifications);
+      setError('Could not update the notification. Please try again.');
     } finally {
       setBusy(null);
-      onChanged?.(rows);
     }
   }
 
@@ -74,13 +78,14 @@ export function GuestNotifications({
             type="button"
             className="btn btn-secondary py-1.5 text-[0.78rem]"
             disabled={busy !== null}
-            onClick={() => void markRead(rows.map((n) => n.id))}
+            onClick={() => void setRead(rows.map((n) => n.id), true)}
           >
             <CheckCheck size={13} /> Mark all as read
           </button>
         ) : null}
       </div>
 
+      {error ? <p role="alert" className="text-sm text-st-cancelled">{error}</p> : null}
       <ul className="divide-y divide-sand-200 overflow-hidden rounded-lg border border-sand-200 bg-white">
         {rows
           .slice()
@@ -109,15 +114,12 @@ export function GuestNotifications({
                 <p className="mt-0.5 whitespace-pre-line text-[0.83rem] leading-relaxed text-navy-600">
                   {n.body}
                 </p>
-                {!n.readAt ? (
-                  <button
-                    type="button"
-                    onClick={() => void markRead([n.id])}
-                    className="mt-1 text-[0.75rem] font-medium text-lemma-dark hover:underline"
-                  >
-                    Mark as read
+                <div className="mt-1 flex flex-wrap gap-4">
+                  <button type="button" disabled={busy !== null} onClick={() => void setRead([n.id], !n.readAt)} className="text-[0.75rem] font-medium text-lemma-dark hover:underline">
+                    {n.readAt ? 'Mark as unread' : 'Mark as read'}
                   </button>
-                ) : null}
+                  {n.href?.startsWith('/') && !n.href.startsWith('//') ? <Link className="text-[0.75rem] font-medium text-lemma-dark hover:underline" href={n.href}>View details</Link> : null}
+                </div>
               </div>
             </li>
           ))}

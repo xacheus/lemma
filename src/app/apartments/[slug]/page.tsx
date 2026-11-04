@@ -1,3 +1,4 @@
+import { publicPaymentMethod } from '@/lib/domain/payment-details';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Bath, BedDouble, CheckCircle2, Layers, Maximize2, Users } from 'lucide-react';
@@ -198,7 +199,16 @@ export default async function ApartmentDetailPage({
           {/* Right: Live Availability & Booking Submission Widget */}
           <ApartmentBookingWidget
             apartment={apartment}
-            settings={db.settings}
+            settings={{
+              property: { taxPayerId: '' },
+              booking: { depositPercent: db.settings.booking.depositPercent, taxesIncluded: db.settings.booking.taxesIncluded },
+              tax: db.settings.tax ? { ...db.settings.tax, registrationNumber: '' } : undefined,
+              payments: {
+                methods: db.settings.payments.methods.filter((method) => method.enabled).map((method) => ({ ...publicPaymentMethod(method), enabled: true })),
+                lockMethodToAdmin: db.settings.payments.lockMethodToAdmin,
+                defaultMethod: db.settings.payments.defaultMethod,
+              },
+            }}
             initialCheckIn={checkIn}
             initialCheckOut={checkOut}
             initialGuests={guests}

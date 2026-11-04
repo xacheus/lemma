@@ -30,10 +30,13 @@
 - **Payments:** Airtel Money, MTN MoMo, bank transfers and cash are recorded as
   guest claims or staff entries; none is an automatic provider settlement. A person
   compares the reference or receipt with the provider statement and verifies it.
-  Attached payment proof must be under 500 KB to fit in one Firestore document; a
-  text-only reference can be submitted. No bank callback or automatic refund transfer
+  Attached payment proof is currently embedded in the claim (not uploaded to
+  Cloudinary) and must be under 500 KB to fit in one Firestore document; a text-only
+  reference can be submitted. No bank callback or automatic refund transfer
   is implemented.
-- **Messages and reminders:** Delivery is only reported after a configured provider
+- **Messages and reminders:** Firebase Cloud Messaging, device-token registration,
+  permission prompts, push delivery and announcement broadcasts are not yet implemented.
+  In-app records do not imply a push was sent. Delivery is only reported after a configured provider
   confirms it. Reminders require a separate scheduler plus `CRON_SECRET`. Without
   external gateways, drafts remain in the app and do not masquerade as delivered.
 - **Media:** Production uploads require signed Cloudinary credentials; without them

@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 
 export const PATCH = apiRoute({
   permission: 'settings.manage',
+  roles: ['admin', 'super_admin'],
   handler: async ({ req, session }) => {
     const patch = await readBody(req, settingsSchema);
     return runAtomicTransaction((db) => {

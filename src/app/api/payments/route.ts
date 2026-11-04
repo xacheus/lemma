@@ -41,11 +41,8 @@ export const POST = apiRoute({
   handler: async ({ req, session }) => {
     const input = await readBody(req, paymentCreateSchema);
     return runAtomicTransaction((db) => {
-      const payment = recordPayment(db, session.user.id, {
-        ...input,
-        claimId: input.claimId ?? null,
-      });
-      const folio = recomputeReservation(db, input.reservationId);
+      const payment = recordPayment(db, session.user.id, { ...input, claimId: input.claimId ?? null });
+      const folio = recomputeReservation(db, payment.reservationId);
       return { payment, folio, snapshot: buildSnapshot(db, session) };
     });
   },

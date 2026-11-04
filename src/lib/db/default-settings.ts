@@ -87,8 +87,7 @@ export const DEFAULT_SETTINGS: Settings = {
         id: 'airtel_money',
         label: 'Airtel Money',
         enabled: true,
-        instructions:
-          'Dial *181# -> Make Payment -> Pay Merchant. Use the merchant code reception gives you on your booking confirmation, then upload the transaction reference or SMS confirmation so the payment can be verified.',
+        instructions: '',
         accountLabel: 'Merchant Code',
         accountNumber: '',
       },
@@ -96,8 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
         id: 'mtn_money',
         label: 'MTN Mobile Money',
         enabled: true,
-        instructions:
-          'Dial *158# -> MoMo Pay. Use the merchant ID reception gives you on your booking confirmation. Payment is credited once it is verified against the MTN MoMo statement.',
+        instructions: '',
         accountLabel: 'Merchant ID',
         accountNumber: '',
       },
@@ -105,19 +103,17 @@ export const DEFAULT_SETTINGS: Settings = {
         id: 'bank_transfer',
         label: 'Bank Transfer',
         enabled: true,
-        instructions:
-          'Transfer in ZMW to the corporate account below using your Booking or Quotation Number as the payment reference.',
+        instructions: '',
         accountLabel: 'Bank / Account',
-        accountNumber: 'Lemma Apartments. Account details are confirmed by reception before any transfer is made',
+        accountNumber: '',
       },
       {
         id: 'cash',
         label: 'Cash',
         enabled: true,
-        instructions:
-          'Payable in ZMW at the Lemma Apartments reception desk against an official numbered receipt.',
+        instructions: '',
         accountLabel: 'Reception Desk',
-        accountNumber: 'Front Office Till 1',
+        accountNumber: '',
       },
     ],
     /**

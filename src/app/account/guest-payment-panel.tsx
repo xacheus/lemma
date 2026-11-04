@@ -13,15 +13,11 @@ import {
   X,
 } from 'lucide-react';
 import { formatKwacha } from '@/lib/domain/money';
+import { PaymentDetails, CopyDetail } from '@/components/payments/payment-details';
+import type { PublicPaymentMethod } from '@/lib/domain/payment-details';
 import type { GuestSubmittedPayment, PaymentMethod } from '@/lib/domain/types';
 
-interface QuoteMethod {
-  id: PaymentMethod;
-  label: string;
-  instructions: string;
-  accountLabel: string;
-  accountNumber: string;
-}
+type QuoteMethod = PublicPaymentMethod;
 
 export interface PaymentQuoteView {
   reservationId: string;
@@ -179,7 +175,7 @@ export function GuestPaymentPanel({
       setDone(json.data.claim as GuestSubmittedPayment);
       onSubmitted();
     } catch {
-      setError('Network error — the payment was not submitted. Please try again.');
+      setError('The connection was interrupted. Refresh to check whether your proof was submitted before retrying.');
     } finally {
       setBusy(false);
     }
@@ -313,7 +309,8 @@ export function GuestPaymentPanel({
               </div>
               {chosen ? (
                 <div className="mt-2 rounded-md border border-sand-200 bg-sand-50 p-3 text-[0.8rem] leading-relaxed text-navy-700">
-                  <p className="whitespace-pre-line">{chosen.instructions}</p>
+                  <PaymentDetails method={chosen} />
+                  <CopyDetail label="booking reference" value={quote.reference} />
                   {quote.guestChoosesMethod ? (
                     <p className="mt-2 text-[0.75rem] text-navy-500">
                       Send the money first, then record it below. Nothing is charged on this page.

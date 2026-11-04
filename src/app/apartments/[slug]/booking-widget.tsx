@@ -15,27 +15,18 @@ import {
   ShieldCheck,
   Smartphone,
 } from 'lucide-react';
-import type { Apartment, Settings } from '@/lib/domain/types';
+import type { Apartment, PaymentMethodSetting } from '@/lib/domain/types';
+import { PaymentDetails, CopyDetail } from '@/components/payments/payment-details';
+import { publicPaymentMethod, type PublicPaymentMethod } from '@/lib/domain/payment-details';
 import type { PaymentMethod } from '@/lib/domain/types';
-import { calculateStayPricing } from '@/lib/domain/pricing';
+import { calculateStayPricing, type PricingSettings } from '@/lib/domain/pricing';
 import { formatKwacha } from '@/lib/domain/money';
 import { addISO } from '@/lib/domain/dates';
 import { isSampleListing } from '@/lib/domain/sample-listings';
 
-interface MethodView {
-  id: PaymentMethod;
-  label: string;
-  instructions: string;
-  accountLabel: string;
-  accountNumber: string;
-}
-
-interface PaymentInstruction {
+type MethodView = PublicPaymentMethod;
+interface PaymentInstruction extends Omit<PublicPaymentMethod, 'id'> {
   method: PaymentMethod;
-  label: string;
-  instructions: string;
-  accountLabel: string;
-  accountNumber: string;
   totalAmount: number;
   depositPercent: number;
   suggestedAmount: number;
@@ -78,7 +69,7 @@ export function ApartmentBookingWidget({
   prefillUser,
 }: {
   apartment: Apartment;
-  settings: Settings;
+  settings: PricingSettings & { payments: { methods: PaymentMethodSetting[]; lockMethodToAdmin?: boolean; defaultMethod?: PaymentMethod } };
   initialCheckIn: string;
   initialCheckOut: string;
   initialGuests: number;
@@ -89,13 +80,7 @@ export function ApartmentBookingWidget({
     () =>
       settings.payments.methods
         .filter((m) => m.enabled)
-        .map((m) => ({
-          id: m.id as PaymentMethod,
-          label: m.label,
-          instructions: m.instructions,
-          accountLabel: m.accountLabel,
-          accountNumber: m.accountNumber,
-        })),
+        .map(publicPaymentMethod),
     [settings.payments.methods],
   );
 
@@ -105,9 +90,7 @@ export function ApartmentBookingWidget({
   const [guestCount, setGuestCount] = useState(initialGuests);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [method, setMethod] = useState<PaymentMethod | null>(
-    settings.payments.lockMethodToAdmin
-      ? (settings.payments.defaultMethod ?? methods[0]?.id ?? null)
-      : (settings.payments.defaultMethod ?? methods[0]?.id ?? null),
+    methods.find((item) => item.id === settings.payments.defaultMethod)?.id ?? methods[0]?.id ?? null,
   );
 
   const [fullName, setFullName] = useState(prefillUser?.fullName || '');
@@ -409,21 +392,7 @@ export function ApartmentBookingWidget({
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-navy-400">
                 {chosen.label} details
               </p>
-              {chosen.accountNumber ? (
-                <p className="mt-1">
-                  <span className="text-navy-500">{chosen.accountLabel}:</span>{' '}
-                  <strong className="tabular-nums text-navy-900">{chosen.accountNumber}</strong>
-                </p>
-              ) : (
-                <p className="mt-1 text-navy-500">
-                  {chosen.accountLabel} — the desk confirms the number on your confirmation.
-                </p>
-              )}
-              {chosen.instructions ? (
-                <p className="mt-1.5 whitespace-pre-line text-[0.78rem] text-navy-600">
-                  {chosen.instructions}
-                </p>
-              ) : null}
+              <PaymentDetails method={chosen} />
               <p className="mt-1.5 text-[0.74rem] text-navy-500">
                 Quote your booking number as the reference. Payment is confirmed by reception after
                 you submit proof — nothing is charged on this page.
@@ -584,11 +553,8 @@ function BookingConfirmation({
         const m = (q?.methods ?? []).find((x: MethodView) => x.id === method);
         if (m && q) {
           setInstructions({
+            ...m,
             method: m.id,
-            label: m.label,
-            instructions: m.instructions,
-            accountLabel: m.accountLabel,
-            accountNumber: m.accountNumber,
             totalAmount: q.totalAmount,
             depositPercent: q.depositPercent,
             suggestedAmount: q.suggestedAmount,
@@ -775,23 +741,14 @@ function BookingConfirmation({
             </div>
             <div className="flex justify-between border-t border-sand-200 pt-2">
               <span className="text-navy-500">Payment reference</span>
-              <span className="font-mono font-semibold text-navy-900">{booking.reference}</span>
+              <CopyDetail label="booking reference" value={booking.reference} />
             </div>
             {shown ? (
               <div className="border-t border-sand-200 pt-2">
                 <p className="text-[0.72rem] uppercase tracking-[0.1em] text-navy-400">
                   {shown.label} · pay to
                 </p>
-                <p className="mt-0.5 font-semibold text-navy-900">
-                  {shown.accountNumber
-                    ? `${shown.accountLabel}: ${shown.accountNumber}`
-                    : `${shown.accountLabel} — call reception to confirm the number`}
-                </p>
-                {shown.instructions ? (
-                  <p className="mt-1 whitespace-pre-line text-[0.78rem] leading-relaxed text-navy-600">
-                    {shown.instructions}
-                  </p>
-                ) : null}
+                <PaymentDetails method={shown} />
               </div>
             ) : null}
           </div>
