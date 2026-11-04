@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
     country: 'Zambia',
     postalCode: '10101',
     serviceArea: 'Lusaka, Zambia',
-    phone: '+260 211 470 662',
+    phone: '+260 574 556 207',
     website: '',
     description:
       'Furnished apartments at Barlaston Park, Lusaka, Zambia. Studio, one-bedroom and family units with fibre Wi-Fi, backup power, secure parking and housekeeping, priced per night in Zambian Kwacha.',

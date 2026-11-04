@@ -32,6 +32,7 @@ import { NAV_SECTIONS } from '@/lib/domain/permissions';
 import { formatLongDate } from '@/lib/domain/dates';
 import { ROLE_META } from '@/lib/domain/status';
 import { ReservationFormDialog } from '@/components/admin/reservation-form';
+import { BrandMark } from '@/components/public/brand-mark';
 import type { BookingSource } from '@/lib/domain/types';
 
 /* --------------------------------------------------------------------- shell context */
@@ -143,13 +144,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const sidebarHeader = (
     <Link href="/admin" className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
-      <span className="shrink-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/logo.jpg" alt="Lemma Apartments" className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/15" />
-      </span>
+      <BrandMark tone="dark" size="sm" />
       <span className="min-w-0">
-        <span className="block truncate font-display text-[0.9rem] leading-none tracking-[0.14em] text-white">LEMMA APARTMENTS</span>
-        <span className="mt-1 block truncate text-[0.62rem] uppercase tracking-[0.16em] text-navy-300">Property management</span>
+        <span className="block truncate font-display text-[0.98rem] font-medium leading-tight text-white">
+          {snapshot.settings.property.name || 'Lemma Apartments'}
+        </span>
+        <span className="mt-0.5 block truncate text-[0.68rem] text-navy-300">Property workspace</span>
       </span>
     </Link>
   );

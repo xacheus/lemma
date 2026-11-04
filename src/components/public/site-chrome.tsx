@@ -17,6 +17,7 @@ import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole } from '@/lib/domain/permissions';
 import { useScrolled } from '@/components/ui/motion';
+import { BrandMark } from './brand-mark';
 import { SiteMenu } from './site-menu';
 
 export function PublicHeader({
@@ -36,6 +37,7 @@ export function PublicHeader({
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/apartments', label: 'Apartments' },
+    { href: '/policies', label: 'Booking Info' },
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
   ];
@@ -44,12 +46,17 @@ export function PublicHeader({
     setMenuOpen(false);
   }, [activePath]);
 
+  const brandTitle = property.name || 'Lemma Apartments';
+  const subline = [property.addressLine || property.city, property.city && property.addressLine ? property.city : property.country]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <header
       className={`sticky top-0 z-40 border-b transition-all duration-300 ease-smooth ${
         scrolled
-          ? 'header-solid border-sand-200 bg-white/92 backdrop-blur-md'
-          : 'border-transparent bg-white/80 backdrop-blur-sm'
+          ? 'header-solid border-sand-200 bg-sand-50/95 backdrop-blur-md'
+          : 'border-sand-200/70 bg-sand-50/88 backdrop-blur-sm'
       }`}
     >
       <div
@@ -57,24 +64,19 @@ export function PublicHeader({
           scrolled ? 'py-2.5' : 'py-3.5'
         }`}
       >
-        <Link href="/" className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo.jpg"
-            alt={property.name}
-            className="h-10 w-10 rounded-md object-cover ring-1 ring-sand-300"
-          />
-          <div>
-            <span className="block text-[0.95rem] font-bold tracking-[0.12em] text-navy-900">
-              LEMMA APARTMENTS
+        <Link href="/" className="flex min-w-0 items-center gap-3">
+          <BrandMark tone="light" size="md" />
+          <div className="min-w-0">
+            <span className="block truncate font-display text-[1.05rem] font-semibold tracking-[-0.01em] text-navy-900">
+              {brandTitle}
             </span>
-            <span className="block text-[0.65rem] uppercase tracking-[0.16em] text-navy-500">
-              {property.addressLine || property.city} · {property.country}
+            <span className="block truncate text-[0.7rem] text-sand-600">
+              {subline || 'Lusaka, Zambia'}
             </span>
           </div>
         </Link>
 
-        <nav aria-label="Main navigation" className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Main navigation" className="hidden items-center gap-6 md:flex">
           {navLinks.map((item) => {
             const active =
               item.href === '/'
@@ -85,8 +87,8 @@ export function PublicHeader({
                 key={item.href}
                 href={item.href}
                 data-active={active ? 'true' : 'false'}
-                className={`underline-sweep text-[0.86rem] font-medium transition-colors duration-200 ${
-                  active ? 'font-semibold text-navy-900' : 'text-navy-600 hover:text-navy-900'
+                className={`underline-sweep text-[0.86rem] transition-colors duration-200 ${
+                  active ? 'font-semibold text-navy-900' : 'font-medium text-sand-700 hover:text-navy-900'
                 }`}
               >
                 {item.label}
@@ -95,13 +97,13 @@ export function PublicHeader({
           })}
         </nav>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {waDigits ? (
             <a
               href={`https://wa.me/${waDigits}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden items-center gap-1.5 rounded-md border border-sand-300 px-3 py-1.5 text-[0.8rem] font-medium text-navy-700 transition-colors duration-200 hover:border-brand-400 hover:bg-sand-50 sm:inline-flex"
+              className="hidden items-center gap-1.5 rounded-md border border-sand-300 bg-white px-3 py-1.5 text-[0.8rem] font-medium text-navy-800 transition-colors duration-200 hover:border-brand-400 hover:bg-sand-100 lg:inline-flex"
             >
               <MessageCircle size={14} className="text-lemma-dark" />
               WhatsApp
@@ -126,9 +128,9 @@ export function PublicHeader({
               </Link>
               <Link
                 href="/apartments"
-                className="btn btn-primary shine hidden py-1.5 text-[0.8rem] transition-transform duration-300 ease-smooth hover:-translate-y-0.5 sm:inline-flex"
+                className="btn btn-primary hidden py-1.5 text-[0.8rem] sm:inline-flex"
               >
-                Book a Stay
+                Check Dates
               </Link>
             </>
           )}
@@ -136,7 +138,7 @@ export function PublicHeader({
           {session && unreadCount > 0 ? (
             <Link
               href={session.user.role === 'guest' ? '/account#notifications' : '/admin/notifications'}
-              className="relative grid h-9 w-9 place-items-center rounded-md border border-sand-300 text-navy-700 transition-colors hover:bg-sand-100"
+              className="relative grid h-9 w-9 place-items-center rounded-md border border-sand-300 bg-white text-navy-700 transition-colors hover:bg-sand-100"
               aria-label={`Notifications, ${unreadCount} unread`}
             >
               <Bell size={15} />
@@ -152,7 +154,9 @@ export function PublicHeader({
             aria-expanded={menuOpen}
             aria-haspopup="dialog"
             onClick={() => setMenuOpen(true)}
-            className="flex h-9 items-center gap-1.5 rounded-md border border-sand-300 px-2.5 text-navy-700 transition-colors hover:bg-sand-100"
+            className={`flex h-9 items-center gap-1.5 rounded-md border border-sand-300 bg-white px-2.5 text-navy-700 transition-colors hover:bg-sand-100 ${
+              session ? '' : 'md:hidden'
+            }`}
           >
             <Menu size={16} />
             <span className="hidden text-[0.8rem] font-medium sm:inline">Menu</span>
@@ -174,40 +178,53 @@ export function PublicHeader({
 
 export function PublicFooter({ property }: { property: Settings['property'] }) {
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
+  const brandTitle = property.name || 'Lemma Apartments';
+
   return (
-    <footer className="border-t border-sand-200 bg-navy-900 text-navy-200">
-      <div className="mx-auto grid grid-cols-1 max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
-        <div className="md:col-span-2">
+    <footer className="border-t border-sand-200 bg-charcoal-950 text-sand-200">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-12 sm:px-6 md:grid-cols-12 lg:px-8">
+        <div className="md:col-span-5">
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/logo.jpg"
-              alt={property.name}
-              className="h-10 w-10 rounded-md object-cover ring-1 ring-white/20"
-            />
+            <BrandMark tone="dark" size="md" />
             <div>
-              <p className="text-[0.95rem] font-bold tracking-[0.14em] text-white">
-                LEMMA APARTMENTS
+              <p className="font-display text-[1.08rem] font-semibold tracking-[-0.01em] text-white">
+                {brandTitle}
               </p>
-              <p className="text-[0.68rem] uppercase tracking-[0.18em] text-navy-300">
+              <p className="text-[0.74rem] text-sand-400">
+                {property.addressLine ? `${property.addressLine}, ` : ''}
                 {property.city}, {property.country}
               </p>
             </div>
           </div>
-          <p className="mt-4 max-w-md text-[0.86rem] leading-relaxed text-navy-300">
+          <p className="mt-4 max-w-sm text-[0.86rem] leading-relaxed text-sand-300">
             {property.tagline ||
-              `Explore apartments in ${property.city} and contact reception to confirm the right stay for your dates.`}
+              `Self-catering furnished apartments in ${property.city}, priced per night in Zambian Kwacha with direct front-desk support.`}
           </p>
         </div>
 
-        <div>
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-white">
-            Navigation
+        <div className="md:col-span-3">
+          <p className="text-[0.78rem] font-semibold text-white">
+            For Guests
           </p>
-          <ul className="mt-3 space-y-2 text-[0.84rem]">
+          <ul className="mt-3 space-y-2 text-[0.84rem] text-sand-300">
             <li>
               <Link href="/apartments" className="hover:text-white">
                 Apartments &amp; ZMW Rates
+              </Link>
+            </li>
+            <li>
+              <Link href="/booking/access" className="hover:text-white">
+                Find a Booking by Reference
+              </Link>
+            </li>
+            <li>
+              <Link href="/account" className="hover:text-white">
+                Guest Account &amp; Receipts
+              </Link>
+            </li>
+            <li>
+              <Link href="/policies" className="hover:text-white">
+                Deposit, Cancellation &amp; House Rules
               </Link>
             </li>
             <li>
@@ -220,45 +237,30 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
                 Location &amp; Contact
               </Link>
             </li>
-            <li>
-              <Link href="/account" className="hover:text-white">
-                Guest Portal &amp; Receipts
-              </Link>
-            </li>
-            <li>
-              <Link href="/policies" className="hover:text-white">
-                Booking Terms &amp; Policies
-              </Link>
-            </li>
-            <li>
-              <Link href="/login" className="hover:text-white">
-                Staff &amp; Management Login
-              </Link>
-            </li>
           </ul>
         </div>
 
-        <div>
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-white">
-            Reception &amp; Location
+        <div className="md:col-span-4">
+          <p className="text-[0.78rem] font-semibold text-white">
+            Front Desk &amp; Location
           </p>
-          <ul className="mt-3 space-y-2.5 text-[0.83rem] text-navy-300">
-            <li className="flex items-start gap-2">
+          <ul className="mt-3 space-y-2.5 text-[0.84rem] text-sand-300">
+            <li className="flex items-start gap-2.5">
               <MapPin size={15} className="mt-0.5 shrink-0 text-lemma-light" />
               <span>
                 {property.addressLine}
-              {property.city ? `, ${property.city}` : ''}
-              {property.country ? `, ${property.country}` : ''}
+                {property.city ? `, ${property.city}` : ''}
+                {property.country ? `, ${property.country}` : ''}
               </span>
             </li>
-            <li className="flex items-center gap-2">
+            <li className="flex items-center gap-2.5">
               <Phone size={15} className="shrink-0 text-lemma-light" />
-              <a href={`tel:${property.phone}`} className="hover:text-white">
+              <a href={`tel:${property.phone.replace(/\s/g, '')}`} className="hover:text-white">
                 {property.phone}
               </a>
             </li>
             {waDigits ? (
-              <li className="flex items-center gap-2">
+              <li className="flex items-center gap-2.5">
                 <MessageCircle size={15} className="shrink-0 text-lemma-light" />
                 <a
                   href={`https://wa.me/${waDigits}`}
@@ -266,18 +268,18 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
                   rel="noreferrer"
                   className="hover:text-white"
                 >
-                  WhatsApp Front Desk
+                  WhatsApp Reception ({property.whatsapp})
                 </a>
               </li>
             ) : null}
-            <li className="flex items-center gap-2">
+            <li className="flex items-center gap-2.5">
               <Mail size={15} className="shrink-0 text-lemma-light" />
               <a href={`mailto:${property.email}`} className="hover:text-white">
                 {property.email}
               </a>
             </li>
-            <li className="flex items-center gap-2">
-              <Clock size={15} className="shrink-0 text-lemma-light" />
+            <li className="flex items-start gap-2.5">
+              <Clock size={15} className="mt-0.5 shrink-0 text-lemma-light" />
               <span>{property.receptionHours}</span>
             </li>
           </ul>
@@ -285,12 +287,18 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-[0.76rem] text-navy-400 sm:flex-row sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-[0.76rem] text-sand-400 sm:flex-row sm:px-6 lg:px-8">
           <p className="flex items-center gap-1.5">
             <Building2 size={13} /> {property.legalName || property.name}
             {property.taxPayerId ? ` · TPIN ${property.taxPayerId}` : ''}
           </p>
-          <p>All rates quoted in Zambian Kwacha (ZMW).</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <span>Rates quoted in Zambian Kwacha (ZMW)</span>
+            <span aria-hidden="true" className="text-white/20">·</span>
+            <Link href="/login" className="hover:text-white">
+              Staff sign-in
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

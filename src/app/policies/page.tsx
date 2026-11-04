@@ -106,23 +106,23 @@ export default async function PoliciesPage() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-navy-900">
+    <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
       <PublicHeader property={property} session={session} activePath="/policies" unreadCount={unreadForSession(db, session)} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-12 sm:px-6 lg:px-8">
-        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
+        <p className="text-[0.8rem] font-medium text-lemma-dark">
           {property.name} · {property.addressLine}
         </p>
-        <h1 className="mt-2 text-[2rem] font-semibold tracking-[-0.02em] text-navy-900">
-          Booking terms, cancellation and privacy
+        <h1 className="mt-1.5 font-display text-[2.05rem] font-medium tracking-[-0.015em] text-navy-900 sm:text-[2.3rem]">
+          Booking terms, cancellation &amp; privacy
         </h1>
-        <p className="mt-2 max-w-2xl text-[0.92rem] leading-relaxed text-navy-600">
-          The practical version of how a stay works here. If anything is unclear, ask reception
-          before you pay a deposit. We would rather explain it first.
+        <p className="mt-2 max-w-2xl text-[0.92rem] leading-relaxed text-sand-700">
+          Clear house and payment rules before you commit to dates. If anything needs clarification
+          for your stay, reach reception directly before sending a deposit.
         </p>
 
-        <div className="mt-8 rounded-lg border border-sand-200 bg-sand-50 p-5">
-          <h2 className="text-[1rem] font-semibold text-navy-900">The short version</h2>
+        <div className="mt-8 rounded-xl border border-sand-200 bg-white p-5 shadow-card sm:p-6">
+          <h2 className="font-display text-[1.15rem] font-medium text-navy-900">At a glance</h2>
           <ul className="mt-2.5 space-y-1.5 text-[0.86rem] leading-relaxed text-navy-700">
             <li>
               {booking.depositPercent}% deposit confirms your dates; the rest is due by arrival.
@@ -188,10 +188,10 @@ export default async function PoliciesPage() {
           )}
         </section>
 
-        <section className="mt-10 rounded-lg border border-sand-200 p-5">
-          <h2 className="text-[1rem] font-semibold text-navy-900">Questions about this stay</h2>
-          <p className="mt-1.5 text-[0.86rem] leading-relaxed text-navy-600">
-            Speak to {property.name} reception. A person answers, not a chatbot.
+        <section className="mt-10 rounded-xl border border-sand-200 bg-white p-6 shadow-card">
+          <h2 className="font-display text-[1.15rem] font-medium text-navy-900">Questions before you book?</h2>
+          <p className="mt-1.5 text-[0.86rem] leading-relaxed text-sand-700">
+            Reach the {property.name} front desk directly by WhatsApp, phone or email.
           </p>
           <div className="mt-3 flex flex-wrap gap-2.5">
             {waDigits ? (

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { MessageCircle, Phone, RotateCcw } from 'lucide-react';
+import { BrandMark } from './brand-mark';
 
 /** Error-boundary fallback with direct reception contact details and retry action. */
 export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
@@ -21,9 +22,10 @@ export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
       <header className="border-b border-sand-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-4 sm:px-8">
           <Link href="/" className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo.jpg" alt="" className="h-10 w-10 rounded-md object-cover" />
-            <span className="text-sm font-bold tracking-[0.12em]">LEMMA APARTMENTS</span>
+            <BrandMark tone="light" size="md" />
+            <span className="font-display text-[1.05rem] font-semibold text-navy-900">
+              Lemma Apartments
+            </span>
           </Link>
         </div>
       </header>
