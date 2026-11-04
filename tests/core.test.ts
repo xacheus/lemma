@@ -22,6 +22,34 @@ process.env.LEMMA_DATA_DIR = temp;
 
 test.after(() => rmSync(temp, { recursive: true, force: true }));
 
+test('a serverless deployment without Firebase credentials refuses local booking data', async () => {
+  const { getDb, ensureCloudFirestoreHydrated, StoreUnavailableError } = await import('../src/lib/db/store');
+  const names = [
+    'VERCEL', 'LEMMA_SESSION_SECRET', 'FIREBASE_PROJECT_ID',
+    'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY',
+  ] as const;
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  try {
+    process.env.VERCEL = '1';
+    process.env.LEMMA_SESSION_SECRET = 'test-secret-only-for-local-unit-tests-1234';
+    delete process.env.FIREBASE_PROJECT_ID;
+    delete process.env.FIREBASE_CLIENT_EMAIL;
+    delete process.env.FIREBASE_PRIVATE_KEY;
+    assert.throws(() => getDb(), (error) =>
+      error instanceof StoreUnavailableError &&
+      error.code === 'storage_unavailable' &&
+      error.message.includes('Booking records are unavailable'));
+    await assert.rejects(() => ensureCloudFirestoreHydrated(), StoreUnavailableError);
+    const { readPublicSiteData } = await import('../src/lib/public/read-site-data');
+    assert.equal(await readPublicSiteData(), null);
+  } finally {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+  }
+});
+
 test('a new cloud database is empty, while local starter units have six stock photos each', async () => {
   const { createEmptyDatabase } = await import('../src/lib/db/store');
   const fresh = createEmptyDatabase(today);

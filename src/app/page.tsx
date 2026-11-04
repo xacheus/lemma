@@ -16,8 +16,8 @@ import {
   Wifi,
   Zap,
 } from 'lucide-react';
-import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
-import { getSession } from '@/lib/auth/session';
+import { readPublicSiteData } from '@/lib/public/read-site-data';
+import { SiteUnavailable } from '@/components/public/site-unavailable';
 import { addISO, businessToday } from '@/lib/domain/dates';
 import { searchAvailability } from '@/lib/domain/availability';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
@@ -46,9 +46,9 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ checkIn?: string; checkOut?: string; guests?: string }>;
 }) {
-  await ensureCloudFirestoreHydrated();
-  const db = getDb();
-  const session = await getSession();
+  const state = await readPublicSiteData();
+  if (!state) return <SiteUnavailable />;
+  const { db, session } = state;
   const { property, booking, payments } = db.settings;
   const sp = await searchParams;
   const today = db.__today || businessToday();

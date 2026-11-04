@@ -91,7 +91,35 @@ Back up any data before changing project credentials.
   claim must be under 500 KB because they are stored inside a Firestore document;
   a transaction reference may be submitted without an attachment.
 
-## 4. Verification checklist
+## 4. If the deployed site shows an application error
+
+Open `/api/session` on the affected deployment. A JSON response with
+`"code":"storage_unavailable"` and **"Booking records are unavailable"** means
+that `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` or `FIREBASE_PRIVATE_KEY` is
+missing, or that the private key lacks its required PEM markers. The same code with **"Sign in is
+temporarily unavailable"** means the production `LEMMA_SESSION_SECRET` is missing,
+shorter than 32 characters, or still the example placeholder. Neither condition is
+fixed by a successful Vercel build. Do not enable local-file storage on Vercel as a
+workaround: bookings and accounts would disappear between requests or deployments.
+
+In **Vercel → the project serving this URL → Settings → Environment Variables**,
+check that all four server-only variables above are present in **Production** (not
+just Preview/Development). The Firebase project ID, service-account email and private
+key must all come from the **same** Firebase project; browser `NEXT_PUBLIC_FIREBASE_*`
+settings are not substitutes. A private key must include its BEGIN/END PRIVATE KEY
+lines, with either real newlines or literal `\n` between lines, and no surrounding
+quotes. Enable Cloud Firestore in that Firebase project. Save the values there and
+**redeploy**; changes to environment variables do not change an already-running
+build. Never paste the key in chat, a PR or an issue.
+
+If `/api/session` still responds `storage_unavailable` after redeploy, inspect the
+first relevant Vercel runtime error and share only a **redacted** error message (no
+credentials). A response with `"code":"unauthenticated"` from `/api/session` is
+expected for a signed-out visitor and means the backend was reached. The public
+website shows a contact/retry page during an outage, but enquiries and staff actions
+stay unavailable until durable storage and authentication work.
+
+## 5. Verification checklist
 
 After setting the variables, redeploy and, with test accounts only:
 

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Bath, BedDouble, CheckCircle2, Layers, Maximize2, Users } from 'lucide-react';
-import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
-import { getSession } from '@/lib/auth/session';
+import { readPublicSiteData } from '@/lib/public/read-site-data';
+import { SiteUnavailable } from '@/components/public/site-unavailable';
 import { addISO } from '@/lib/domain/dates';
 import { isSampleListing } from '@/lib/domain/sample-listings';
 import { isRepresentativeImage } from '@/lib/cloudinary/urls';
@@ -21,9 +21,9 @@ export default async function ApartmentDetailPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ checkIn?: string; checkOut?: string; guests?: string }>;
 }) {
-  await ensureCloudFirestoreHydrated();
-  const db = getDb();
-  const session = await getSession();
+  const state = await readPublicSiteData();
+  if (!state) return <SiteUnavailable />;
+  const { db, session } = state;
   const { slug } = await params;
   const sp = await searchParams;
 
