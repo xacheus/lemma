@@ -7,27 +7,8 @@ import { Modal } from '@/components/ui/overlays';
 import { Alert, Spinner } from '@/components/ui';
 import type { ApartmentView } from '@/lib/view-types';
 import { ApartmentPhotoManager } from './apartment-photos';
+import { AMENITY_LIBRARY, normaliseAmenities } from '@/lib/domain/amenities';
 
-const AMENITY_LIBRARY = [
-  'Wi-Fi',
-  'Air conditioning',
-  'Backup power',
-  'Borehole water',
-  'Flat-screen TV',
-  'DSTV Explora',
-  'Fully fitted kitchen',
-  'Microwave',
-  'Fridge / freezer',
-  'Washer',
-  'In-room safe',
-  'Work desk',
-  'Balcony',
-  'Private parking',
-  'Step-free access',
-  'Daily housekeeping',
-  '24/7 security',
-  'Kitchenette',
-];
 
 const TIERS = [
   { value: 'standard', label: 'Standard Suite' },
@@ -215,19 +196,10 @@ export function ApartmentEditor({
           <TextInput label="Bed configuration" value={draft.bedConfiguration} onChange={(e) => set({ bedConfiguration: e.target.value })} placeholder="1 king + 2 singles" />
         </div>
 
-        <fieldset className="rounded-xl border border-sand-200 bg-sand-50/60 p-3">
-          <legend className="px-1 text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-navy-400">Amenities</legend>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
-            {AMENITY_LIBRARY.map((amenity) => (
-              <CheckboxRow
-                key={amenity}
-                label={amenity}
-                checked={draft.amenities.includes(amenity)}
-                onChange={(on) => set({ amenities: on ? [...draft.amenities, amenity] : draft.amenities.filter((a) => a !== amenity) })}
-              />
-            ))}
-          </div>
-        </fieldset>
+        <AmenityPicker
+          selected={draft.amenities}
+          onChange={(next) => set({ amenities: next })}
+        />
 
         <fieldset className="rounded-xl border border-sand-200 bg-white p-3">
           <legend className="px-1 text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-navy-400">
@@ -302,5 +274,127 @@ function NumberField({
       value={String(value)}
       onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
     />
+  );
+}
+
+/**
+ * Amenities manager.
+ *
+ * Everything is opt-in. Nothing starts ticked (except what the operator already
+ * saved), so a unit is never credited with a fitting nobody confirmed. The library
+ * covers the usual fittings; anything else can be typed in, because a Lusaka
+ * apartment might have something this list has never heard of.
+ */
+function AmenityPicker({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [custom, setCustom] = useState('');
+  const chosen = new Set(selected.map((a) => a.toLowerCase()));
+  const groups = Array.from(new Set(AMENITY_LIBRARY.map((a) => a.group)));
+  const customSelected = selected.filter(
+    (label) => !AMENITY_LIBRARY.some((a) => a.label.toLowerCase() === label.trim().toLowerCase()),
+  );
+
+  const toggle = (label: string, on: boolean) =>
+    onChange(normaliseAmenities(on ? [...selected, label] : selected.filter((x) => x !== label)));
+
+  return (
+    <fieldset className="rounded-xl border border-sand-200 bg-sand-50/60 p-3">
+      <legend className="px-1 text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-navy-400">
+        Amenities
+      </legend>
+      <p className="mb-2 px-1 text-[0.75rem] leading-relaxed text-navy-500">
+        Tick only what this apartment actually has. Anything left unticked is never shown to
+        guests — that is deliberate, so a missing Wi-Fi is simply absent rather than assumed.
+      </p>
+
+      {groups.map((group) => (
+        <div key={group} className="mb-2.5">
+          <p className="mb-1 px-1 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-navy-400">
+            {group}
+          </p>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 sm:grid-cols-3">
+            {AMENITY_LIBRARY.filter((a) => a.group === group).map((amenity) => {
+              const Icon = amenity.icon;
+              const checked = chosen.has(amenity.label.toLowerCase());
+              return (
+                <label
+                  key={amenity.key}
+                  className="flex cursor-pointer items-start gap-1.5 rounded px-1 py-1 text-[0.79rem] hover:bg-white"
+                  title={amenity.hint}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={checked}
+                    onChange={(e) => toggle(amenity.label, e.target.checked)}
+                  />
+                  <span className="flex items-center gap-1.5 text-navy-700">
+                    <Icon size={13} className="shrink-0 text-navy-400" aria-hidden="true" />
+                    {amenity.label}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      <div className="mt-2 border-t border-sand-200 pt-2">
+        <p className="mb-1 px-1 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-navy-400">
+          Added by you
+        </p>
+        {customSelected.length ? (
+          <ul className="mb-1.5 flex flex-wrap gap-1.5">
+            {customSelected.map((label) => (
+              <li key={label}>
+                <button
+                  type="button"
+                  onClick={() => toggle(label, false)}
+                  className="inline-flex items-center gap-1 rounded-full border border-sand-300 bg-white px-2 py-0.5 text-[0.75rem] text-navy-700 hover:border-st-cancelled hover:text-st-cancelled"
+                >
+                  {label} ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mb-1.5 px-1 text-[0.75rem] text-navy-400">Nothing added by hand.</p>
+        )}
+        <div className="flex gap-1.5">
+          <input
+            className="field h-8 flex-1 py-1 text-[0.8rem]"
+            value={custom}
+            maxLength={40}
+            placeholder="e.g. Solar geyser, Private courtyard"
+            onChange={(e) => setCustom(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              const value = custom.trim();
+              if (!value) return;
+              onChange(normaliseAmenities([...selected, value]));
+              setCustom('');
+            }}
+          />
+          <button
+            type="button"
+            className="btn-secondary h-8 px-2.5 text-[0.78rem]"
+            onClick={() => {
+              const value = custom.trim();
+              if (!value) return;
+              onChange(normaliseAmenities([...selected, value]));
+              setCustom('');
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </fieldset>
   );
 }

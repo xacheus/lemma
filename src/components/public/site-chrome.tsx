@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
-  ArrowRight,
+  Bell,
   Building2,
   Clock,
   Mail,
@@ -12,21 +12,23 @@ import {
   MessageCircle,
   Phone,
   User,
-  X,
 } from 'lucide-react';
 import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole } from '@/lib/domain/permissions';
 import { useScrolled } from '@/components/ui/motion';
+import { SiteMenu } from './site-menu';
 
 export function PublicHeader({
   property,
   session,
   activePath = '/',
+  unreadCount = 0,
 }: {
   property: Settings['property'];
   session: Session | null;
   activePath?: string;
+  unreadCount?: number;
 }) {
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
   const scrolled = useScrolled(10);
@@ -37,8 +39,6 @@ export function PublicHeader({
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
   ];
-  const policy = property as typeof property & { policies?: { terms?: string } };
-  void policy;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -133,52 +133,41 @@ export function PublicHeader({
             </>
           )}
 
+          {session && unreadCount > 0 ? (
+            <Link
+              href={session.user.role === 'guest' ? '/account#notifications' : '/admin/notifications'}
+              className="relative grid h-9 w-9 place-items-center rounded-md border border-sand-300 text-navy-700 transition-colors hover:bg-sand-100"
+              aria-label={`Notifications, ${unreadCount} unread`}
+            >
+              <Bell size={15} />
+              <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-lemma-dark px-1 text-[0.6rem] font-semibold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            </Link>
+          ) : null}
+
           <button
             type="button"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label="Open menu"
             aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
-            className="grid h-9 w-9 place-items-center rounded-md border border-sand-300 text-navy-700 transition-colors hover:bg-sand-100 md:hidden"
+            aria-haspopup="dialog"
+            onClick={() => setMenuOpen(true)}
+            className="flex h-9 items-center gap-1.5 rounded-md border border-sand-300 px-2.5 text-navy-700 transition-colors hover:bg-sand-100"
           >
-            {menuOpen ? <X size={16} /> : <Menu size={16} />}
+            <Menu size={16} />
+            <span className="hidden text-[0.8rem] font-medium sm:inline">Menu</span>
           </button>
         </div>
       </div>
 
-      {/* Mobile drawer */}
-      <div
-        className={`overflow-hidden border-t border-sand-200 bg-white transition-[max-height,opacity] duration-300 ease-smooth md:hidden ${
-          menuOpen ? 'max-h-[22rem] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <nav aria-label="Mobile navigation" className="px-4 py-3">
-          <ul className="divide-y divide-sand-100">
-            {navLinks.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center justify-between py-2.5 text-[0.88rem] ${
-                    activePath === item.href
-                      ? 'font-semibold text-navy-900'
-                      : 'text-navy-600'
-                  }`}
-                >
-                  {item.label}
-                  <ArrowRight size={14} className="text-navy-300" />
-                </Link>
-              </li>
-            ))}
-            <li>
-              <Link href="/login" className="flex items-center justify-between py-2.5 text-[0.88rem] text-navy-600">
-                Staff sign in <ArrowRight size={14} className="text-navy-300" />
-              </Link>
-            </li>
-          </ul>
-          <Link href="/apartments" className="btn btn-primary mt-3 w-full justify-center py-2.5">
-            Check dates &amp; book
-          </Link>
-        </nav>
-      </div>
+      <SiteMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        property={property}
+        session={session}
+        activePath={activePath}
+        unreadCount={unreadCount}
+      />
     </header>
   );
 }

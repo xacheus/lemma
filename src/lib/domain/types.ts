@@ -55,6 +55,14 @@ export interface UserRecord {
   passwordResetToken?: string | null;
   passwordResetExpiresAt?: string | null;
   sessionVersion?: number;
+  /** True once this row is tied to a real Firebase Auth account (signed in with Firebase). */
+  firebaseLinked?: boolean;
+  /**
+   * True only for accounts whose password is verified against this database instead
+   * of Firebase Auth. Absent for Firebase accounts, so anyone who can write a public
+   * registration body can never take over a Firebase-authenticated administrator.
+   */
+  demoPassword?: boolean;
 }
 
 export interface StaffUser {
@@ -468,6 +476,13 @@ export interface GuestSubmittedPayment {
   note: string;
   proof: PaymentProof | null;
   status: 'awaiting_verification' | 'linked' | 'rejected';
+  /**
+   * Set the first time a member of staff opens this claim. It separates "the guest
+   * uploaded something" from "someone is checking it", which is the difference between
+   * the Proof Submitted and Under Verification labels on the guest's dashboard.
+   */
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
   /** Set when staff verify it, so the claim and the ledger entry stay connected. */
   paymentId: ID | null;
   linkedAt: string | null;
@@ -633,6 +648,12 @@ export interface ReceiptRecord {
   totalBookingAmount: number;
   totalVerifiedPaid: number;
   remainingBalance: number;
+  /** Stay dates, printed on the receipt so it stands on its own as a record. */
+  checkIn?: string | null;
+  checkOut?: string | null;
+  nights?: number | null;
+  /** How the payment reached the property, e.g. "Airtel Money merchant 4522108". */
+  paymentDestination?: string | null;
   createdAt: string;
 }
 
@@ -974,6 +995,26 @@ export interface PaginatedResult<T> {
   totalEstimate?: number;
 }
 
+/**
+ * What the guest is shown about money, in the words they were promised:
+ *
+ *   awaiting_payment      nothing verified and no claim on file
+ *   proof_submitted       they uploaded a receipt, the desk has not opened it yet
+ *   under_verification    a claim is being checked, or a receipt awaits a signature
+ *   approved              verified money covers the booking
+ *   rejected              the last claim was refused (a reason is attached)
+ *   part_paid             some money verified, balance still outstanding
+ *
+ * It is derived, never stored, so it cannot drift from the ledger.
+ */
+export type PaymentStage =
+  | 'awaiting_payment'
+  | 'proof_submitted'
+  | 'under_verification'
+  | 'part_paid'
+  | 'approved'
+  | 'rejected';
+
 export interface ReservationView extends Reservation {
   guest: Guest | null;
   apartment: Apartment | null;
@@ -990,6 +1031,17 @@ export interface ReservationView extends Reservation {
   canCheckIn: boolean;
   canCheckOut: boolean;
   receiptCount: number;
+  /** Derived payment stage for the guest dashboard. */
+  paymentStage: PaymentStage;
+  /** The most recent guest claim on this booking, if any. */
+  latestClaim: {
+    id: ID;
+    amount: number;
+    method: PaymentMethod;
+    reference: string;
+    status: GuestSubmittedPayment['status'];
+    createdAt: string;
+  } | null;
 }
 
 export type DayStatus =

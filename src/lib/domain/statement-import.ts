@@ -171,11 +171,12 @@ export function parseStatement(
     const date = parseDate(get(dateCol));
     if (!date) problems.push('Date not understood — check the file format.');
 
-    let amount = amountCol >= 0 ? parseAmount(get(amountCol)) : null;
+    const amount = amountCol >= 0 ? parseAmount(get(amountCol)) : null;
     if (amount === null && debitCol >= 0) {
       // A debit is money leaving; only treat it as a payment when no credit column exists.
       const debit = parseAmount(get(debitCol));
-      if (debit !== null && amountCol === -1) {
+      void debit;
+      if (amountCol === -1) {
         problems.push('This line is a debit (money out) — not a payment received.');
       }
     }

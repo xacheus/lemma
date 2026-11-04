@@ -8,6 +8,7 @@ import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoStrip } from '@/components/ui/photo';
 import { ApartmentBookingWidget } from './booking-widget';
+import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export default async function ApartmentDetailPage({
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
-      <PublicHeader property={db.settings.property} session={session} activePath="/apartments" />
+      <PublicHeader property={db.settings.property} session={session} activePath="/apartments" unreadCount={unreadForSession(db, session)} />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Link
@@ -123,22 +124,31 @@ export default async function ApartmentDetailPage({
                 <strong>Bed configuration:</strong> {apartment.bedConfiguration}
               </div>
 
-              <div className="pt-2">
-                <h3 className="text-[0.95rem] font-semibold text-navy-900">
-                  Suite Amenities &amp; Equipment
-                </h3>
-                <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                  {apartment.amenities.map((amenity) => (
-                    <li
-                      key={amenity}
-                      className="flex items-center gap-2 text-[0.84rem] text-navy-700"
-                    >
-                      <CheckCircle2 size={15} className="shrink-0 text-lemma-dark" />
-                      {amenity}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {/* Only what the operator ticked for this unit. A unit with no Wi-Fi
+                  simply has no Wi-Fi line — nothing is assumed on its behalf. */}
+              {apartment.amenities.length > 0 ? (
+                <div className="pt-2">
+                  <h3 className="text-[0.95rem] font-semibold text-navy-900">
+                    What this apartment has
+                  </h3>
+                  <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                    {apartment.amenities.map((amenity) => (
+                      <li
+                        key={amenity}
+                        className="flex items-center gap-2 text-[0.84rem] text-navy-700"
+                      >
+                        <CheckCircle2 size={15} className="shrink-0 text-lemma-dark" />
+                        {amenity}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="pt-2 text-[0.82rem] leading-relaxed text-navy-500">
+                  The fittings for this apartment are being confirmed. Ask reception and we will
+                  tell you exactly what is there.
+                </p>
+              )}
             </div>
 
             <div className="card space-y-3 p-6">

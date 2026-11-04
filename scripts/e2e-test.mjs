@@ -9,7 +9,7 @@
  * role restrictions. Run it against a development instance only.
  */
 const BASE = process.argv[2] || 'http://localhost:3000';
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'grace@lemma.test';
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'chanda@lemma.test';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'LemmaAdmin2026!';
 
 let pass = 0;
@@ -52,11 +52,11 @@ function isoAdd(days) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let lastBookingAt = 0;
 /** The public booking endpoint is rate-limited on purpose; space the attempts out. */
-async function book(body) {
+async function book(body, session = 'admin') {
   const wait = lastBookingAt + 2200 - Date.now();
   if (wait > 0) await sleep(wait);
   lastBookingAt = Date.now();
-  return call('/api/public/reservations', { method: 'POST', body });
+  return call('/api/public/reservations', { method: 'POST', session: 'none', body });
 }
 
 const run = async () => {
@@ -85,6 +85,7 @@ const run = async () => {
     body: { fullName: 'Chanda Banda', email: guestEmail, phoneNumber: '+260970000111', password: 'GuestPass2026!' },
   });
   check('guest can register', reg.json?.ok === true, JSON.stringify(reg.json).slice(0, 200));
+  const guestCookie = jar.get('guest');
   const guestSnap = await call('/api/session', { session: 'guest' });
   check('new account is a guest', guestSnap.json?.data?.user?.role === 'guest', guestSnap.json?.data?.user?.role);
   check(
@@ -98,6 +99,14 @@ const run = async () => {
     body: { role: 'admin' },
   });
   check('guest cannot promote themselves to admin', escal.status === 403 || escal.status === 401, `status ${escal.status}`);
+
+  console.log('\n3b. Administrator appointment (no bootstrap token)');
+  const setupPage = await call('/setup-admin', { raw: true, session: null });
+  check('the token provisioning page no longer exists', setupPage.status === 404, `status ${setupPage.status}`);
+  const setupApi = await fetch(`${BASE}/api/auth/setup-admin`).then((r) => r.status);
+  check('the provisioning endpoint no longer exists', setupApi === 404, `status ${setupApi}`);
+  const adminSnap = await call('/api/session');
+  check('the administrator role came from the user record', adminSnap.json?.data?.user?.role === 'admin' || adminSnap.json?.data?.user?.role === 'super_admin', adminSnap.json?.data?.user?.role);
 
   console.log('\n4. Booking engine');
   // Find a three-night window that is genuinely free for this unit, so the run is
@@ -132,6 +141,7 @@ const run = async () => {
     email: guestEmail,
     notes: 'Two adults, arriving late.',
     agreedPolicy: true,
+    paymentMethod: 'airtel_money',
   };
   const booking = await book(bookingBody);
   check('guest can submit a booking request', booking.json?.ok === true, JSON.stringify(booking.json).slice(0, 240));
@@ -140,6 +150,23 @@ const run = async () => {
   const total = booking.json?.data?.totalAmount;
   check('booking total is nights × rate', typeof total === 'number' && total > 0, String(total));
   check('deposit quoted at the configured percentage', typeof booking.json?.data?.depositDue === 'number');
+
+  console.log('\n4b. Payment instructions follow the chosen method');
+  const payInfo = booking.json?.data?.payment;
+  check('the booking returns payment instructions', Boolean(payInfo), JSON.stringify(payInfo));
+  check('the instructions match the chosen channel', payInfo?.method === 'airtel_money', payInfo?.method);
+  check('the destination is configured, not hard-coded', Boolean(payInfo?.accountNumber), payInfo?.accountNumber);
+  check('the booking reference is the payment reference', payInfo?.reference === reference, `${payInfo?.reference} vs ${reference}`);
+  const methodList = booking.json?.data?.methods ?? [];
+  check('all four Zambian channels are offered', methodList.length >= 3, JSON.stringify(methodList.map((m) => m.id)));
+  const settingsSnap = await call('/api/session');
+  const configured = settingsSnap.json?.data?.settings?.payments?.methods ?? [];
+  const mtm = configured.find((m) => m.id === 'mtn_money');
+  check(
+    'MTN instructions quote the configured merchant number',
+    !mtm?.accountNumber || (mtm.accountNumber.length > 0 && mtm.instructions.length > 0),
+    mtm?.accountNumber,
+  );
 
   console.log('\n5. Double-booking prevention');
   // (the clash is asserted after confirmation below)
@@ -305,6 +332,148 @@ const run = async () => {
     }
   }
 
+  console.log('\n7b-ii. Proof upload, review and approval');
+  // A visitor books without signing in, uploads proof from the confirmation page, then
+  // claims the booking by registering with the same email. Nothing may move a penny
+  // until a person has verified the proof.
+  const visitorEmail = `visitor-${Date.now()}@lemma.test`;
+  // A phone number identifies a guest record, so give this run its own.
+  const visitorPhone = `+26097${String(Date.now()).slice(-7)}`;
+  const visitorBooking = await book({
+    ...bookingBody,
+    email: visitorEmail,
+    // A phone number identifies a guest record, so give this run its own.
+    phone: visitorPhone,
+    fullName: 'Namwali Zulu',
+    checkIn: isoAdd(400),
+    checkOut: isoAdd(403),
+  });
+  check('a visitor can book without an account', visitorBooking.json?.ok === true, JSON.stringify(visitorBooking.json).slice(0, 200));
+  const visitorId = visitorBooking.json?.data?.id;
+  const visitorTotal = visitorBooking.json?.data?.totalAmount;
+  const proofPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAWklEQVR4nO3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfg0QQAABbXy0zAAAAAElFTkSuQmCC';
+  if (visitorId) {
+    const visitorClaim = await call('/api/payments/claims', {
+      method: 'POST',
+      session: null,
+      body: {
+        reservationId: visitorId,
+        amount: Math.max(50, Math.round(visitorTotal * 0.5)),
+        method: 'airtel_money',
+        reference: `E2E-PROOF-${Date.now()}`,
+        paidAt: new Date().toISOString().slice(0, 10),
+        proof: { fileName: 'sms.png', mimeType: 'image/png', dataUrl: proofPng, sizeBytes: 582 },
+      },
+    });
+    check('a visitor can upload proof for the booking they just made', visitorClaim.json?.ok === true, JSON.stringify(visitorClaim.json).slice(0, 200));
+    const proofClaimId = visitorClaim.json?.data?.claim?.id;
+    check('the proof is stored against the claim', Boolean(visitorClaim.json?.data?.claim?.proof?.dataUrl));
+
+    const outsider = await call('/api/payments/claims', {
+      method: 'POST',
+      session: null,
+      body: { reservationId: visitorId, amount: 10, method: 'airtel_money', reference: 'X' },
+    });
+    check('a second visitor claim is refused while one is waiting', outsider.json?.ok === false, JSON.stringify(outsider.json).slice(0, 140));
+    const anonymousPeek = await fetch(`${BASE}/api/payments/claims?reservationId=${visitorId}&method=airtel_money`);
+    const peekBody = await anonymousPeek.text();
+    check(
+      'an anonymous quote never reveals the guest or the claim history',
+      !peekBody.includes('Namwali') && !peekBody.includes(visitorPhone) && !peekBody.includes('sms.png'),
+      String(anonymousPeek.status),
+    );
+
+    // The visitor now claims the booking by registering with the same email.
+    const visitorAccount = await call('/api/auth/register', {
+      method: 'POST',
+      session: 'guest',
+      body: { fullName: 'Namwali Zulu', email: visitorEmail, phoneNumber: visitorPhone, password: 'VisitorPass2026!' },
+    });
+    check('registering with the booking email claims the stay', visitorAccount.json?.ok === true, JSON.stringify(visitorAccount.json).slice(0, 160));
+    const visitorSnap = await call('/api/session', { session: 'guest' });
+    const afterProof = (visitorSnap.json?.data?.reservations ?? []).find((r) => r.id === visitorId);
+    check('the guest sees the booking they made as a visitor', Boolean(afterProof), afterProof ? afterProof.status : 'missing');
+    check('an uploaded receipt leaves the balance untouched', afterProof?.balanceDue === visitorTotal, `${afterProof?.balanceDue} of ${visitorTotal}`);
+    check('the guest stage reads as proof submitted', afterProof?.paymentStage === 'proof_submitted', afterProof?.paymentStage);
+
+    if (proofClaimId) {
+      const reviewed = await call(`/api/payments/claims/${proofClaimId}`);
+      check('opening a claim records that it was reviewed', Boolean(reviewed.json?.data?.claim?.reviewedAt), JSON.stringify(reviewed.json?.data?.claim?.reviewedAt));
+      const stageAfterReview = (await call('/api/session', { session: 'guest' })).json?.data?.reservations?.find((r) => r.id === visitorId);
+      check('the guest stage moves to under verification once opened', stageAfterReview?.paymentStage === 'under_verification', stageAfterReview?.paymentStage);
+
+      const approval = await call('/api/payments', {
+        method: 'POST',
+        body: {
+          reservationId: visitorId,
+          amount: Math.max(50, Math.round(visitorTotal * 0.5)),
+          method: 'airtel_money',
+          kind: 'deposit',
+          reference: `E2E-PROOF-${Date.now()}`,
+          claimId: proofClaimId,
+        },
+      });
+      check('approving a claim records a payment', approval.json?.ok === true, JSON.stringify(approval.json).slice(0, 200));
+      const approvedPayment = approval.json?.data?.payment;
+      check('the approval is banked as awaiting verification', approvedPayment?.verificationStatus === 'pending' || approvedPayment?.verificationStatus === 'verified', approvedPayment?.verificationStatus);
+      const beforeSign = (await call('/api/session')).json?.data?.reservations?.find((r) => r.id === visitorId);
+      check('the balance still has not moved before verification', beforeSign?.balanceDue === visitorTotal, String(beforeSign?.balanceDue));
+      const duplicate = await call('/api/payments', {
+        method: 'POST',
+        body: {
+          reservationId: visitorId,
+          amount: Math.max(50, Math.round(visitorTotal * 0.5)),
+          method: 'airtel_money',
+          kind: 'deposit',
+          reference: `E2E-PROOF-${Date.now()}-B`,
+          claimId: proofClaimId,
+        },
+      });
+      check('the same proof cannot be approved twice', duplicate.json?.ok === false, JSON.stringify(duplicate.json).slice(0, 160));
+
+      const signed = await call(`/api/payments/${approvedPayment.id}`, { method: 'PATCH', body: { status: 'verified', note: 'Matched on the statement.' } });
+      check('the administrator can verify it', signed.json?.ok === true, JSON.stringify(signed.json).slice(0, 160));
+      const paidReservation = signed.json?.data?.snapshot?.reservations?.find((r) => r.id === visitorId);
+      check('the balance drops only after verification', paidReservation?.balanceDue === visitorTotal - Math.max(50, Math.round(visitorTotal * 0.5)), JSON.stringify({ due: paidReservation?.balanceDue }));
+      check('a deposit promotes the booking to reserved', ['reserved', 'fully_paid'].includes(paidReservation?.status), paidReservation?.status);
+      const receiptRows = signed.json?.data?.snapshot?.receipts?.filter((rc) => rc.reservationId === visitorId) ?? [];
+      check('a unique receipt is generated on approval', receiptRows.length === 1 && /^[A-Z]+-\d{4}-\d+$/.test(receiptRows[0].receiptNumber), JSON.stringify(receiptRows.map((r) => r.receiptNumber)));
+      check('the receipt carries the stay dates', Boolean(receiptRows[0]?.checkIn && receiptRows[0]?.checkOut && receiptRows[0]?.nights), JSON.stringify({ in: receiptRows[0]?.checkIn, out: receiptRows[0]?.checkOut }));
+
+      const guestReceipt = await call(`/receipt/${receiptRows[0].id}`, { raw: true, session: 'guest' });
+      check('the guest can open their receipt', guestReceipt.status === 200, `status ${guestReceipt.status}`);
+      const receiptPdf = await fetch(`${BASE}/api/documents/receipt/${receiptRows[0].id}/pdf`, {
+        headers: { cookie: `lemma_session=${jar.get('guest')}` },
+      });
+      check('the receipt PDF downloads for the guest', receiptPdf.status === 200 && receiptPdf.headers.get('content-type')?.includes('pdf'), `${receiptPdf.status} ${receiptPdf.headers.get('content-type')}`);
+      const anonymousReceipt = await fetch(`${BASE}/receipt/${receiptRows[0].id}`, { redirect: 'manual' });
+      check('a signed-out visitor cannot read the receipt', anonymousReceipt.status === 307 || anonymousReceipt.status === 404, `status ${anonymousReceipt.status}`);
+      const guestNotified = (await call('/api/session', { session: 'guest' })).json?.data?.notifications ?? [];
+      check('the guest is notified in-app that the payment was approved', guestNotified.length > 0, `${guestNotified.length} notifications`);
+
+      // Rejection must not touch the money.
+      const rejectionClaim = await call('/api/payments/claims', {
+        method: 'POST',
+        session: 'guest',
+        body: { reservationId: visitorId, amount: 100, method: 'mtn_money', reference: `E2E-REJECT-${Date.now()}`, proof: { fileName: 'r.png', mimeType: 'image/png', dataUrl: proofPng, sizeBytes: 582 } },
+      });
+      check('a guest can submit another claim on the same booking', rejectionClaim.json?.ok === true, JSON.stringify(rejectionClaim.json).slice(0, 160));
+      const rejectId = rejectionClaim.json?.data?.claim?.id;
+      if (rejectId) {
+        const rejected = await call(`/api/payments/claims/${rejectId}`, { method: 'PATCH', body: { status: 'rejected', note: 'Screenshot was too blurry to read.' } });
+        check('an administrator can reject a claim with a reason', rejected.json?.ok === true, JSON.stringify(rejected.json).slice(0, 160));
+        const afterReject = (await call('/api/session', { session: 'guest' })).json?.data?.reservations?.find((r) => r.id === visitorId);
+        check('a rejection leaves the verified balance alone', afterReject?.balanceDue === paidReservation?.balanceDue, `${afterReject?.balanceDue} vs ${paidReservation?.balanceDue}`);
+        check('the guest stage reads as rejected', afterReject?.paymentStage === 'rejected', afterReject?.paymentStage);
+        const guestCannotReject = await call(`/api/payments/claims/${rejectId}`, { method: 'PATCH', session: 'guest', body: { status: 'rejected', note: 'me' } });
+        check('a guest cannot drive the review decision', guestCannotReject.json?.ok === false, String(guestCannotReject.status));
+      }
+    }
+    // Put the original guest session back so later sections keep their own identity.
+    jar.set('guest', guestCookie);
+    await call(`/api/reservations/${visitorId}/actions`, { method: 'POST', body: { kind: 'cancel', reason: 'Automated end-to-end check finished.', refund: false } });
+  }
+
   console.log('\n7c. Statement import');
   const statementCsv = [
     'date,amount,reference,description',
@@ -420,6 +589,84 @@ const run = async () => {
   const home = await fetch(`${BASE}/`).then((r) => r.text());
   check('homepage lists the studio apartment', home.includes('Studio Apartment'));
   check('homepage quotes Kwacha rates', /K\d/.test(home));
+
+  console.log('\n11. Amenities are opt-in');
+  const amenityUnit = apartments.find((a) => a.id === unit.id) ?? apartments[0];
+  const amenityPatch = await call(`/api/apartments/${amenityUnit.id}`, {
+    method: 'PATCH',
+    body: { amenities: ['Free Wi-Fi', 'Swimming pool', 'A private courtyard'] },
+  });
+  check('an administrator can set a custom amenity list', amenityPatch.json?.ok === true, JSON.stringify(amenityPatch.json).slice(0, 160));
+  const publicUnit = await fetch(`${BASE}/apartments/${amenityUnit.slug}`).then((r) => r.text());
+  check('a ticked amenity appears on the public page', publicUnit.includes('Swimming pool'));
+  check('a hand-written amenity appears too', publicUnit.includes('A private courtyard'));
+  check('an unticked amenity is absent', !publicUnit.includes('Gym') && !publicUnit.includes('Washing machine'));
+  const guestAmenity = await call(`/api/apartments/${amenityUnit.id}`, {
+    method: 'PATCH',
+    session: 'guest',
+    body: { amenities: ['Swimming pool'] },
+  });
+  check('a guest cannot change amenities', guestAmenity.json?.ok === false, String(guestAmenity.status));
+  // Put the unit's own list back so the run leaves nothing odd behind.
+  await call(`/api/apartments/${amenityUnit.id}`, { method: 'PATCH', body: { amenities: amenityUnit.amenities } });
+
+  console.log('\n12. Homepage hero and full-screen menu');
+  const homeHtml = await fetch(`${BASE}/`).then((r) => r.text());
+  check('the homepage renders the animated carousel', homeHtml.includes('aria-roledescription="carousel"'));
+  check('the hero offers Check availability and Book now', homeHtml.includes('Check availability') && homeHtml.includes('Book now'));
+  check('the hero frames are real apartment photographs', /\/images\/apartments\//.test(homeHtml));
+  check('the menu uses a full-screen dialog', homeHtml.includes('aria-haspopup="dialog"'));
+  check('the old short drawer is gone', !homeHtml.includes('max-h-[22rem]'));
+  const staffHome = await fetch(`${BASE}/`, { headers: { cookie: `lemma_session=${jar.get('admin')}` } }).then((r) => r.text());
+  check('staff see workspace navigation in the menu', staffHome.includes('Workspace'));
+  const guestHome = await fetch(`${BASE}/`, { headers: { cookie: `lemma_session=${guestCookie}` } }).then((r) => r.text());
+  check('guests see their own account section', guestHome.includes('Your account'));
+  check('guests never receive staff menu entries', !guestHome.includes('Staff &amp; Users') && !guestHome.includes('Operations dashboard'));
+
+  console.log('\n13. Role permissions');
+  const receptionReg = await call('/api/staff', {
+    method: 'POST',
+    body: {
+      name: `E2E Reception ${Date.now() % 1000}`,
+      username: `recep${Date.now() % 100000}`,
+      email: `recep${Date.now() % 100000}@lemma.test`,
+      phone: '+260977000444',
+      role: 'receptionist',
+      jobTitle: 'Front desk',
+      password: 'RecepPass2026!',
+    },
+  });
+  check('an administrator can create a receptionist', receptionReg.json?.ok === true, JSON.stringify(receptionReg.json).slice(0, 160));
+  const recepUser = receptionReg.json?.data?.staff ?? receptionReg.json?.data?.user;
+  if (recepUser?.username) {
+    const recepLogin = await call('/api/auth/login', {
+      method: 'POST',
+      session: 'recep',
+      body: { username: recepUser.username, password: 'RecepPass2026!' },
+    });
+    check('the receptionist can sign in', recepLogin.json?.ok === true, JSON.stringify(recepLogin.json).slice(0, 120));
+    check('a receptionist lands on the desk dashboard', recepLogin.json?.data?.home === '/admin', recepLogin.json?.data?.home);
+    const recepPrice = await call(`/api/apartments/${unit.id}`, { method: 'PATCH', session: 'recep', body: { nightlyRate: 1 } });
+    check('a receptionist cannot change prices', recepPrice.json?.ok === false, String(recepPrice.status));
+    const recepSettings = await call('/api/settings', { method: 'PATCH', session: 'recep', body: { property: { name: 'Hijacked' } } });
+    check('a receptionist cannot change property settings', recepSettings.json?.ok === false, String(recepSettings.status));
+    const recepStaff = await call('/api/staff', {
+      method: 'POST', session: 'recep',
+      body: { name: 'X', username: `x${Date.now() % 9999}`, email: 'x@lemma.test', phone: '1', role: 'admin', jobTitle: 'x', password: 'Xpass2026!' },
+    });
+    check('a receptionist cannot create accounts', recepStaff.json?.ok === false, String(recepStaff.status));
+  }
+
+  console.log('\n14. Sign-in protection');
+  const wrong = await call('/api/auth/login', { method: 'POST', session: 'none', body: { username: ADMIN_EMAIL, password: 'definitely-wrong' } });
+  check('a wrong password is refused', wrong.json?.ok === false && wrong.status === 401, String(wrong.status));
+  check('the refusal never reveals whether the account exists', /Incorrect|Invalid/i.test(wrong.json?.error ?? ''), wrong.json?.error);
+  // A public registration must never be able to adopt an existing account.
+  const hijack = await call('/api/auth/register', {
+    method: 'POST', session: 'none',
+    body: { fullName: 'Impostor', email: ADMIN_EMAIL, phoneNumber: '+260955000999', password: 'Impostor2026!' },
+  });
+  check('registration with an existing email is refused', hijack.json?.ok === false, JSON.stringify(hijack.json).slice(0, 140));
 
   console.log(`\n${pass} checks passed, ${failures.length} failed.`);
   if (failures.length) {

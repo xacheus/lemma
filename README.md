@@ -21,11 +21,25 @@ npm run dev          # http://localhost:3000  (binds 0.0.0.0)
 
 ## Getting started: your own account
 
-The property starts with no users at all, including no administrator.
+The property starts with no staff at all. There is no bootstrap token and no
+provisioning page: the first administrator is appointed in the Firebase Console.
 
-1. Set `FIRST_ADMIN_SETUP_TOKEN` (and `LEMMA_SESSION_SECRET`) in the environment — see `.env.example`.
-2. Open `/setup-admin`, enter the token, your name, email and a password. This is the only public bootstrap route, it works exactly once, and it locks permanently as soon as one active Super Administrator exists.
-3. Sign in at `/login` with that email and password. Additional admins, receptionists and cleaners are created in **Admin → Staff & Users**, each with its own password.
+1. Set `LEMMA_SESSION_SECRET` (and the Firebase Admin credentials — see `.env.example`).
+2. Create or sign up as an ordinary account, then sign in once so the account exists:
+   either register at `/register`, or create the user in **Firebase Console → Authentication**
+   and sign in at `/login` with that email and password.
+3. In **Firebase Console → Firestore → `users`**, open that account's document and change
+   `role` from `guest` to `admin` (or `super_admin`).
+4. Reload the dashboard. The server reads `role` from the user document on every
+   request, so the promotion applies immediately — no redeploy, no token.
+
+Additional admins, receptionists and cleaners are then created in
+**Admin → Staff & Users**, each with its own password, or in bulk from a CSV.
+
+`firestore.rules` enforces the same rule independently: a signed-in user may edit only
+their own name, phone and photo, and the role/status fields are writable only by an
+administrator. Nobody can promote themselves from the browser, and the server never
+trusts a role supplied in a request body.
 
 Then, in this order: add the apartments (**Admin → Apartments**), confirm the phone, WhatsApp, check-in times and deposit rules (**Admin → Settings**), and publish the units you want the website to sell.
 
@@ -43,6 +57,8 @@ Then, in this order: add the apartments (**Admin → Apartments**), confirm the 
 
 - `/` and `/apartments` show a contact card (phone, WhatsApp, front desk) instead of a catalogue until at least one apartment is published.
 - `/admin` shows a three-step setup panel: apartments, staff accounts, property details.
+- The only way a staff role exists is a `role` value on a user document set by an
+  administrator or in the Firebase Console. No page in the product can create one.
 - Counts, charts and revenue read `0` / `K0` because they are computed from records, not placeholders.
 
 ## How the pieces fit

@@ -5,6 +5,7 @@ import { getSession } from '@/lib/auth/session';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
 import { Reveal } from '@/components/ui/motion';
+import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export default async function AboutPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-navy-900">
-      <PublicHeader property={property} session={session} activePath="/about" />
+      <PublicHeader property={property} session={session} activePath="/about" unreadCount={unreadForSession(db, session)} />
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-12 px-4 py-12 sm:px-6 lg:px-8">
         <div className="animate-fade-up grid items-center gap-10 lg:grid-cols-2">

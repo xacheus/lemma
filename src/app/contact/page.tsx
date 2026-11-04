@@ -4,6 +4,7 @@ import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
 import { getSession } from '@/lib/auth/session';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
+import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export default async function ContactPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
-      <PublicHeader property={property} session={session} activePath="/contact" />
+      <PublicHeader property={property} session={session} activePath="/contact" unreadCount={unreadForSession(db, session)} />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 lg:px-8 space-y-10">
         <div className="animate-fade-up">

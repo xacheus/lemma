@@ -26,7 +26,9 @@ import { isIllustrativeImage } from '@/lib/cloudinary/urls';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
 import { Reveal } from '@/components/ui/motion';
-import { ApartmentShowcase, type ShowcaseSlide } from '@/components/public/apartment-showcase';
+import type { ShowcaseSlide } from '@/components/public/apartment-showcase';
+import { HomeHeroCarousel } from '@/components/public/home-hero-carousel';
+import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +93,30 @@ export default async function HomePage({
     };
   });
 
+  /**
+   * Hero frames: one large interior per published apartment, in the order the
+   * operator set their photographs. The owner replaces these in Admin → Apartments
+   * (cover photograph / gallery order) — nothing here is hard-coded. Units with no
+   * photograph are skipped rather than filled with a stock image.
+   */
+  const heroSlides = slides
+    .filter((s) => s.photos.length > 0)
+    .map((s) => ({
+      id: s.id,
+      slug: s.slug,
+      name: s.name,
+      code: s.code,
+      tagline: s.tagline,
+      nightlyRate: s.nightlyRate,
+      maxGuests: s.maxGuests,
+      bedrooms: s.bedrooms,
+      bathrooms: s.bathrooms,
+      photo: s.photos[0],
+      illustrative: s.illustrative,
+      available: s.available,
+      availabilityNote: s.availabilityNote,
+    }));
+
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
   const stayQuery = `checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`;
   const nights = availability.nights;
@@ -100,107 +126,94 @@ export default async function HomePage({
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-navy-900">
-      <PublicHeader property={property} session={session} activePath="/" />
+      <PublicHeader property={property} session={session} activePath="/" unreadCount={unreadForSession(db, session)} />
 
       <main className="flex-1">
-        {/* ---------------------------------------------------------------- hero */}
-        <section className="border-b border-sand-200 bg-sand-50">
-          <div className="mx-auto grid max-w-7xl items-end gap-8 px-4 pb-8 pt-10 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:gap-14 lg:pb-10 lg:pt-14 lg:px-8">
-            <div>
+        {/* ----------------------------------------------------------------- hero */}
+        {heroSlides.length > 0 ? (
+          <HomeHeroCarousel
+            slides={heroSlides}
+            stayQuery={stayQuery}
+            propertyName={property.name}
+            totalApartments={published.length}
+          />
+        ) : (
+          <section className="border-b border-sand-200 bg-sand-50">
+            <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
               <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-lemma-dark">
                 {property.addressLine} · {property.city}, {property.country}
               </p>
-              <h1 className="mt-3 text-[2.15rem] font-semibold leading-[1.06] tracking-[-0.02em] text-navy-900 sm:text-[2.9rem] lg:text-[3.15rem]">
+              <h1 className="mt-3 max-w-3xl text-[2.15rem] font-semibold leading-[1.06] tracking-[-0.02em] text-navy-900 sm:text-[2.9rem]">
                 Furnished apartments
                 <span className="block text-navy-500">you can book by the night.</span>
               </h1>
               <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-navy-600">
-                {published.length > 0
-                  ? `${published.length} apartment${published.length === 1 ? '' : 's'}, each with its own kitchen, bathroom and living space. Check the dates you need, see the real rate in Kwacha, and reserve in a couple of minutes.`
-                  : 'Apartments at Barlaston Park, Lusaka. Call or message reception and we will confirm availability and hold your dates.'}
+                Apartments at Barlaston Park, Lusaka. Check the dates you need and see the real rate
+                in Kwacha.
               </p>
             </div>
+          </section>
+        )}
 
-            {/* Availability search — submits to the apartments page */}
+        {/* Availability search — directly under the hero, above the fold. */}
+        <section className="border-b border-sand-200 bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
             <form
               action="/apartments"
               method="get"
-              className="rounded-lg border border-sand-200 bg-white p-4 shadow-[0_12px_32px_-24px_rgba(18,23,30,0.5)]"
+              className="grid gap-3 rounded-lg border border-sand-200 bg-sand-50/60 p-3.5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.8fr_auto] lg:items-end"
             >
-              <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-navy-400">
-                Check availability
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="label mb-1 block" htmlFor="home-checkin">
-                    Check-in
-                  </label>
-                  <input
-                    id="home-checkin"
-                    name="checkIn"
-                    type="date"
-                    defaultValue={checkIn}
-                    min={today}
-                    className="field"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label mb-1 block" htmlFor="home-checkout">
-                    Check-out
-                  </label>
-                  <input
-                    id="home-checkout"
-                    name="checkOut"
-                    type="date"
-                    defaultValue={checkOut}
-                    min={addISO(checkIn, 1)}
-                    className="field"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label mb-1 block" htmlFor="home-guests">
-                    Guests
-                  </label>
-                  <select id="home-guests" name="guests" defaultValue={String(guests)} className="field">
-                    {[1, 2, 3, 4, 5, 6].map((n) => (
-                      <option key={n} value={n}>
-                        {n} {n === 1 ? 'guest' : 'guests'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button type="submit" className="btn btn-primary h-[38px] w-full justify-center">
-                    Search dates
-                  </button>
-                </div>
+              <div>
+                <label className="label mb-1 block" htmlFor="home-checkin">
+                  Check-in
+                </label>
+                <input
+                  id="home-checkin"
+                  name="checkIn"
+                  type="date"
+                  defaultValue={checkIn}
+                  min={today}
+                  className="field"
+                  required
+                />
               </div>
-              <p className="mt-3 text-[0.74rem] leading-relaxed text-navy-500">
-                {nights > 0
-                  ? `${nights} night${nights === 1 ? '' : 's'} · rates shown in ZMW per night, no card required to enquire.`
-                  : 'Choose your arrival and departure dates.'}
-              </p>
+              <div>
+                <label className="label mb-1 block" htmlFor="home-checkout">
+                  Check-out
+                </label>
+                <input
+                  id="home-checkout"
+                  name="checkOut"
+                  type="date"
+                  defaultValue={checkOut}
+                  min={addISO(checkIn, 1)}
+                  className="field"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label mb-1 block" htmlFor="home-guests">
+                  Guests
+                </label>
+                <select id="home-guests" name="guests" defaultValue={String(guests)} className="field">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <option key={n} value={n}>
+                      {n} {n === 1 ? 'guest' : 'guests'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary h-[38px] justify-center px-5">
+                Check availability
+              </button>
             </form>
+            <p className="mt-2 text-[0.74rem] text-navy-500">
+              {nights > 0
+                ? `${nights} night${nights === 1 ? '' : 's'} · rates in ZMW per night · no card needed to enquire.`
+                : 'Choose your arrival and departure dates.'}
+            </p>
           </div>
         </section>
-
-        {/* ---------------------------------------------------- apartment showcase */}
-        {slides.length > 0 ? (
-          <section className="bg-charcoal-950">
-            <ApartmentShowcase slides={slides} checkIn={checkIn} checkOut={checkOut} guests={guests} />
-            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-[0.76rem] text-white/55 sm:px-6 lg:px-8">
-              <p>
-                Showing our apartments for {formatShort(checkIn)} – {formatShort(checkOut)} · {guests}{' '}
-                {guests === 1 ? 'guest' : 'guests'}
-              </p>
-              <Link href={`/apartments?${stayQuery}`} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white">
-                See every apartment and rate <ArrowRight size={13} />
-              </Link>
-            </div>
-          </section>
-        ) : null}
 
         {/* ------------------------------------------------------------ apartment grid */}
         <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">

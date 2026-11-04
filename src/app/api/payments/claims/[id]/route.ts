@@ -13,6 +13,27 @@ export const runtime = 'nodejs';
  * a `claimId`, so it lands in the ordinary receipt rules (and the ordinary
  * verification queue when a second signature is required).
  */
+/**
+ * Reading one claim is a review action: it stamps `reviewedAt` the first time a
+ * member of staff opens it. That timestamp is the only difference between the
+ * guest's "Proof submitted" and "Under verification" labels — it is a real record of
+ * somebody having looked, not a guessed delay.
+ */
+export const GET = apiRoute({
+  permission: 'payments.view',
+  handler: async ({ params, session }) => {
+    return runAtomicTransaction((db) => {
+      const claim = (db.paymentClaims ?? []).find((c) => c.id === params.id);
+      if (!claim) throw new HttpError('Payment claim not found.', 404, 'not_found');
+      if (claim.status === 'awaiting_verification' && !claim.reviewedAt) {
+        claim.reviewedAt = new Date().toISOString();
+        claim.reviewedBy = session.user.name;
+      }
+      return { claim, snapshot: buildSnapshot(db, session) };
+    });
+  },
+});
+
 export const PATCH = apiRoute({
   permission: 'payments.verify',
   handler: async ({ req, session, params }) => {

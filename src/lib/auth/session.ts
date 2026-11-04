@@ -2,8 +2,9 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import type { PermissionKey, StaffUser, UserRecord } from '../domain/types';
 import { permissionsFor } from '../domain/permissions';
-import { ensureCloudFirestoreHydrated, getDb } from '../db/store';
-import { getAdminAuth } from '../firebase/admin';
+import { ensureCloudFirestoreHydrated, getDb, mutate } from '../db/store';
+import { getAdminAuth, getAdminFirestore } from '../firebase/admin';
+import { applyConsoleRoleChange } from '../domain/production-ops';
 
 export const SESSION_COOKIE = 'lemma_session';
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7-day persistent authenticated session
@@ -103,6 +104,41 @@ export interface Session {
 }
 
 /**
+ * Pulls the authoritative `role` / `accountStatus` from the Firestore user document.
+ *
+ * Staff roles are assigned and revoked in the Firebase Console, so the document wins
+ * over this process's cached copy. Without this, a promotion made in the Console
+ * would only appear after a redeploy — the cache is hydrated once per instance.
+ *
+ * Reads one document, ignores anything malformed, and writes only when the value
+ * actually differs. When Firebase Admin is not configured (local development) there
+ * is no Console to read, so the stored record stands.
+ */
+async function syncRoleFromFirestore(uid: string): Promise<void> {
+  if (!process.env.FIREBASE_PROJECT_ID) return;
+  const adminDb = getAdminFirestore();
+  if (!adminDb) return;
+  try {
+    const snap = await adminDb.collection('users').doc(uid).get();
+    if (!snap.exists) return;
+    const data = snap.data() as { role?: unknown; accountStatus?: unknown; username?: unknown };
+    const current = (getDb().users ?? []).find((u) => u.uid === uid);
+    if (!current) return;
+    const same =
+      (typeof data.role !== 'string' || data.role === current.role) &&
+      (typeof data.accountStatus !== 'string' || data.accountStatus === current.accountStatus) &&
+      (typeof data.username !== 'string' || data.username === current.username);
+    if (same) return;
+    mutate((db) => {
+      const row = (db.users ?? []).find((u) => u.uid === uid);
+      if (row) applyConsoleRoleChange(db, row, data);
+    });
+  } catch (err) {
+    console.warn('[session] Firestore role sync skipped:', err);
+  }
+}
+
+/**
  * Resolves the current authenticated session against `users/{uid}` (and Firebase Admin
  * session cookies if issued via Firebase Auth). Always reads current role & status
  * so role promotions or account deactivations take effect immediately.
@@ -141,7 +177,11 @@ export async function getSession(): Promise<Session | null> {
 
   if (!resolvedUid) return null;
 
-  const userRec = (db.users ?? []).find((u) => u.uid === resolvedUid);
+  // A Console role change must be honoured on the very next request.
+  await syncRoleFromFirestore(resolvedUid);
+
+  const refreshedDb = getDb();
+  const userRec = (refreshedDb.users ?? []).find((u) => u.uid === resolvedUid);
   if (userRec) {
     if (userRec.accountStatus !== 'active') return null;
     if (
@@ -152,6 +192,7 @@ export async function getSession(): Promise<Session | null> {
       return null;
     }
     const staffView = userRecordToStaffView(userRec);
+    void db;
     return {
       uid: userRec.uid,
       user: staffView,
@@ -161,7 +202,7 @@ export async function getSession(): Promise<Session | null> {
   }
 
   // Fallback for legacy staff record if not yet mirrored into db.users
-  const legacyStaff = db.staff.find((s) => s.id === resolvedUid);
+  const legacyStaff = refreshedDb.staff.find((s) => s.id === resolvedUid);
   if (!legacyStaff || !legacyStaff.active) return null;
   const synthesized: UserRecord = {
     uid: legacyStaff.id,

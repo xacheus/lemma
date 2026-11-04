@@ -220,9 +220,20 @@
     transform: none !important;
   }
 
+  .menu-panel {
+    transition: none !important;
+  }
+
   html {
     scroll-behavior: auto;
   }
+}
+
+/* Full-screen menu: iOS momentum scrolling inside the panel, no rubber-banding of
+   the page behind it. */
+.menu-panel {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 @layer components {

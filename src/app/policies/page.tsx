@@ -3,6 +3,7 @@ import { Mail, MessageCircle, Phone } from 'lucide-react';
 import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
 import { getSession } from '@/lib/auth/session';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
+import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,7 +110,7 @@ export default async function PoliciesPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-navy-900">
-      <PublicHeader property={property} session={session} activePath="/policies" />
+      <PublicHeader property={property} session={session} activePath="/policies" unreadCount={unreadForSession(db, session)} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-12 sm:px-6 lg:px-8">
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">

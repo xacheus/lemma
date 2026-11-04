@@ -3,6 +3,10 @@ import { z } from 'zod';
 export const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the date picker (YYYY-MM-DD).');
 export const timeStr = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:mm.');
 
+export const firebaseSessionSchema = z.object({
+  firebaseIdToken: z.string().min(20, 'A Firebase ID token is required.'),
+});
+
 export const loginSchema = z.object({
   username: z.string().min(2, 'Enter your email address or login handle.'),
   password: z.string().min(1, 'Enter your password.'),
@@ -35,13 +39,6 @@ export const profileUpdateSchema = z.object({
   newPassword: z.string().min(6).max(128).optional(),
 });
 
-export const bootstrapAdminSchema = z.object({
-  setupToken: z.string().min(6, 'Enter the FIRST_ADMIN_SETUP_TOKEN.'),
-  fullName: z.string().min(2, 'Full name is required.'),
-  email: z.string().email('Enter a valid email address.'),
-  phoneNumber: z.string().min(6, 'Enter a phone number.'),
-  password: z.string().min(8, 'Administrator password must be at least 8 characters.'),
-});
 
 export const userRoleChangeSchema = z.object({
   role: z.enum(['super_admin', 'admin', 'receptionist', 'cleaner', 'guest']),
@@ -496,6 +493,12 @@ export const publicBookingSchema = z
     selectedServiceIds: z.array(z.string()).optional(),
     notes: z.string().max(800).optional(),
     agreedPolicy: z.literal(true, { error: 'Please accept the booking conditions.' }),
+    /**
+     * The channel the guest intends to pay through. Optional so an older form still
+     * books; when present it must be one the business has enabled, and it decides
+     * which instructions the confirmation shows. It is a preference, not a payment.
+     */
+    paymentMethod: z.enum(['airtel_money', 'mtn_money', 'bank_transfer', 'cash']).optional(),
     /** Honeypot — humans never see this field. */
     company_url: z.string().max(0).optional(),
   })

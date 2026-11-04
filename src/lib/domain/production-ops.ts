@@ -223,6 +223,20 @@ export function authenticateAccount(
     }
   }
 
+  /**
+   * A password typed into the public sign-in form can only ever prove an account that
+   * keeps its password in this database. Accounts created through Firebase Auth are
+   * marked `firebaseLinked` and have no local hash worth guessing: without this guard
+   * a public registration with an administrator's email address would create a row
+   * whose password spoke for that administrator.
+   */
+  if (user && user.firebaseLinked && !user.passwordHash) {
+    throw new OperationError(
+      'This account signs in through Firebase. Use the same email and password you signed up with.',
+      409,
+      'firebase_account',
+    );
+  }
   if (!user || !verifyPassword(input.password, user.passwordHash)) {
     throw new OperationError('Invalid email/handle or password.', 401, 'bad_credentials');
   }
@@ -554,90 +568,6 @@ export function changeUserAccountStatus(
   return target;
 }
 
-export function bootstrapFirstSuperAdmin(
-  db: Database,
-  input: {
-    setupToken: string;
-    fullName: string;
-    email: string;
-    phoneNumber: string;
-    password: string;
-  },
-): UserRecord {
-  const configuredToken = process.env.FIRST_ADMIN_SETUP_TOKEN;
-  if (!configuredToken || input.setupToken !== configuredToken) {
-    throw new OperationError(
-      'Invalid or unconfigured FIRST_ADMIN_SETUP_TOKEN. Set FIRST_ADMIN_SETUP_TOKEN on the server to run initial bootstrap.',
-      403,
-      'invalid_bootstrap_token',
-    );
-  }
-
-  const existingSuper = (db.users ?? []).find(
-    (u) => u.role === 'super_admin' && u.accountStatus === 'active',
-  );
-  if (existingSuper) {
-    throw new OperationError(
-      'Initial Super Administrator bootstrap is locked because an active Super Administrator already exists.',
-      409,
-      'already_bootstrapped',
-    );
-  }
-
-  if ((db.users ?? []).some((u) => u.email.toLowerCase() === input.email.trim().toLowerCase())) {
-    throw new OperationError(
-      'An account with that email address already exists.',
-      409,
-      'email_taken',
-    );
-  }
-
-  // Created directly rather than through customer registration: an owner is not a
-  // guest, so this must never create a guest-register profile for them.
-  const uid = `usr-${randomUUID().slice(0, 12)}`;
-  const now = nowISO();
-  const email = input.email.trim().toLowerCase();
-  // A readable handle derived from the email, kept unique across the account list.
-  const baseHandle = email.split('@')[0].replace(/[^a-z0-9._-]/g, '') || 'admin';
-  let username = baseHandle;
-  for (let i = 2; (db.users ?? []).some((u) => u.username === username) && i < 100; i += 1) {
-    username = `${baseHandle}${i}`;
-  }
-  const user: UserRecord = {
-    uid,
-    fullName: input.fullName.trim(),
-    email,
-    phoneNumber: input.phoneNumber.trim(),
-    profilePhoto: '',
-    role: 'super_admin',
-    accountStatus: 'active',
-    emailVerified: true,
-    createdAt: now,
-    updatedAt: now,
-    lastLoginAt: now,
-    username,
-    jobTitle: 'Owner / Super Administrator',
-    passwordHash: hashPassword(input.password),
-    emailVerificationToken: null,
-    passwordResetToken: null,
-    passwordResetExpiresAt: null,
-    sessionVersion: 1,
-  };
-  db.users = db.users ?? [];
-  db.users.unshift(user);
-  syncStaffMirrorFromUser(db, user);
-
-  appendAuditLog(db, {
-    category: 'role',
-    action: 'system.bootstrap_super_admin',
-    actorUid: user.uid,
-    targetType: 'user',
-    targetId: user.uid,
-    summary: `Bootstrapped initial Super Administrator (${user.email}).`,
-  });
-
-  return user;
-}
 
 /* ------------------------------------------- Guest Cancellation Request */
 
@@ -752,6 +682,16 @@ export function issueOfficialReceipt(
     totalBookingAmount: r.totalAmount,
     totalVerifiedPaid: f.verifiedPaid,
     remainingBalance: f.balanceDue,
+    checkIn: r.checkIn,
+    checkOut: r.checkOut,
+    nights: r.nights,
+    paymentDestination: (() => {
+      const channel = db.settings.payments.methods.find((m) => m.id === payment.method);
+      if (!channel) return null;
+      return channel.accountNumber
+        ? `${channel.label} · ${channel.accountLabel} ${channel.accountNumber}`
+        : channel.label;
+    })(),
     createdAt: nowISO(),
   };
 
@@ -759,6 +699,145 @@ export function issueOfficialReceipt(
   payment.receiptId = receipt.id;
   payment.receiptNumber = receipt.receiptNumber;
   return receipt;
+}
+
+/**
+ * Appoints an account that already signed in once.
+ *
+ * The owner's documented way to make the first administrator is to open the user
+ * document in the Firebase Console and set `role`. That edit happens outside this
+ * application, so the account has to exist here before it can mean anything: a
+ * Firebase Auth user with no profile row has nothing to edit. This creates the
+ * profile from the verified token the first time such a user reaches the API —
+ * always as `guest` with the role the caller's claims/permissions already grant,
+ * and it never invents a password for an account that authenticates through
+ * Firebase. A guest who is not an administrator can only ever create their own
+ * `guest` row, which is the same state public registration produces.
+ */
+export function ensureProfileForFirebaseUser(
+  db: Database,
+  firebase: {
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+    phoneNumber: string | null;
+    emailVerified: boolean;
+  },
+  demoMode: boolean,
+): UserRecord {
+  db.users = db.users ?? [];
+  const email = (firebase.email ?? '').trim().toLowerCase();
+  const existing = db.users.find(
+    (u) => u.uid === firebase.uid || (!!email && u.email.toLowerCase() === email),
+  );
+  if (existing) {
+    // An account that signs in through Firebase is not held to the demo password
+    // rule; keep the uid authoritative if the row was created before Auth linked it.
+    if (!existing.firebaseLinked) existing.firebaseLinked = true;
+    return existing;
+  }
+
+  const now = nowISO();
+  const baseHandle = (email.split('@')[0] || 'guest').replace(/[^a-z0-9._-]/g, '') || 'guest';
+  let username = baseHandle;
+  for (let i = 2; db.users.some((u) => u.username === username) && i < 500; i += 1) {
+    username = `${baseHandle}${i}`;
+  }
+
+  const user: UserRecord = {
+    uid: firebase.uid,
+    fullName: firebase.displayName?.trim() || email.split('@')[0] || 'Guest',
+    email,
+    phoneNumber: firebase.phoneNumber ?? '',
+    profilePhoto: '',
+    // Never read from the request body. This is the only role a self-service
+    // profile creation can produce; anything else comes from an admin action.
+    role: 'guest',
+    accountStatus: 'active',
+    emailVerified: firebase.emailVerified,
+    createdAt: now,
+    updatedAt: now,
+    lastLoginAt: now,
+    username,
+    jobTitle: 'Registered Guest',
+    sessionVersion: 1,
+    firebaseLinked: true,
+    demoPassword: demoMode,
+  };
+  db.users.unshift(user);
+  syncStaffMirrorFromUser(db, user);
+
+  appendAuditLog(db, {
+    category: 'staff',
+    action: 'user.profile_created_from_firebase',
+    actorUid: firebase.uid,
+    targetType: 'user',
+    targetId: firebase.uid,
+    summary: `Created the guest profile for ${email || firebase.uid} from a verified Firebase sign-in.`,
+  });
+
+  return user;
+}
+
+/**
+ * Reads `role`, `accountStatus` and `username` from the Firestore user document and
+ * applies them to the cached copy.
+ *
+ * Assignment and revocation of staff roles is done in the Firebase Console, so the
+ * database is the authority, not this process's cache. `getSession` calls this before
+ * it authorises anything, which is what makes a Console edit take effect on the
+ * next request (or on a hard refresh) without a redeploy.
+ *
+ * It never writes back: the document is the source of truth. A value this build does
+ * not recognise is ignored rather than trusted into the object.
+ */
+export function applyConsoleRoleChange(
+  db: Database,
+  user: UserRecord,
+  fromFirestore: { role?: unknown; accountStatus?: unknown; username?: unknown },
+): { changed: boolean; previousRole: string | null } {
+  const previousRole = user.role;
+  let changed = false;
+
+  const role = typeof fromFirestore.role === 'string' ? fromFirestore.role.trim() : '';
+  const allowedRoles = ['super_admin', 'admin', 'receptionist', 'cleaner', 'guest'];
+  if (role && allowedRoles.includes(role) && role !== user.role) {
+    user.role = role as UserRecord['role'];
+    changed = true;
+  }
+
+  const status =
+    typeof fromFirestore.accountStatus === 'string' ? fromFirestore.accountStatus.trim() : '';
+  const allowedStatuses = ['active', 'deactivated', 'suspended', 'pending_verification'];
+  if (status && allowedStatuses.includes(status) && status !== user.accountStatus) {
+    user.accountStatus = status as UserRecord['accountStatus'];
+    changed = true;
+    if (status !== 'active') user.sessionVersion = (user.sessionVersion ?? 1) + 1;
+  }
+
+  if (typeof fromFirestore.username === 'string') {
+    const handle = fromFirestore.username.trim().toLowerCase();
+    if (handle && handle !== user.username && !db.users?.some((u) => u.username === handle)) {
+      user.username = handle;
+      changed = true;
+    }
+  }
+
+  if (!changed) return { changed: false, previousRole };
+
+  user.updatedAt = nowISO();
+  syncStaffMirrorFromUser(db, user);
+  appendAuditLog(db, {
+    category: 'role',
+    action: 'user.role_synced_from_firestore',
+    actorUid: user.uid,
+    targetType: 'user',
+    targetId: user.uid,
+    summary: `Applied a Firestore Console change to ${user.fullName} (${user.email}): ${previousRole} -> ${user.role}.`,
+    before: { role: previousRole },
+    after: { role: user.role, accountStatus: user.accountStatus },
+  });
+  return { changed: true, previousRole };
 }
 
 export function issuePaymentRefund(

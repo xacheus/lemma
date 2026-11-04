@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AlertCircle, ArrowRight, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { Role } from '@/lib/domain/types';
+import { getFirebaseClientAuth, isFirebaseClientConfigured } from '@/lib/firebase/client';
 
 function destinationForRole(role: Role, nextPath: string | null): string {
   if (nextPath && nextPath.startsWith('/')) {
@@ -35,7 +37,58 @@ export function LoginPage({
     event.preventDefault();
     setBusy(true);
     setError(null);
+
+    /**
+     * One sign-in form, two authorities.
+     *
+     * When this build is wired to Firebase (the owner's accounts live in Firebase
+     * Auth) the credentials are proved by Firebase itself and the resulting ID token
+     * is exchanged for a session cookie server-side. Accounts that exist only in this
+     * database — guests who registered through the site, staff created in the admin
+     * screen — fall back to the password path on the same form.
+     */
     try {
+      if (isFirebaseClientConfigured() && username.includes('@')) {
+        const auth = getFirebaseClientAuth();
+        if (auth) {
+          try {
+            const credential = await signInWithEmailAndPassword(auth, username.trim(), password);
+            const idToken = await credential.user.getIdToken();
+            const exchange = await fetch('/api/auth/firebase-session', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ firebaseIdToken: idToken }),
+            });
+            const payload = await exchange.json();
+            if (exchange.ok && payload.ok) {
+              router.push(destinationForRole(payload.data.role, nextPath));
+              router.refresh();
+              return;
+            }
+            if (payload.code !== 'firebase_not_configured') {
+              setError(payload.error ?? 'Sign in failed.');
+              setBusy(false);
+              await signOut(auth).catch(() => undefined);
+              return;
+            }
+          } catch (err) {
+            const code = (err as { code?: string }).code ?? '';
+            // A wrong password is a wrong password — do not silently retry elsewhere.
+            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+              setError('Invalid email or password.');
+              setBusy(false);
+              return;
+            }
+            // No account in Firebase with that address: fall through to the local one.
+            if (code !== 'auth/user-not-found' && code !== 'auth/invalid-email') {
+              setError('Firebase sign-in failed. Check your connection and try again.');
+              setBusy(false);
+              return;
+            }
+          }
+        }
+      }
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

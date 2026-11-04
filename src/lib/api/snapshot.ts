@@ -21,7 +21,7 @@ import type {
 } from '../domain/types';
 import { can, permissionsFor } from '../domain/permissions';
 import { checkAvailability } from '../domain/availability';
-import { dashboard, decorateAll, guestSummary, nightsBetweenSummary } from '../domain/selectors';
+import { dashboard, decorateAll, guestSummary, nightsBetweenSummary, recomputeReservation } from '../domain/selectors';
 import { addISO } from '../domain/dates';
 import type { Session } from '../auth/session';
 import type { IntegrationStatusView, PublicUserView } from '../view-types';
@@ -123,7 +123,26 @@ export function getIntegrationStatus(): IntegrationStatusView {
  * - Receptionist: front-office reservations, guests, payments, quotations, invoices, housekeeping.
  * - Admin / Super Admin: full property, staff/users, media, audit logs, and verified summary.
  */
+/**
+ * Brings the stored statuses up to date with the ledger before anything is read.
+ *
+ * A folio's status is derived from verified money, so it has to be re-derived even on
+ * a read: a receipt verified in an earlier request (or in an earlier deploy with the
+ * old rule) must show the booking as Reserved, not Inquiry. This is idempotent, writes
+ * nothing unless a value actually changes, and never touches a status a person set
+ * (`checked_in`, `checked_out`, `cancelled`).
+ */
+function refreshDerivedStatuses(db: Database): void {
+  for (const r of db.reservations) {
+    const before = `${r.status}|${r.nights}|${r.totalAmount}`;
+    recomputeReservation(db, r.id);
+    const after = `${r.status}|${r.nights}|${r.totalAmount}`;
+    if (before !== after) r.updatedAt = new Date().toISOString();
+  }
+}
+
 export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser): Snapshot {
+  refreshDerivedStatuses(db);
   const user: StaffUser = 'user' in sessionOrUser ? sessionOrUser.user : sessionOrUser;
   const permissions: Set<PermissionKey> =
     'permissions' in sessionOrUser && sessionOrUser.permissions instanceof Set
@@ -157,9 +176,29 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
     );
     const myReservationIds = new Set(myRawReservations.map((r) => r.id));
 
+    /**
+     * A guest who registered with the same email they booked under still needs to see
+     * those bookings: the reservation's guest record carries the email but its
+     * `userId` is null, because the booking was made by a visitor. Matching on the
+     * verified account email closes that gap without loosening anything else.
+     */
+    const mineByEmail = db.reservations.filter(
+      (r) =>
+        !myReservationIds.has(r.id) &&
+        Boolean(emailLower) &&
+        db.guests.some((g) => g.id === r.guestId && g.email && g.email.toLowerCase() === emailLower),
+    );
+    for (const r of mineByEmail) myReservationIds.add(r.id);
+    const guestIdByEmail = new Set(
+      db.guests
+        .filter((g) => emailLower && g.email && g.email.toLowerCase() === emailLower)
+        .map((g) => g.id),
+    );
+    for (const id of guestIdByEmail) myGuestIds.add(id);
+
     const myReservations = decorateAll(
       db,
-      [...myRawReservations].sort((a, b) => (a.checkIn < b.checkIn ? 1 : -1)),
+      [...myRawReservations, ...mineByEmail].sort((a, b) => (a.checkIn < b.checkIn ? 1 : -1)),
     );
     const myPayments = db.payments.filter(
       (p) => p.userId === user.id || myReservationIds.has(p.reservationId),

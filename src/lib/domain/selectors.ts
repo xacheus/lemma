@@ -86,6 +86,25 @@ export function recomputeReservation(db: Database, reservationId: ID): Reservati
   }
   const f = financialsFor(db, r);
   r.paymentStatus = f.paymentStatus;
+
+  /**
+   * The money moves the booking, once, in the direction the deposit rules allow:
+   *
+   *   inquiry / pending_confirmation → reserved   as soon as verified money covers
+   *                                               the deposit
+   *   reserved                       → fully_paid  when verified money covers the stay
+   *
+   * It never walks backwards on its own: a booking that has been confirmed stays
+   * confirmed, because the apartment is already being held for that guest. A verified
+   * refund is a deliberate staff decision and is handled where the refund is issued.
+   * Statuses a person set — checked_in, checked_out, cancelled — are never touched
+   * here.
+   */
+  const depositSatisfied = f.verifiedPaid + 0.001 >= f.depositDue && f.depositDue > 0;
+  if ((r.status === 'inquiry' || r.status === 'pending_confirmation') && depositSatisfied) {
+    r.status = 'reserved';
+    r.holdExpiresAt = null;
+  }
   if (r.status === 'reserved' && f.paymentStatus === 'fully_paid') r.status = 'fully_paid';
   else if (r.status === 'fully_paid' && f.paymentStatus !== 'fully_paid' && !r.checkedInAt) {
     r.status = 'reserved';
@@ -107,6 +126,37 @@ export function recomputeReservation(db: Database, reservationId: ID): Reservati
 
   r.updatedAt = new Date().toISOString();
   return r;
+}
+
+/**
+ * Turns the ledger and the claim queue into the six words a guest understands.
+ * Verified money always wins: a booking with no balance left is `approved` even if an
+ * old claim sits in history.
+ */
+export function paymentStageFor(
+  db: Database,
+  r: Reservation,
+  f: Financials,
+): ReservationView['paymentStage'] {
+  const claims = (db.paymentClaims ?? [])
+    .filter((c) => c.reservationId === r.id)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  if (f.balanceDue <= 0) return 'approved';
+  const open = claims.find((c) => c.status === 'awaiting_verification');
+  if (open) {
+    // "Proof submitted" until a person has actually opened it; staff opening the
+    // queue stamps reviewedAt, which is what promotes it to under verification.
+    const reviewed = Boolean(open.reviewedAt);
+    return reviewed ? 'under_verification' : 'proof_submitted';
+  }
+  if (f.pendingVerification > 0) return 'under_verification';
+  const latest = claims[0];
+  // A declined proof is the guest's most recent news even when earlier money was
+  // verified — they still have to send a readable screenshot. The money itself is
+  // reported separately (verified, pending, balance), so nothing is hidden by this.
+  if (latest?.status === 'rejected') return 'rejected';
+  if (f.verifiedPaid > 0) return 'part_paid';
+  return 'awaiting_payment';
 }
 
 export function decorate(db: Database, r: Reservation): ReservationView {
@@ -140,6 +190,22 @@ export function decorate(db: Database, r: Reservation): ReservationView {
       ['reserved', 'fully_paid'].includes(r.status) && dayDiff(today, r.checkIn) <= 0 && unitReady,
     canCheckOut: r.status === 'checked_in',
     receiptCount: f.receiptCount,
+    paymentStage: paymentStageFor(db, r, f),
+    latestClaim: (() => {
+      const c = (db.paymentClaims ?? [])
+        .filter((x) => x.reservationId === r.id)
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+      return c
+        ? {
+            id: c.id,
+            amount: c.amount,
+            method: c.method,
+            reference: c.reference,
+            status: c.status,
+            createdAt: c.createdAt,
+          }
+        : null;
+    })(),
   };
 }
 

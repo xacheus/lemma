@@ -1,7 +1,7 @@
 import { HttpError, readBody } from '@/lib/api/http';
 import { publicBookingSchema } from '@/lib/api/schemas';
 import { runAtomicTransaction } from '@/lib/db/store';
-import { createReservation } from '@/lib/domain/operations';
+import { createReservation, paymentQuote } from '@/lib/domain/operations';
 import { take } from '@/lib/api/rate-limit';
 import { getSession } from '@/lib/auth/session';
 
@@ -56,6 +56,17 @@ export async function POST(req: Request) {
         },
       });
 
+      /**
+       * The guest picked a payment method on the booking form, so the confirmation
+       * carries the exact instructions they need next — the destination configured in
+       * Settings for that channel, the amount, the deposit and their booking number as
+       * the reference. Nothing is charged here; the guest pays outside the site and
+       * submits the proof for verification.
+       */
+      const quote = paymentQuote(db, reservation);
+      const chosen =
+        quote.methods.find((m) => m.id === input.paymentMethod) ?? quote.methods[0] ?? null;
+
       return {
         id: reservation.id,
         reference: reservation.reference,
@@ -72,6 +83,21 @@ export async function POST(req: Request) {
         checkOutTime: db.settings.booking.checkOutTime,
         contactPhone: db.settings.property.phone,
         contactWhatsapp: db.settings.property.whatsapp,
+        payment: chosen
+          ? {
+              method: chosen.id,
+              label: chosen.label,
+              instructions: chosen.instructions,
+              accountLabel: chosen.accountLabel,
+              accountNumber: chosen.accountNumber,
+              totalAmount: quote.totalAmount,
+              depositPercent: quote.depositPercent,
+              suggestedAmount: quote.suggestedAmount,
+              reference: quote.reference,
+              proofUploadEnabled: quote.proofUploadEnabled,
+            }
+          : null,
+        methods: quote.methods.map((m) => ({ id: m.id, label: m.label })),
       };
     });
 

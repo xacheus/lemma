@@ -1,4 +1,4 @@
-import { apiRoute, readBody } from '@/lib/api/http';
+import { apiRoute, publicRoute, readBody } from '@/lib/api/http';
 import { guestPaymentClaimSchema } from '@/lib/api/schemas';
 import { ensureCloudFirestoreHydrated, getDb, runAtomicTransaction } from '@/lib/db/store';
 import { paymentQuote, submitPaymentClaim } from '@/lib/domain/operations';
@@ -15,8 +15,7 @@ export const runtime = 'nodejs';
  *        A claim never banks money: the balance is untouched until staff verify it
  *        through POST /api/payments, which links the claim to a real receipt.
  */
-export const GET = apiRoute({
-  handler: async ({ search, session }) => {
+export const GET = publicRoute(async ({ search, session }) => {
     await ensureCloudFirestoreHydrated();
     const db = getDb();
     const reservationId = search.get('reservationId') ?? '';
@@ -24,23 +23,63 @@ export const GET = apiRoute({
     if (!reservation) {
       return { quotes: [], detail: 'Choose one of your bookings.' };
     }
+
     const mine =
-      reservation.userId === session.uid ||
-      db.guests.find((g) => g.id === reservation.guestId)?.userId === session.uid;
+      Boolean(session) &&
+      (reservation.userId === session?.uid ||
+        db.guests.find((g) => g.id === reservation.guestId)?.userId === session?.uid);
+
+    /**
+     * A brand-new booking belongs to someone who may not have signed in yet — they
+     * booked as a visitor. They still need the payment details and the deposit for the
+     * booking they just made, so an anonymous caller holding the booking id gets a
+     * deliberately narrow object: the amount owed, the deposit, the channels and where
+     * to send money. No guest name, no contact details, no other bookings, and no
+     * claim history — the id is a random server-generated value, and everything else
+     * on the page was already shown to whoever made the booking.
+     */
     if (!mine) {
-      return { quotes: [], detail: 'That booking does not belong to your account.' };
+      const quote = paymentQuote(db, reservation);
+      const wanted = (search.get('method') ?? '').trim();
+      return {
+        quote: {
+          reservationId: quote.reservationId,
+          reference: quote.reference,
+          totalAmount: quote.totalAmount,
+          verifiedPaid: quote.verifiedPaid,
+          pendingAmount: quote.pendingAmount,
+          balanceDue: quote.balanceDue,
+          depositPercent: quote.depositPercent,
+          suggestedAmount: quote.suggestedAmount,
+          allowPartial: quote.allowPartial,
+          guestChoosesMethod: true,
+          defaultMethod: wanted || quote.defaultMethod,
+          methods: quote.methods,
+          openClaim: null,
+          claims: [],
+          proofUploadEnabled: quote.proofUploadEnabled,
+        },
+        // Say plainly what is limited, so the guest knows to sign in for the rest.
+        detail: 'Payment instructions for this booking. Sign in to see payments and receipts.',
+      };
     }
-    return { quote: paymentQuote(db, reservation) };
-  },
+
+    const quote = paymentQuote(db, reservation);
+    const wanted = search.get('method') ?? '';
+    if (wanted && quote.methods.some((m) => m.id === wanted)) {
+      return { quote: { ...quote, defaultMethod: wanted } };
+    }
+    return { quote };
 });
 
-export const POST = apiRoute({
-  handler: async ({ req, session }) => {
+export const POST = publicRoute(async ({ req, session }) => {
     const input = await readBody(req, guestPaymentClaimSchema);
     return runAtomicTransaction((db) => {
       const claim = submitPaymentClaim(db, {
         reservationId: input.reservationId,
-        userId: session.uid,
+        // A visitor who has not signed in may file one claim against the booking they
+        // just made; submitPaymentClaim refuses anything that belongs to an account.
+        userId: session?.uid ?? null,
         amount: input.amount,
         method: input.method,
         reference: input.reference,
@@ -52,8 +91,8 @@ export const POST = apiRoute({
       return {
         claim,
         quote: paymentQuote(db, reservation),
-        snapshot: buildSnapshot(db, session),
+        // Only a signed-in guest gets their whole snapshot back.
+        snapshot: session ? buildSnapshot(db, session) : null,
       };
     });
-  },
 });
