@@ -30,7 +30,7 @@ export default function ApartmentsPage() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-9 w-64" />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-72" />
           ))}
@@ -138,7 +138,7 @@ export default function ApartmentsPage() {
       ) : rows.length === 0 ? (
         <EmptyState title="Nothing in this view" body="No apartment matches the filter you picked. Switch back to All to see the full building." />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((apartment) => {
             const meta = DAY_STATUS_META[apartment.tonightStatus];
             const task = snapshot.housekeeping.find((t) => t.apartmentId === apartment.id && t.status !== 'clean');

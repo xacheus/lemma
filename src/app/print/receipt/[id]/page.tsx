@@ -58,7 +58,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
         issuedOn={formatMediumDate(payment.paidAt.slice(0, 10))}
       />
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-[1fr_1.1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>
           <p className="print-label">Received from</p>
           <p className="mt-1 text-[1.05rem] font-semibold text-navy-900">{guest?.fullName ?? 'Guest'}</p>
@@ -108,7 +108,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
       ) : null}
 
       {payment.proof ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
           <div>
             <p className="print-label">Supporting evidence on file</p>
             <p className="mt-1 text-[0.82rem] text-navy-500">

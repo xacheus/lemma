@@ -74,8 +74,8 @@ export default function AdminAuditLogsPage() {
         </select>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-left text-[0.82rem]">
+      <div className="card responsive-table-container overflow-x-auto">
+        <table className="responsive-table w-full text-left text-[0.82rem]">
           <thead className="border-b border-sand-200 bg-sand-50 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-navy-500">
             <tr>
               <th className="px-4 py-3">Timestamp (UTC)</th>
@@ -95,22 +95,22 @@ export default function AdminAuditLogsPage() {
             ) : (
               visible.map((log) => (
                 <tr key={log.id} className="hover:bg-sand-50/70">
-                  <td className="px-4 py-3 font-mono text-[0.75rem] text-navy-500 whitespace-nowrap">
+                  <td data-label="Timestamp (UTC)" className="px-4 py-3 font-mono text-[0.75rem] text-navy-500 whitespace-nowrap">
                     {log.createdAt.replace('T', ' ').slice(0, 19)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-label="Category" className="px-4 py-3">
                     <span className="chip bg-sand-100 text-navy-700 ring-1 ring-sand-300 uppercase">
                       {log.category}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-label="Actor" className="px-4 py-3">
                     <div className="font-semibold text-navy-900">{log.actorName}</div>
                     <div className="text-[0.72rem] uppercase text-navy-500">
                       {String(log.actorRole).replace(/_/g, ' ')}
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-[0.76rem] text-navy-700">{log.action}</td>
-                  <td className="px-4 py-3 text-navy-800">{log.summary}</td>
+                  <td data-label="Action" className="px-4 py-3 font-mono text-[0.76rem] text-navy-700">{log.action}</td>
+                  <td data-label="Summary" className="px-4 py-3 text-navy-800">{log.summary}</td>
                 </tr>
               ))
             )}

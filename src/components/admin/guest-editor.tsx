@@ -144,14 +144,14 @@ export function GuestEditor({
       <div className="space-y-4">
         {error ? <Alert tone="error" title="Not saved">{error}</Alert> : null}
 
-        <div className="grid gap-3.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <TextInput label="Full name" required value={draft.fullName} onChange={(e) => set({ fullName: e.target.value })} placeholder="John Banda" />
           <TextInput label="Phone" required value={draft.phone} onChange={(e) => set({ phone: e.target.value })} placeholder="+260 977 123 4567" hint="Mobile number used for WhatsApp" />
           <TextInput label="Email" type="email" value={draft.email} onChange={(e) => set({ email: e.target.value })} placeholder="john@example.com" error={draft.email && !/^\S+@\S+\.\S+$/.test(draft.email) ? 'That address looks incomplete.' : null} />
           <SelectInput label="How did they reach us?" value={draft.source} onChange={(e) => set({ source: e.target.value })} options={SOURCES} />
         </div>
 
-        <div className="grid gap-3.5 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-4">
           <SelectInput label="ID type" value={draft.idType} onChange={(e) => set({ idType: e.target.value as Draft['idType'] })} options={[{ value: 'nrc', label: 'NRC' }, { value: 'passport', label: 'Passport' }]} />
           <div className="sm:col-span-2">
             <TextInput
@@ -165,12 +165,12 @@ export function GuestEditor({
           <TextInput label="Nationality" value={draft.nationality} onChange={(e) => set({ nationality: e.target.value })} />
         </div>
 
-        <div className="grid gap-3.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <TextInput label="City / town" value={draft.city} onChange={(e) => set({ city: e.target.value })} />
           <TextInput label="Company (corporate accounts)" value={draft.company} onChange={(e) => set({ company: e.target.value })} placeholder="Baraka Farms Ltd" />
         </div>
 
-        <div className="grid gap-3.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <TextArea label="Standing preferences" value={draft.specialRequests} onChange={(e) => set({ specialRequests: e.target.value })} rows={3} maxLength={600} counter hint="Carried onto every new booking, e.g. high floor, early check-in." />
           <TextArea label="Internal notes" value={draft.internalNotes} onChange={(e) => set({ internalNotes: e.target.value })} rows={3} maxLength={1200} counter hint="Staff only. Never shown to the guest or printed on a receipt." />
         </div>

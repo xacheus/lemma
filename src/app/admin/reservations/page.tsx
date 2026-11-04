@@ -151,7 +151,7 @@ function ReservationsView() {
 
       <Panel bodyClass="">
         <div className="flex flex-wrap items-end gap-2.5 border-b border-sand-200 p-3.5">
-          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(1); }} placeholder="Reference, guest, phone, notes…" className="min-w-[15rem] flex-1" />
+          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(1); }} placeholder="Reference, guest, phone, notes…" className="min-w-0 w-full flex-1 sm:min-w-[15rem]" />
           <SelectInput
             label="Booking"
             value={bookingStatus}

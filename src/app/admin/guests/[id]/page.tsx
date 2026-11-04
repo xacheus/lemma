@@ -118,10 +118,10 @@ export default function GuestDetailPage({ params }: { params: Promise<{ id: stri
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="space-y-4">
           <Panel title="Contact" bodyClass="p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <ContactLine icon={Phone} label="Phone / WhatsApp" value={guest.phone} href={`tel:${guest.phone.replace(/\s/g, '')}`} />
               <ContactLine icon={Mail} label="Email" value={guest.email || 'Not provided'} href={guest.email ? `mailto:${guest.email}` : undefined} />
               <ContactLine icon={Building2} label="Company" value={guest.company || '—'} />

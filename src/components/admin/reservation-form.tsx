@@ -331,11 +331,11 @@ export function ReservationFormDialog({
             </div>
 
             {mode === 'new' ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <TextInput label="Full name" required value={form.fullName} onChange={(e) => set('fullName', e.target.value)} placeholder="e.g. John Banda" error={errors.fullName} />
                 <TextInput label="Phone number" required value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+260 977 415 208" error={errors.phone} />
                 <TextInput label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="guest@example.co.zm" error={errors.email} />
-                <div className="grid grid-cols-[1fr_6.5rem] gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-2">
                   <TextInput label="NRC / Passport" required value={form.nationalId} onChange={(e) => set('nationalId', e.target.value)} placeholder="389104/61/1" error={errors.nationalId} />
                   <SelectInput
                     label="Type"
@@ -360,7 +360,7 @@ export function ReservationFormDialog({
                   placeholder="Name, phone or email"
                   error={errors.guest}
                 />
-                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                   {guestOptions.map((g) => {
                     const selected = guestId === g.id;
                     const totals = snapshot?.guestTotals?.[g.id];
@@ -400,7 +400,7 @@ export function ReservationFormDialog({
           </section>
         ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-[1fr_1fr] lg:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-4">
           <Field label="Apartment" required error={errors.apartmentId} className="sm:col-span-2 lg:col-span-2">
             <SelectInput value={form.apartmentId} onChange={(e) => set('apartmentId', e.target.value)} options={apartmentOptions} />
           </Field>
@@ -500,7 +500,7 @@ export function ReservationFormDialog({
         </section>
 
         {editing ? (
-          <section className="grid gap-3 sm:grid-cols-3">
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SelectInput
               label="Booking status"
               value={form.status}
@@ -535,7 +535,7 @@ export function ReservationFormDialog({
               hint={`Recorded against the folio as ${depositPercent ? `${depositPercent}% of ${formatKwacha(total)}` : 'a deposit'}. Money entered by reception stays “awaiting verification” until an administrator confirms it.`}
             />
             {takeDeposit ? (
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <MoneyInput label="Amount received" required value={form.depositAmount} onValueChange={(n) => set('depositAmount', String(n))} error={errors.depositAmount} />
                 <SelectInput
                   label="Method"

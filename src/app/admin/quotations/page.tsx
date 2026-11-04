@@ -194,8 +194,8 @@ export default function AdminQuotationsPage() {
       </div>
 
       {/* Quotations Table */}
-      <div className="card overflow-x-auto">
-        <table className="w-full text-left text-[0.83rem]">
+      <div className="card responsive-table-container overflow-x-auto">
+        <table className="responsive-table w-full text-left text-[0.83rem]">
           <thead className="border-b border-sand-200 bg-sand-50 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-navy-500">
             <tr>
               <th className="px-4 py-3">Quotation #</th>
@@ -217,17 +217,17 @@ export default function AdminQuotationsPage() {
             ) : (
               paged.map((q) => (
                 <tr key={q.id} className="hover:bg-sand-50/70">
-                  <td className="px-4 py-3.5 font-mono font-semibold text-navy-900">
+                  <td data-label="Quotation #" className="px-4 py-3.5 font-mono font-semibold text-navy-900">
                     {q.quotationNumber}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td data-label="Customer / Organisation" className="px-4 py-3.5">
                     <div className="font-semibold text-navy-900">{q.customerName}</div>
                     <div className="text-[0.75rem] text-navy-500">
                       {q.customerCompany ? `${q.customerCompany} · ` : ''}
                       {q.customerPhone}
                     </div>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td data-label="Apartment & Stay" className="px-4 py-3.5">
                     <div className="font-medium text-navy-800">
                       Apt {q.apartmentNumber} · {q.apartmentName}
                     </div>
@@ -235,16 +235,16 @@ export default function AdminQuotationsPage() {
                       {q.checkIn} → {q.checkOut} ({q.nights}n · {q.guestCount}g)
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-navy-600 tabular-nums">{q.expiryDate}</td>
-                  <td className="px-4 py-3.5 text-right font-bold text-navy-900 tabular-nums">
+                  <td data-label="Valid Until" className="px-4 py-3.5 text-navy-600 tabular-nums">{q.expiryDate}</td>
+                  <td data-label="Total (ZMW)" className="px-4 py-3.5 text-right font-bold text-navy-900 tabular-nums">
                     K{q.totalAmount.toLocaleString('en-US')}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td data-label="Status" className="px-4 py-3.5">
                     <span className="chip bg-sand-100 text-navy-700 ring-1 ring-sand-300 uppercase">
                       {q.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td data-label="Actions" className="px-4 py-3.5">
                     <div className="flex flex-wrap justify-end gap-1.5">
                       <a
                         href={`/api/documents/quotation/${q.id}/pdf?download=1`}
@@ -317,10 +317,10 @@ export default function AdminQuotationsPage() {
 
       {/* Create Quotation Modal */}
       {createOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/50 p-4">
           <form
             onSubmit={handleCreateQuotation}
-            className="card my-8 w-full max-w-2xl space-y-4 p-6"
+            className="card my-auto w-full max-w-2xl space-y-4 p-4 sm:p-6"
           >
             <div className="flex items-center justify-between border-b border-sand-200 pb-3">
               <h2 className="text-[1.15rem] font-bold text-navy-900">Generate ZMW Quotation</h2>
@@ -333,7 +333,7 @@ export default function AdminQuotationsPage() {
               </button>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="label mb-1 block">Customer Full Name</label>
                 <input
@@ -371,7 +371,7 @@ export default function AdminQuotationsPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="sm:col-span-3">
                 <label className="label mb-1 block">Apartment</label>
                 <select
@@ -425,7 +425,7 @@ export default function AdminQuotationsPage() {
             {selectedApt?.optionalServices?.length ? (
               <div className="space-y-1.5">
                 <p className="label">Optional Add-on Services</p>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {selectedApt.optionalServices
                     .filter((s) => s.active)
                     .map((s) => (
@@ -454,7 +454,7 @@ export default function AdminQuotationsPage() {
               </div>
             ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="label mb-1 block">Manual Discount (ZMW)</label>
                 <input

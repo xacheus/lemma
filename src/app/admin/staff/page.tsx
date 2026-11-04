@@ -140,7 +140,7 @@ export default function StaffPage() {
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Panel
           title="Accounts"
           subtitle={`${staff.filter((s) => s.active).length} active of ${staff.length} · each person signs in with the password set for their own account`}
@@ -251,7 +251,7 @@ export default function StaffPage() {
           </Panel>
 
           <Panel title="Sign-in as this person" subtitle="Prefill the handle, then type that person’s own password" bodyClass="p-4">
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {staff
                 .filter((s) => s.active)
                 .slice(0, 6)
@@ -319,8 +319,26 @@ Sessions in progress are refused at the next request, and the account disappears
 
 function PermissionMatrix() {
   return (
-    <Panel title="Role matrix" subtitle="What each role carries by default; per-account overrides replace the row entirely" bodyClass="overflow-x-auto">
-      <table className="w-full min-w-[38rem] border-collapse text-[0.8rem]">
+    <Panel title="Role matrix" subtitle="What each role carries by default; per-account overrides replace the row entirely" bodyClass="permission-matrix-container">
+      <div className="permission-matrix-cards space-y-3 p-3">
+        {PERMISSION_GROUPS.map((group) => (
+          <section key={group.title}>
+            <h3 className="font-semibold text-navy-700">{group.title}</h3>
+            <p className="text-[0.72rem] text-navy-400">{group.note}</p>
+            {group.keys.map((key) => (
+              <div key={key} className="border-t border-sand-100 py-2">
+                <p className="font-mono text-[0.76rem]">{key}</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {(['admin', 'receptionist', 'cleaner'] as Role[]).map((r) => (
+                    <span key={r} className="text-[0.72rem] text-navy-600">{ROLE_META[r].label}: {ROLE_PERMISSIONS[r].includes(key) ? 'yes' : 'no'}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        ))}
+      </div>
+      <table className="permission-matrix-table w-full border-collapse text-[0.8rem]">
         <thead>
           <tr className="border-b border-sand-200 bg-sand-50/70">
             <th className="th w-[15rem] text-left">Capability</th>
@@ -431,7 +449,7 @@ function StaffEditor({
     >
       <div className="space-y-4">
         {error ? <Alert tone="error" title="Not saved">{error}</Alert> : null}
-        <div className="grid gap-3.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <TextInput label="Full name" required value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Mary Gondwe" />
           <TextInput
             label="Login handle"
@@ -507,7 +525,7 @@ function StaffEditor({
             {PERMISSION_GROUPS.map((group) => (
               <div key={group.title}>
                 <p className="label mb-1">{group.title}</p>
-                <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
                   {group.keys.map((key) => (
                     <CheckboxRow
                       key={key}
@@ -605,13 +623,13 @@ function RegisteredUsersRolePanel() {
               key={u.uid}
               className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-sand-200 p-2.5 text-[0.78rem]"
             >
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-navy-900">{u.fullName}</p>
-                <p className="truncate text-[0.72rem] text-navy-500">
+              <div className="min-w-0 max-w-full">
+                <p className="font-semibold text-navy-900">{u.fullName}</p>
+                <p className="text-[0.72rem] text-navy-500">
                   {u.email} · <span className="uppercase">{u.accountStatus}</span>
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <select
                   disabled={lockedSuper || updatingUid === u.uid}
                   value={u.role}

@@ -176,7 +176,7 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
   return (
     <footer className="border-t border-sand-200 bg-navy-900 text-navy-200">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
+      <div className="mx-auto grid grid-cols-1 max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4 lg:px-8">
         <div className="md:col-span-2">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}

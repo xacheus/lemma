@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Loader2, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { Children, cloneElement, isValidElement } from 'react';
 
 
 
@@ -229,8 +230,8 @@ export function Pagination({
 
 export function DataTable({ head, children, className = '' }: { head: React.ReactNode[]; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`scroll-slim w-full overflow-x-auto ${className}`}>
-      <table className="w-full min-w-[46rem] border-collapse">
+    <div className={`responsive-table-container scroll-slim w-full overflow-x-auto ${className}`}>
+      <table className="responsive-table w-full min-w-[46rem] border-collapse">
         <thead className="bg-sand-50/80">
           <tr className="border-b border-sand-200">
             {head.map((cell, i) => (
@@ -240,7 +241,15 @@ export function DataTable({ head, children, className = '' }: { head: React.Reac
             ))}
           </tr>
         </thead>
-        <tbody>{children}</tbody>
+        <tbody>{Children.map(children, (row) => {
+          if (!isValidElement<{ children?: React.ReactNode }>(row) || row.type !== 'tr') return row;
+          return cloneElement(row, {}, Children.map(row.props.children, (cell, index) => {
+            if (!isValidElement<{ colSpan?: number; 'data-label'?: string }>(cell) || cell.type !== 'td') return cell;
+            const heading = head[index];
+            const label = typeof heading === 'string' ? heading : isValidElement<{ label?: string }>(heading) ? heading.props.label : '';
+            return cloneElement(cell, { 'data-label': cell.props.colSpan ? '' : label || '' });
+          }));
+        })}</tbody>
       </table>
     </div>
   );

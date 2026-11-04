@@ -149,7 +149,7 @@ export default function PaymentsPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label={`Banked in ${month.label}`}
           value={formatKwacha(bankedThisMonth)}
@@ -266,7 +266,7 @@ export default function PaymentsPage() {
       {tab === 'ledger' ? (
         <>
           <div className="card flex flex-wrap items-end gap-3 p-3.5">
-            <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(1); }} placeholder="Reference, guest or receipt number" className="min-w-[14rem] flex-1" />
+            <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(1); }} placeholder="Reference, guest or receipt number" className="min-w-0 w-full flex-1 sm:min-w-[15rem]" />
             <SelectInput
               label="Method"
               className="w-44"
@@ -441,7 +441,7 @@ export default function PaymentsPage() {
       ) : null}
 
       {tab === 'instructions' ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {snapshot.settings.payments.methods.map((m) => (
             <Panel
               key={m.id}

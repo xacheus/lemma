@@ -67,3 +67,18 @@ SMS, WhatsApp, bank reconciliation and email require separate providers.
 
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md) for what remains manual and what
 requires verification against a live Firebase project.
+
+### Responsive browser regression
+
+With the disposable fixture prepared as above, set a stable local session secret
+(e.g. `LEMMA_SESSION_SECRET=local-test-secret`) when starting the development
+server. Install Chromium/Chrome separately, then run:
+
+```bash
+CHROMIUM_PATH=/path/to/chromium npm run test:responsive
+```
+
+The test signs in as the local fixture administrator, checks the major routes at
+320–1440px, and exercises the mobile calendar, navigation and booking dialog.
+It checks document width as well as visible elements extending beyond the viewport;
+it does not replace visual checks of zoom, text size or real-device interactions.

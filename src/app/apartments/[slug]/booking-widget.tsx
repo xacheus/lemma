@@ -242,7 +242,7 @@ export function ApartmentBookingWidget({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="label mb-1 block" htmlFor="bw-in">
             Check-in
@@ -380,7 +380,7 @@ export function ApartmentBookingWidget({
           <legend className="label mb-1.5 block">
             {locked ? 'Payment method' : 'How will you pay?'}
           </legend>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {methods.map((m) => {
               const Icon = METHOD_ICONS[m.id] ?? CreditCard;
               const active = method === m.id;
@@ -453,7 +453,7 @@ export function ApartmentBookingWidget({
             required
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="label mb-1 block" htmlFor="bw-phone">
               Phone / WhatsApp
@@ -839,7 +839,7 @@ function BookingConfirmation({
               </p>
             ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="label mb-1 block" htmlFor="bp-amount">
                   Amount paid (ZMW)

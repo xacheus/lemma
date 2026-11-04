@@ -131,8 +131,8 @@ export default function AdminInvoicesPage() {
       </div>
 
       {tab === 'invoices' ? (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-left text-[0.83rem]">
+        <div className="card responsive-table-container overflow-x-auto">
+          <table className="responsive-table w-full text-left text-[0.83rem]">
             <thead className="border-b border-sand-200 bg-sand-50 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-navy-500">
               <tr>
                 <th className="px-4 py-3">Invoice #</th>
@@ -155,32 +155,32 @@ export default function AdminInvoicesPage() {
               ) : (
                 invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-sand-50/70">
-                    <td className="px-4 py-3.5 font-mono font-semibold text-navy-900">
+                    <td data-label="Invoice #" className="px-4 py-3.5 font-mono font-semibold text-navy-900">
                       {inv.invoiceNumber}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td data-label="Billed To" className="px-4 py-3.5">
                       <div className="font-semibold text-navy-900">{inv.customerName}</div>
                       <div className="text-[0.75rem] text-navy-500">
                         {inv.customerCompany || inv.customerPhone}
                         {inv.customerTpin ? ` · TPIN ${inv.customerTpin}` : ''}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-navy-600">
+                    <td data-label="Stay" className="px-4 py-3.5 text-navy-600">
                       <div>{inv.apartmentName}</div>
                       <div className="text-[0.74rem] text-navy-500">
                         {inv.checkIn} → {inv.checkOut}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-semibold tabular-nums">
+                    <td data-label="Total" className="px-4 py-3.5 text-right font-semibold tabular-nums">
                       K{inv.totalAmount.toLocaleString('en-US')}
                     </td>
-                    <td className="px-4 py-3.5 text-right text-st-available font-medium tabular-nums">
+                    <td data-label="Verified Paid" className="px-4 py-3.5 text-right text-st-available font-medium tabular-nums">
                       K{inv.verifiedPaid.toLocaleString('en-US')}
                     </td>
-                    <td className="px-4 py-3.5 text-right font-bold text-navy-900 tabular-nums">
+                    <td data-label="Balance Due" className="px-4 py-3.5 text-right font-bold text-navy-900 tabular-nums">
                       K{inv.balanceDue.toLocaleString('en-US')}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td data-label="Status" className="px-4 py-3.5">
                       <span
                         className={`chip uppercase ${
                           inv.status === 'paid'
@@ -193,7 +193,7 @@ export default function AdminInvoicesPage() {
                         {inv.status.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td data-label="PDF" className="px-4 py-3.5 text-right">
                       <a
                         href={`/api/documents/invoice/${inv.id}/pdf?download=1`}
                         className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
@@ -208,8 +208,8 @@ export default function AdminInvoicesPage() {
           </table>
         </div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-left text-[0.83rem]">
+        <div className="card responsive-table-container overflow-x-auto">
+          <table className="responsive-table w-full text-left text-[0.83rem]">
             <thead className="border-b border-sand-200 bg-sand-50 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-navy-500">
               <tr>
                 <th className="px-4 py-3">Receipt #</th>
@@ -231,24 +231,24 @@ export default function AdminInvoicesPage() {
               ) : (
                 receipts.map((rc) => (
                   <tr key={rc.id} className="hover:bg-sand-50/70">
-                    <td className="px-4 py-3.5 font-mono font-semibold text-navy-900">
+                    <td data-label="Receipt #" className="px-4 py-3.5 font-mono font-semibold text-navy-900">
                       {rc.receiptNumber}
                     </td>
-                    <td className="px-4 py-3.5 font-medium text-navy-900">{rc.customerName}</td>
-                    <td className="px-4 py-3.5 font-mono text-[0.78rem] text-navy-600">
+                    <td data-label="Guest" className="px-4 py-3.5 font-medium text-navy-900">{rc.customerName}</td>
+                    <td data-label="Booking Ref" className="px-4 py-3.5 font-mono text-[0.78rem] text-navy-600">
                       {rc.bookingReference}
                     </td>
-                    <td className="px-4 py-3.5 text-navy-600">
+                    <td data-label="Method & Ref" className="px-4 py-3.5 text-navy-600">
                       <span className="uppercase">{rc.method.replace(/_/g, ' ')}</span> ·{' '}
                       {rc.transactionReference}
                     </td>
-                    <td className="px-4 py-3.5 text-navy-600">
+                    <td data-label="Verified By" className="px-4 py-3.5 text-navy-600">
                       {rc.verifiedBy} ({rc.paidAt})
                     </td>
-                    <td className="px-4 py-3.5 text-right font-bold text-st-available tabular-nums">
+                    <td data-label="Amount (ZMW)" className="px-4 py-3.5 text-right font-bold text-st-available tabular-nums">
                       K{rc.amount.toLocaleString('en-US')}
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td data-label="PDF" className="px-4 py-3.5 text-right">
                       <a
                         href={`/api/documents/receipt/${rc.id}/pdf?download=1`}
                         className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
@@ -265,8 +265,8 @@ export default function AdminInvoicesPage() {
       )}
 
       {createOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 p-4">
-          <form onSubmit={handleGenerateInvoice} className="card w-full max-w-lg space-y-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/50 p-4">
+          <form onSubmit={handleGenerateInvoice} className="card my-auto w-full max-w-lg space-y-4 p-4 sm:p-6">
             <h2 className="text-[1.1rem] font-bold text-navy-900">
               Generate Invoice from Reservation
             </h2>
@@ -291,7 +291,7 @@ export default function AdminInvoicesPage() {
                     ))}
                   </select>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="label mb-1 block">Company Name (optional)</label>
                     <input
@@ -321,7 +321,7 @@ export default function AdminInvoicesPage() {
               </>
             )}
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}

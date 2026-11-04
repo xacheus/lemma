@@ -284,7 +284,7 @@ export function Segmented<T extends string>({
   ariaLabel: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className="inline-flex rounded-lg border border-sand-300 bg-white p-0.5">
+    <div role="radiogroup" aria-label={ariaLabel} className="inline-flex max-w-full flex-wrap rounded-lg border border-sand-300 bg-white p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -320,7 +320,7 @@ export function ProofUploader({
   return (
     <div className="rounded-lg border border-dashed border-sand-300 bg-sand-50/60 p-3">
       {value ? (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <img src={value.dataUrl} alt="Uploaded proof of payment" className="h-14 w-14 rounded-md border border-sand-300 object-cover" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.82rem] font-semibold text-navy-800">{value.fileName}</p>

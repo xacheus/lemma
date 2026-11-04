@@ -156,7 +156,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ShellCtx.Provider value={actions}>
-      <div className="app-shell min-h-screen bg-sand-50 lg:grid lg:grid-cols-[15.5rem_1fr]">
+      <div className="app-shell min-h-screen bg-sand-50 lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
         {/* desktop sidebar */}
         <aside className="sticky top-0 hidden h-screen flex-col bg-navy-900 lg:flex">
           {sidebarHeader}
@@ -168,7 +168,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         {mobileOpen ? (
           <div className="fixed inset-0 z-[60] flex lg:hidden no-print">
             <button className="absolute inset-0 bg-navy-950/50" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />
-            <aside className="relative flex h-full w-[17rem] flex-col bg-navy-900 shadow-pop">
+            <aside className="relative flex h-full w-[17rem] max-w-[calc(100%-2rem)] flex-col bg-navy-900 shadow-pop">
               <div className="flex items-center justify-between">
                 {sidebarHeader}
                 <button onClick={() => setMobileOpen(false)} className="mr-3 rounded-lg p-2 text-navy-200 hover:bg-white/10" aria-label="Close navigation">
@@ -283,7 +283,7 @@ function Topbar({ onMenu, onNewBooking }: { onMenu: () => void; onNewBooking: ()
           <span className="truncate text-[0.84rem] font-medium text-navy-700">{snapshot ? formatLongDate(snapshot.today) : ''}</span>
         </div>
 
-        <div className="relative ml-auto w-full max-w-[22rem]">
+        <div className="relative ml-auto min-w-0 w-full max-w-[22rem]">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-400" />
           <input
             ref={searchRef}
@@ -363,7 +363,7 @@ function Topbar({ onMenu, onNewBooking }: { onMenu: () => void; onNewBooking: ()
             {unread.length ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-gold-400 ring-2 ring-white" /> : null}
           </button>
           {bellOpen ? (
-            <div className="absolute right-0 top-11 z-50 w-[22rem] overflow-hidden rounded-xl border border-sand-200 bg-white shadow-pop">
+            <div className="fixed right-3 top-16 z-50 w-[min(22rem,calc(100vw-1.5rem))] sm:absolute sm:right-0 sm:top-11 overflow-hidden rounded-xl border border-sand-200 bg-white shadow-pop">
               <div className="flex items-center justify-between border-b border-sand-200 px-3.5 py-2.5">
                 <p className="text-[0.82rem] font-semibold text-navy-800">Notifications</p>
                 <Link href="/admin/notifications" onClick={() => setBellOpen(false)} className="text-[0.74rem] font-semibold text-teal-600 hover:underline">
@@ -491,7 +491,7 @@ export function PageHeader({
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         {crumbs?.length ? (
-          <nav aria-label="Breadcrumb" className="mb-1 flex items-center gap-1.5 text-[0.72rem] text-navy-400">
+          <nav aria-label="Breadcrumb" className="mb-1 flex flex-wrap items-center gap-1.5 text-[0.72rem] text-navy-400">
             {crumbs.map((c, i) => (
               <span key={c.label} className="flex items-center gap-1.5">
                 {i > 0 ? <span aria-hidden>/</span> : null}

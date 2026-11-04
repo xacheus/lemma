@@ -27,7 +27,7 @@ export function PrintSheet({
               <span className="block text-[0.72rem] text-navy-400">Lemma Apartments · document view</span>
             </span>
           </span>
-          <div className="flex shrink-0 items-center gap-2">{toolbar}</div>
+          <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto">{toolbar}</div>
         </div>
       </div>
       <main className="print-page mx-auto max-w-[52rem] px-3 py-5 sm:px-4 sm:py-8">
@@ -61,9 +61,9 @@ export function PrintHeader({
 }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-5 border-b-2 border-navy-800 pb-5">
-      <div className="flex items-start gap-3">
-        <img src="/brand/logo.jpg" alt={`${property.name} logo`} className="h-14 w-14 rounded-lg object-cover ring-1 ring-sand-300" />
-        <div>
+      <div className="flex min-w-0 items-start gap-3">
+        <img src="/brand/logo.jpg" alt={`${property.name} logo`} className="h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-sand-300" />
+        <div className="min-w-0">
           <p className="font-display text-[1.35rem] leading-tight text-navy-900">{property.name}</p>
           <p className="mt-0.5 text-[0.76rem] leading-snug text-navy-500">
             {property.legalName} · TPIN {property.taxPayerId}

@@ -259,7 +259,7 @@ export function GuestPaymentPanel({
           </div>
         ) : (
           <form onSubmit={submit} className="mt-4 space-y-4">
-            <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-sand-200 bg-sand-200 text-center">
+            <div className="grid grid-cols-1 gap-px overflow-hidden sm:grid-cols-3 rounded-lg border border-sand-200 bg-sand-200 text-center">
               {[
                 { label: 'Stay total', value: formatKwacha(quote.totalAmount) },
                 { label: 'Verified', value: formatKwacha(quote.verifiedPaid) },
@@ -359,7 +359,7 @@ export function GuestPaymentPanel({
             </div>
 
             {/* 3 — the reference the provider gave them */}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="label mb-1 block" htmlFor="claim-ref">
                   {method === 'bank_transfer' ? 'Bank slip / transfer reference' : 'Transaction ID or SMS code'}

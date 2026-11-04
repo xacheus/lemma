@@ -115,8 +115,8 @@ export function StaffImport({ onClose }: { onClose: () => void }) {
 
       {result?.created.length ? (
         <Panel title="Password sheet — copy it now" subtitle="Shown once. Passwords are stored hashed and cannot be recovered.">
-          <div className="overflow-x-auto">
-            <table className="w-full text-[0.8rem]">
+          <div className="responsive-table-container overflow-x-auto">
+            <table className="responsive-table w-full text-[0.8rem]">
               <thead>
                 <tr className="text-left text-navy-400">
                   <th className="py-1 pr-3 font-medium">Name</th>
@@ -128,10 +128,10 @@ export function StaffImport({ onClose }: { onClose: () => void }) {
               <tbody>
                 {result.created.map((c) => (
                   <tr key={c.username} className="border-t border-sand-100">
-                    <td className="py-1.5 pr-3 text-navy-800">{c.name}</td>
-                    <td className="py-1.5 pr-3 font-mono text-navy-700">{c.username}</td>
-                    <td className="py-1.5 pr-3 text-navy-600">{c.role}</td>
-                    <td className="py-1.5 font-mono text-navy-900">{c.password}</td>
+                    <td data-label="Name" className="py-1.5 pr-3 text-navy-800">{c.name}</td>
+                    <td data-label="Username" className="py-1.5 pr-3 font-mono text-navy-700">{c.username}</td>
+                    <td data-label="Role" className="py-1.5 pr-3 text-navy-600">{c.role}</td>
+                    <td data-label="Temporary password" className="py-1.5 font-mono text-navy-900">{c.password}</td>
                   </tr>
                 ))}
               </tbody>

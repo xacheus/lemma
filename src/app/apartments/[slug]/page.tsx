@@ -55,7 +55,7 @@ export default async function ApartmentDetailPage({
           <ArrowLeft size={14} /> Back to all apartments
         </Link>
 
-        <div className="animate-fade-up mt-5 grid items-start gap-8 lg:grid-cols-[1.35fr_0.95fr]">
+        <div className="animate-fade-up mt-5 grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
           {/* Left: Gallery & Specifications */}
           <div className="space-y-6">
             <div>
@@ -142,7 +142,7 @@ export default async function ApartmentDetailPage({
                   <h3 className="text-[0.95rem] font-semibold text-navy-900">
                     What this apartment has
                   </h3>
-                  <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                  <ul className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {apartment.amenities.map((amenity) => (
                       <li
                         key={amenity}
@@ -166,7 +166,7 @@ export default async function ApartmentDetailPage({
               <h2 className="text-[1.05rem] font-semibold text-navy-900">
                 Rate Structure &amp; Stay Policies
               </h2>
-              <div className="grid gap-3 text-[0.84rem] text-navy-600 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 text-[0.84rem] text-navy-600 sm:grid-cols-2">
                 <p>
                   <strong>Standard Nightly Rate:</strong> K
                   {apartment.nightlyRate.toLocaleString('en-US')} / night

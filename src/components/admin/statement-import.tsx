@@ -178,7 +178,7 @@ export function StatementImport() {
         subtitle="CSV with a date and an amount column; a reference column is what makes the match reliable. Nothing is banked until you confirm the ticks."
       >
         <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
             <div>
               <label className="label mb-1 block" htmlFor="statement-file">
                 Statement CSV

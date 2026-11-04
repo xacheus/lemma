@@ -157,7 +157,7 @@ export default function ReportsPage() {
       ) : null}
 
       {state === 'loading' && !report ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-52" />
           ))}
@@ -166,7 +166,7 @@ export default function ReportsPage() {
         <EmptyState title="Nothing to show" body="Pick a window to build the report." />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Kpi
               label={`Revenue (${report.period})`}
               value={formatKwacha(report.revenue)}
@@ -186,7 +186,7 @@ export default function ReportsPage() {
             <Kpi label="Cash by method" value={methodSlices.length ? methodSlices[0].label : '—'} hint={methodSlices.length ? `${formatKwacha(methodSlices[0].value)} of ${formatKwacha(report.revenue)}` : 'Nothing banked in this window'} />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <Panel title="Revenue in the window" subtitle="Verified money only — pending proof never counts as revenue." icon={BarChart3} bodyClass="p-4">
               {revenuePoints.length ? <AreaChart data={revenuePoints} format={(n) => formatKwacha(n)} /> : <EmptyState title="No receipts in this window" body="Record a payment and it will appear here." />}
             </Panel>
@@ -204,7 +204,7 @@ export default function ReportsPage() {
             </Panel>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel title="Occupancy through the window" subtitle="Room-nights sold against room-nights on offer">
               <div className="p-4">{occupancyPoints.length ? <BarChart data={occupancyPoints} max={100} unit="%" /> : <p className="py-8 text-center text-[0.82rem] text-navy-400">Nothing to chart.</p>}</div>
             </Panel>
@@ -259,7 +259,7 @@ export default function ReportsPage() {
             )}
           </Panel>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel title="Outstanding balances" subtitle={`${formatKwacha(report.outstandingTotal)} across ${report.outstandingRows.length} folios`} bodyClass="divide-y divide-sand-100">
               {report.outstandingRows.length ? (
                 report.outstandingRows.slice(0, 8).map((o) => (

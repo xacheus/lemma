@@ -20,7 +20,7 @@ export default async function AboutPage() {
       <PublicHeader property={property} session={session} activePath="/about" unreadCount={unreadForSession(db, session)} />
 
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-12 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="animate-fade-up grid items-center gap-10 lg:grid-cols-2">
+        <div className="animate-fade-up grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
               About {property.name}
@@ -56,7 +56,7 @@ export default async function AboutPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <PhotoFrame
                 src="/images/apartments/apt-02/01.jpg"
@@ -81,7 +81,7 @@ export default async function AboutPage() {
           </div>
         </div>
 
-        <div className="stagger grid gap-6 md:grid-cols-3">
+        <div className="stagger grid grid-cols-1 gap-6 md:grid-cols-3">
           {[
             {
               icon: Sun,
@@ -114,7 +114,7 @@ export default async function AboutPage() {
             <Building2 size={18} className="text-lemma-dark" />
             <h2 className="text-[1.15rem] font-semibold">House Policies &amp; Arrival Guide</h2>
           </div>
-          <div className="mt-4 grid gap-4 text-[0.86rem] text-navy-700 sm:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 text-[0.86rem] text-navy-700 sm:grid-cols-2">
             <div className="flex items-start gap-2">
               <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-lemma-dark" />
               <span>
