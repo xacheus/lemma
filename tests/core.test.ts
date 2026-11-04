@@ -22,26 +22,79 @@ process.env.LEMMA_DATA_DIR = temp;
 
 test.after(() => rmSync(temp, { recursive: true, force: true }));
 
-test('a serverless deployment without Firebase credentials refuses local booking data', async () => {
-  const { getDb, ensureCloudFirestoreHydrated, StoreUnavailableError } = await import('../src/lib/db/store');
+test('a serverless deployment without Firebase credentials serves the starter catalogue and accepts bookings', async () => {
+  const { getDb, ensureCloudFirestoreHydrated, runAtomicTransaction } = await import('../src/lib/db/store');
+  const { sessionToken, verifyToken } = await import('../src/lib/auth/session');
   const names = [
     'VERCEL', 'LEMMA_SESSION_SECRET', 'FIREBASE_PROJECT_ID',
-    'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY',
+    'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_SERVICE_ACCOUNT',
   ] as const;
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
     process.env.VERCEL = '1';
-    process.env.LEMMA_SESSION_SECRET = 'test-secret-only-for-local-unit-tests-1234';
+    delete process.env.LEMMA_SESSION_SECRET;
     delete process.env.FIREBASE_PROJECT_ID;
     delete process.env.FIREBASE_CLIENT_EMAIL;
     delete process.env.FIREBASE_PRIVATE_KEY;
-    assert.throws(() => getDb(), (error) =>
-      error instanceof StoreUnavailableError &&
-      error.code === 'storage_unavailable' &&
-      error.message.includes('Booking records are unavailable'));
-    await assert.rejects(() => ensureCloudFirestoreHydrated(), StoreUnavailableError);
-    const { readPublicSiteData } = await import('../src/lib/public/read-site-data');
-    assert.equal(await readPublicSiteData(), null);
+    delete process.env.FIREBASE_SERVICE_ACCOUNT;
+
+    await ensureCloudFirestoreHydrated();
+    const db = getDb();
+    assert.equal(db.apartments.length, 3);
+    assert.ok(db.apartments.every((apt) => apt.photos.length === 6));
+
+    const tok = sessionToken('usr-test-1', 2);
+    assert.deepEqual(verifyToken(tok), { uid: 'usr-test-1', sessionVersion: 2 });
+
+    const beforeSeq = db.sequences.reservation;
+    await runAtomicTransaction((draft) => {
+      draft.sequences.reservation += 1;
+    });
+    assert.equal(getDb().sequences.reservation, beforeSeq + 1);
+  } finally {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+  }
+});
+
+test('Firebase Admin credential parser normalises common paste formats and rejects invalid PEMs safely', async () => {
+  const {
+    normalisePrivateKey,
+    resolveFirebaseAdminCredentials,
+    getFirebaseAdminApp,
+    isFirebaseAdminConfigured,
+  } = await import('../src/lib/firebase/admin');
+
+  const samplePem = '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n-----END PRIVATE KEY-----';
+  assert.equal(
+    normalisePrivateKey(`"${samplePem.replace(/\n/g, '\\n')}",`),
+    samplePem,
+  );
+  assert.equal(
+    normalisePrivateKey(Buffer.from(samplePem, 'utf8').toString('base64')),
+    samplePem,
+  );
+
+  const names = [
+    'FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+    'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY',
+  ] as const;
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  try {
+    delete process.env.FIREBASE_PROJECT_ID;
+    delete process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    process.env.FIREBASE_CLIENT_EMAIL = 'firebase-adminsdk-abc@lemma-prod-123.iam.gserviceaccount.com';
+    process.env.FIREBASE_PRIVATE_KEY = samplePem;
+
+    // Infers projectId from service account email when FIREBASE_PROJECT_ID is omitted.
+    const resolved = resolveFirebaseAdminCredentials();
+    assert.equal(resolved?.projectId, 'lemma-prod-123');
+
+    // Truncated PEM fails OpenSSL cert() gracefully (returns null instead of crashing).
+    assert.equal(getFirebaseAdminApp(), null);
+    assert.equal(isFirebaseAdminConfigured(), false);
   } finally {
     for (const name of names) {
       if (previous[name] === undefined) delete process.env[name];

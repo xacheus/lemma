@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Mail, MessageCircle, Phone } from 'lucide-react';
 import { readPublicSiteData } from '@/lib/public/read-site-data';
-import { SiteUnavailable } from '@/components/public/site-unavailable';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { unreadForSession } from '@/lib/domain/inbox';
 
@@ -21,9 +20,7 @@ export const metadata = {
  * the defaults below are printed.
  */
 export default async function PoliciesPage() {
-  const state = await readPublicSiteData();
-  if (!state) return <SiteUnavailable />;
-  const { db, session } = state;
+  const { db, session } = await readPublicSiteData();
   const { property, booking, payments } = db.settings;
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
 

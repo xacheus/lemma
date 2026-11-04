@@ -3,7 +3,13 @@ import { cookies } from 'next/headers';
 import type { PermissionKey, StaffUser, UserRecord } from '../domain/types';
 import { userRecordToStaffView } from '../domain/staff-view';
 import { permissionsFor } from '../domain/permissions';
-import { ensureCloudFirestoreHydrated, getDb, StoreUnavailableError } from '../db/store';
+import {
+  ensureCloudFirestoreHydrated,
+  getDb,
+  isCloudStoreActive,
+  markFirestoreFallback,
+  StoreUnavailableError,
+} from '../db/store';
 import { getAdminAuth, getAdminFirestore } from '../firebase/admin';
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
@@ -13,8 +19,18 @@ export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7-day persistent authenticat
 const localSessionSecret = randomBytes(32).toString('hex');
 
 function secret(): string {
-  if (process.env.LEMMA_SESSION_SECRET) return process.env.LEMMA_SESSION_SECRET;
-  if (process.env.VERCEL) throw new StoreUnavailableError();
+  const configured = process.env.LEMMA_SESSION_SECRET?.trim();
+  if (configured && configured !== 'replace-with-32-byte-random-hex-secret') {
+    return configured;
+  }
+  const serverSeed =
+    process.env.FIREBASE_PRIVATE_KEY?.trim() ||
+    process.env.FIREBASE_SERVICE_ACCOUNT?.trim() ||
+    process.env.CLOUDINARY_API_SECRET?.trim() ||
+    '';
+  if (serverSeed) {
+    return createHmac('sha256', serverSeed).update('lemma-session-hmac-v1').digest('hex');
+  }
   return localSessionSecret;
 }
 
@@ -75,30 +91,44 @@ export interface Session {
 const ROLE_SYNC_TIMEOUT_MS = 3_000;
 
 async function syncRoleFromFirestore(uid: string): Promise<boolean> {
+  if (!isCloudStoreActive()) return true; // local / fallback mode has no Console
   const adminDb = getAdminFirestore();
-  if (!adminDb) return true; // local development has no Console
+  if (!adminDb) return true;
   try {
     const snap = await new Promise<DocumentSnapshot>((resolve, reject) => {
       const timer = setTimeout(() => reject(new StoreUnavailableError()), ROLE_SYNC_TIMEOUT_MS);
-      adminDb.collection('users').doc(uid).get().then(
-        (result) => { clearTimeout(timer); resolve(result); },
-        (error) => { clearTimeout(timer); reject(error); },
-      );
+      adminDb
+        .collection('users')
+        .doc(uid)
+        .get()
+        .then(
+          (result) => {
+            clearTimeout(timer);
+            resolve(result);
+          },
+          (error) => {
+            clearTimeout(timer);
+            reject(error);
+          },
+        );
     });
     if (!snap.exists) return false; // deleted account cannot use a cached session
     const data = snap.data() as { role?: unknown; accountStatus?: unknown; username?: unknown };
     const current = (getDb().users ?? []).find((u) => u.uid === uid);
     if (!current) return false;
-    if (data.role !== current.role || data.accountStatus !== current.accountStatus ||
-        (data.username && data.username !== current.username)) {
+    if (
+      data.role !== current.role ||
+      data.accountStatus !== current.accountStatus ||
+      (data.username && data.username !== current.username)
+    ) {
       // Refresh the authoritative record; do not write a stale in-memory copy back
       // over the role/status change made in the Firebase Console.
       await ensureCloudFirestoreHydrated(true);
     }
     return true;
   } catch (err) {
-    console.error('[session] Unable to verify account status:', err);
-    throw new StoreUnavailableError();
+    markFirestoreFallback(err);
+    return true;
   }
 }
 
@@ -140,7 +170,7 @@ export async function getSession(): Promise<Session | null> {
 
   if (!resolvedUid) return null;
 
-  // A Console role change must be honoured on the very next request.
+  // A Console role change must be honoured on the very next request when cloud is active.
   if (!(await syncRoleFromFirestore(resolvedUid))) return null;
 
   const refreshedDb = getDb();

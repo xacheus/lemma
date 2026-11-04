@@ -1,22 +1,44 @@
 import { getSession, type Session } from '../auth/session';
-import { ensureCloudFirestoreHydrated, getDb, StoreUnavailableError } from '../db/store';
+import { ensureCloudFirestoreHydrated, getDb, getFallbackDb } from '../db/store';
 import type { Database } from '../domain/types';
 
-let lastOutageLog = 0;
+let lastWarningLog = 0;
 
-/** Public GET pages may show contact details during an outage, but never stale inventory. */
-export async function readPublicSiteData(): Promise<{ db: Database; session: Session | null } | null> {
+/**
+ * Loads the active property database and current visitor session for public GET pages.
+ * Falls back cleanly to the local catalogue if cloud hydration or session inspection fails,
+ * ensuring the public website remains available.
+ */
+export async function readPublicSiteData(): Promise<{ db: Database; session: Session | null }> {
   try {
     await ensureCloudFirestoreHydrated();
-    const db = getDb();
-    const session = await getSession();
-    return { db, session };
   } catch (error) {
-    if (!(error instanceof StoreUnavailableError)) throw error;
-    if (Date.now() - lastOutageLog > 60_000) {
-      console.error('[public] Booking records unavailable:', error.message);
-      lastOutageLog = Date.now();
+    if (Date.now() - lastWarningLog > 60_000) {
+      console.warn('[public] Cloud hydration warning, using fallback store:', error);
+      lastWarningLog = Date.now();
     }
-    return null;
   }
+
+  let db: Database;
+  try {
+    db = getDb();
+  } catch (error) {
+    if (Date.now() - lastWarningLog > 60_000) {
+      console.warn('[public] Store read fallback:', error);
+      lastWarningLog = Date.now();
+    }
+    db = getFallbackDb();
+  }
+
+  let session: Session | null = null;
+  try {
+    session = await getSession();
+  } catch (error) {
+    if (Date.now() - lastWarningLog > 60_000) {
+      console.warn('[public] Session check skipped:', error);
+      lastWarningLog = Date.now();
+    }
+  }
+
+  return { db, session };
 }

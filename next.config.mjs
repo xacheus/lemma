@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  allowedDevOrigins: ['*.e2b.app'],
   eslint: { ignoreDuringBuilds: true },
   images: {
     remotePatterns: [

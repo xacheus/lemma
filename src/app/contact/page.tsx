@@ -1,16 +1,13 @@
 import Link from 'next/link';
 import { Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import { readPublicSiteData } from '@/lib/public/read-site-data';
-import { SiteUnavailable } from '@/components/public/site-unavailable';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ContactPage() {
-  const state = await readPublicSiteData();
-  if (!state) return <SiteUnavailable />;
-  const { db, session } = state;
+  const { db, session } = await readPublicSiteData();
   const { property, payments } = db.settings;
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
 
