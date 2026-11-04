@@ -1,9 +1,10 @@
 import { apiRoute, HttpError } from '@/lib/api/http';
 import { ensureCloudFirestoreHydrated, getDb, runAtomicTransaction } from '@/lib/db/store';
 import { paginateRecords } from '@/lib/db/pagination';
-import { uploadMediaAsset } from '@/lib/cloudinary/server';
+import { CLOUDINARY_CLOUD_NAME, isCloudinaryConfigured, uploadMediaAsset } from '@/lib/cloudinary/server';
 import { registerMediaRecord } from '@/lib/domain/operations';
 import { buildSnapshot } from '@/lib/api/snapshot';
+import type { Session } from '@/lib/auth/session';
 import type { MediaCategory } from '@/lib/domain/types';
 
 export const runtime = 'nodejs';
@@ -16,6 +17,17 @@ const VALID_CATEGORIES = new Set<MediaCategory>([
   'property_document',
   'brand',
 ]);
+
+function checkUploadPermission(category: MediaCategory, session: Session) {
+  const allowed =
+    category === 'maintenance'
+      ? session.permissions.has('housekeeping.maintenance') || session.permissions.has('media.manage')
+      : category === 'payment_proof'
+        ? session.permissions.has('payments.record') || session.permissions.has('media.manage')
+        : session.permissions.has('media.manage') ||
+          ((category === 'apartment' || category === 'brand') && session.permissions.has('apartments.manage'));
+  if (!allowed) throw new HttpError('You cannot upload this type of file.', 403, 'forbidden');
+}
 
 export const GET = apiRoute({
   permission: 'media.view',
@@ -54,23 +66,27 @@ export const POST = apiRoute({
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
       const rawCategory = String(form.get('category') || 'apartment') as MediaCategory;
-      const category: MediaCategory = VALID_CATEGORIES.has(rawCategory) ? rawCategory : 'apartment';
+      if (!VALID_CATEGORIES.has(rawCategory)) throw new HttpError('Unknown media category.', 422, 'validation');
+      const category = rawCategory;
       const apartmentId = (form.get('apartmentId') as string | null) || null;
       const titlePrefix = String(form.get('title') || '').trim();
       const description = String(form.get('description') || '').trim();
       const isCover = String(form.get('isCover') || '') === 'true';
       const replaceMediaId = (form.get('replaceMediaId') as string | null) || null;
 
-      if (category === 'apartment' || category === 'property_document' || category === 'brand') {
-        if (!session.permissions.has('media.manage') && !session.permissions.has('apartments.manage')) {
-          throw new HttpError('Only administrators can upload apartment or property media.', 403, 'forbidden');
-        }
+      checkUploadPermission(category, session);
+      if (process.env.VERCEL && !isCloudinaryConfigured()) {
+        throw new HttpError('Photograph storage is not connected. Please try again later.', 503, 'media_unavailable');
+      }
+      if (apartmentId && !getDb().apartments.some((apt) => apt.id === apartmentId)) {
+        throw new HttpError('Choose an apartment from the list before uploading.', 422, 'validation');
       }
 
       const files = form.getAll('files').filter((f): f is File => f instanceof File);
       const singleFile = form.get('file');
       if (singleFile instanceof File) files.push(singleFile);
 
+      if (files.length > 24) throw new HttpError('Choose up to 24 files at a time.', 422, 'validation');
       if (!files.length) {
         throw new HttpError('Choose at least one image or PDF file to upload.', 422, 'validation');
       }
@@ -124,7 +140,7 @@ export const POST = apiRoute({
     }
 
     // JSON callback after direct signed upload to Cloudinary `hpxm6znp`
-    const body = (await req.json()) as {
+    const body = ((await req.json()) ?? {}) as {
       url: string;
       thumbnailUrl?: string;
       detailUrl?: string;
@@ -141,8 +157,20 @@ export const POST = apiRoute({
       replaceMediaId?: string | null;
     };
 
+    const category = body.category || 'apartment';
+    if (!VALID_CATEGORIES.has(category)) throw new HttpError('Unknown media category.', 422, 'validation');
+    checkUploadPermission(category, session);
+    if (body.apartmentId && !getDb().apartments.some((apt) => apt.id === body.apartmentId)) {
+      throw new HttpError('Choose an apartment from the list before uploading.', 422, 'validation');
+    }
     if (!body.url || !body.publicId) {
       throw new HttpError('url and publicId are required.', 422, 'validation');
+    }
+    const folder = `lemma_apartments/${category}${body.apartmentId ? `/${body.apartmentId}` : ''}/`;
+    const expectedOrigin = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/`;
+    if (!body.url.startsWith(expectedOrigin) || !body.url.includes('/upload/') ||
+        !body.publicId.startsWith(folder)) {
+      throw new HttpError('The uploaded file does not match this property and category.', 422, 'validation');
     }
 
     return runAtomicTransaction((db) => {
@@ -151,9 +179,9 @@ export const POST = apiRoute({
         thumbnailUrl: body.thumbnailUrl || body.url,
         detailUrl: body.detailUrl || body.url,
         publicId: body.publicId,
-        storageProvider: body.url.includes('res.cloudinary.com') ? 'cloudinary' : 'local',
+        storageProvider: 'cloudinary',
         mediaType: body.mimeType === 'application/pdf' ? 'document' : 'image',
-        category: body.category || 'apartment',
+        category,
         title: body.title || 'Uploaded Asset',
         description: body.description || '',
         apartmentId: body.apartmentId ?? null,

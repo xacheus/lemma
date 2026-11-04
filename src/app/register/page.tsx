@@ -141,15 +141,16 @@ export default function RegisterPage() {
           <div className="mt-8 overflow-hidden rounded-md ring-1 ring-white/15">
             <PhotoFrame
               src="/images/apartments/apt-01/01.jpg"
-              alt="Lemma Apartments interior"
+              alt="Representative apartment interior"
               ratio="16 / 8"
               variant="detail"
             />
           </div>
+          <p className="mt-2 text-[0.72rem] text-navy-200">Representative stock photograph · Not of the property</p>
         </div>
 
         <p className="flex items-center gap-2 text-[0.74rem] text-navy-300">
-          <Shield size={13} /> All newly registered accounts are provisioned with standard guest permissions.
+          <Shield size={13} /> Your account is private. Only authorised staff can access booking records.
         </p>
       </div>
 

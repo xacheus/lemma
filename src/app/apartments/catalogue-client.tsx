@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Bath, BedDouble, Building2, CheckCircle2, Maximize2, Phone, Search, Users, XCircle } from 'lucide-react';
 import type { Apartment } from '@/lib/domain/types';
+import { addISO } from '@/lib/domain/dates';
+import { isSampleListing } from '@/lib/domain/sample-listings';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { PhotoFrame } from '@/components/ui/photo';
-import { Reveal } from '@/components/ui/motion';
+import { isRepresentativeImage } from '@/lib/cloudinary/urls';
 
 interface CatalogueUnit {
   apartment: Apartment;
@@ -70,17 +72,16 @@ export function ApartmentsCatalogueClient({
           jumping here puts the date pickers under the reader instead of the page title. */}
       <div id="availability" className="animate-fade-up scroll-mt-24">
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
-          Live Inventory &amp; ZMW Rates
+          Apartments &amp; rates
         </p>
         <h1 className="mt-1 text-[1.85rem] font-bold tracking-tight text-navy-900">
           Serviced Apartments &amp; Availability
         </h1>
         {publishedTotal > 0 ? (
           <p className="mt-1.5 text-[0.9rem] text-navy-600">
-            Showing real-time availability for {initialCheckIn} to {initialCheckOut} ({units[0]?.nights ?? 1}{' '}
-            {(units[0]?.nights ?? 1) === 1 ? 'night' : 'nights'}). {availableCount} of{' '}
-            {filtered.length} {filtered.length === 1 ? 'apartment' : 'apartments'} available for
-            immediate booking.
+            For {initialCheckIn} to {initialCheckOut}, {availableCount} of {filtered.length}{' '}
+            {filtered.length === 1 ? 'apartment is' : 'apartments are'} available to enquire about.
+            Reception confirms your dates and final quote.
           </p>
         ) : (
           <p className="mt-1.5 text-[0.9rem] text-navy-600">
@@ -88,6 +89,12 @@ export function ApartmentsCatalogueClient({
             your dates and hold it for you.
           </p>
         )}
+        {units.some((u) => isSampleListing(u.apartment)) ? (
+          <p className="mt-2 text-[0.8rem] text-navy-600">
+            Example listings need confirmation from reception before you book or pay. Photos marked
+            representative are stock images, not photographs of these apartments.
+          </p>
+        ) : null}
       </div>
 
       {/* Filter & Availability Bar */}
@@ -104,7 +111,11 @@ export function ApartmentsCatalogueClient({
             type="date"
             min={today}
             value={checkIn}
-            onChange={(e) => setCheckIn(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCheckIn(next);
+              if (checkOut <= next) setCheckOut(addISO(next, 1));
+            }}
             className="field"
             required
           />
@@ -225,6 +236,11 @@ export function ApartmentsCatalogueClient({
                   ratio="16 / 10"
                   variant="card"
                 />
+                {isRepresentativeImage(apt.coverPhoto || apt.photos[0]) ? (
+                  <span className="absolute bottom-3 left-3 rounded bg-charcoal-950/75 px-2 py-1 text-[0.65rem] text-white">
+                    Representative photo
+                  </span>
+                ) : null}
                 <span
                   className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[0.7rem] font-semibold ${
                     item.isAvailable
@@ -250,7 +266,7 @@ export function ApartmentsCatalogueClient({
 
               <div className="flex flex-1 flex-col p-5">
                 <div className="flex items-center justify-between text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-lemma-dark">
-                  <span>{APARTMENT_TIER_LABELS[apt.tier] || apt.tier}</span>
+                  <span>{APARTMENT_TIER_LABELS[apt.tier] || apt.tier}{isSampleListing(apt) ? ' · Example listing' : ''}</span>
                   <span>
                     Floor {apt.floor === 0 ? 'Ground' : apt.floor} · {apt.code}
                   </span>

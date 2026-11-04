@@ -19,6 +19,8 @@ import type { Apartment, Settings } from '@/lib/domain/types';
 import type { PaymentMethod } from '@/lib/domain/types';
 import { calculateStayPricing } from '@/lib/domain/pricing';
 import { formatKwacha } from '@/lib/domain/money';
+import { addISO } from '@/lib/domain/dates';
+import { isSampleListing } from '@/lib/domain/sample-listings';
 
 interface MethodView {
   id: PaymentMethod;
@@ -50,6 +52,7 @@ interface BookingResult {
   nights: number;
   totalAmount: number;
   depositDue: number;
+  sample: boolean;
   depositPercent: number;
   apartmentName: string;
   apartmentNumber: number;
@@ -96,6 +99,7 @@ export function ApartmentBookingWidget({
     [settings.payments.methods],
   );
 
+  const sample = isSampleListing(apartment);
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [guestCount, setGuestCount] = useState(initialGuests);
@@ -248,7 +252,11 @@ export function ApartmentBookingWidget({
             type="date"
             min={today}
             value={checkIn}
-            onChange={(e) => setCheckIn(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCheckIn(next);
+              if (checkOut <= next) setCheckOut(addISO(next, 1));
+            }}
             className="field"
             required
           />
@@ -260,7 +268,7 @@ export function ApartmentBookingWidget({
           <input
             id="bw-out"
             type="date"
-            min={checkIn}
+            min={addISO(checkIn, 1)}
             value={checkOut}
             onChange={(e) => setCheckOut(e.target.value)}
             className="field"
@@ -351,15 +359,23 @@ export function ApartmentBookingWidget({
             <span>Total ZMW</span>
             <span>{formatKwacha(pricing.totalAmount)}</span>
           </div>
-          <div className="flex justify-between text-[0.76rem] text-navy-500">
-            <span>Deposit to confirm ({pricing.depositPercent}%)</span>
-            <span>{formatKwacha(pricing.depositRequired)}</span>
-          </div>
+          {!sample ? (
+            <div className="flex justify-between text-[0.76rem] text-navy-500">
+              <span>Deposit to confirm ({pricing.depositPercent}%)</span>
+              <span>{formatKwacha(pricing.depositRequired)}</span>
+            </div>
+          ) : (
+            <p className="text-[0.77rem] text-navy-600">Indicative quote only. Reception will confirm the actual unit and rate before payment.</p>
+          )}
         </div>
       ) : null}
 
       {/* ---- payment method: the instructions change as soon as one is chosen ---- */}
-      {methods.length > 0 ? (
+      {sample ? (
+        <p className="border-t border-sand-200 pt-3 text-[0.79rem] text-navy-600">
+          Send an enquiry now. Reception will confirm the unit and payment details before you pay.
+        </p>
+      ) : methods.length > 0 ? (
         <fieldset className="border-t border-sand-200 pt-3">
           <legend className="label mb-1.5 block">
             {locked ? 'Payment method' : 'How will you pay?'}
@@ -498,13 +514,15 @@ export function ApartmentBookingWidget({
 
       <button
         type="submit"
-        disabled={busy || availState !== 'available' || !method}
+        disabled={busy || availState !== 'available' || (!sample && !method)}
         className="btn btn-primary w-full justify-center py-2.5"
       >
-        {busy ? 'Submitting booking…' : `Book now${pricing.totalAmount > 0 ? ` · ${formatKwacha(pricing.totalAmount)}` : ''}`}
+        {busy ? 'Sending request…' : sample ? 'Send enquiry' : `Book now${pricing.totalAmount > 0 ? ` · ${formatKwacha(pricing.totalAmount)}` : ''}`}
       </button>
       <p className="text-center text-[0.72rem] leading-relaxed text-navy-400">
-        You will get the payment details and an upload box for your receipt straight away.
+        {sample
+          ? 'No payment is needed until reception confirms the actual unit and final price.'
+          : 'You will get payment details and an upload box for your receipt straight away.'}
       </p>
     </form>
   );
@@ -549,6 +567,7 @@ function BookingConfirmation({
   // A guest without an account can still submit proof here; the claim is tied to the
   // booking. Choosing a different channel asks the server for that channel's details.
   useEffect(() => {
+    if (booking.sample && booking.status === 'inquiry') return;
     if (booking.payment?.method === method) {
       setInstructions(booking.payment);
       return;
@@ -585,13 +604,13 @@ function BookingConfirmation({
     return () => {
       cancelled = true;
     };
-  }, [method, booking.id, booking.payment]);
+  }, [method, booking.id, booking.payment, booking.sample, booking.status]);
 
   async function pickProof(file: File | null) {
     setProofError(null);
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setProofError('That file is over 5 MB. Take a smaller screenshot.');
+    if (file.size > 500 * 1024) {
+      setProofError('That file is over 500 KB. Use a smaller screenshot, or submit the transaction reference without an attachment.');
       return;
     }
     if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type)) {
@@ -657,6 +676,31 @@ function BookingConfirmation({
 
   const shown = instructions ?? booking.payment;
 
+  if (booking.sample && booking.status === 'inquiry') {
+    return (
+      <div className="card sticky top-24 space-y-4 p-5 sm:p-6">
+        <CheckCircle2 size={22} className="text-st-available" />
+        <h2 className="text-[1.15rem] font-semibold text-navy-900">Enquiry received</h2>
+        <p className="text-[0.86rem] leading-relaxed text-navy-700">
+          Your reference is <strong>{booking.reference}</strong>. The apartment shown is an example:
+          reception will confirm the actual unit, dates and final rate before you pay.
+          Please do not send a deposit yet.
+        </p>
+        {prefillUser ? (
+          <Link href="/account" className="btn btn-primary justify-center">View my account</Link>
+        ) : (
+          <Link href="/contact" className="btn btn-primary justify-center">Contact reception</Link>
+        )}
+        {waDigits ? (
+          <a href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello, please confirm my enquiry ${booking.reference}.`)}`}
+            target="_blank" rel="noreferrer" className="btn btn-secondary justify-center">
+            <MessageCircle size={15} /> Ask on WhatsApp
+          </a>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="card sticky top-24 space-y-4 p-5 sm:p-6">
       <div className="flex items-start gap-2">
@@ -696,8 +740,8 @@ function BookingConfirmation({
                   Create an account to track it
                 </Link>
                 <p className="text-center text-[0.74rem] text-navy-500">
-                  Register with <strong>{booking.reference}</strong> handy — we match your booking by
-                  the phone or email you booked with.
+                  Keep <strong>{booking.reference}</strong> handy. Verify your email to connect
+                  earlier visitor bookings to your new account.
                 </p>
               </>
             )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { ZodType } from 'zod';
+import { ZodError, type ZodType } from 'zod';
 import { getSession, SESSION_COOKIE, SESSION_MAX_AGE, type Session } from '../auth/session';
+import { StoreUnavailableError } from '../db/store';
 import { OperationError } from '../domain/operations';
 import type { PermissionKey, Role } from '../domain/types';
 import { describeMissing } from '../domain/permissions';
@@ -32,7 +33,7 @@ interface RouteOptions {
 }
 
 function errorResponse(error: unknown) {
-  if (error instanceof OperationError || error instanceof HttpError) {
+  if (error instanceof OperationError || error instanceof HttpError || error instanceof StoreUnavailableError) {
     return NextResponse.json(
       {
         ok: false,
@@ -43,6 +44,14 @@ function errorResponse(error: unknown) {
       { status: error.status },
     );
   }
+  if (error instanceof ZodError) {
+    return NextResponse.json({
+      ok: false,
+      error: error.issues[0]?.message ?? 'Please check the details and try again.',
+      code: 'validation',
+      details: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
+    }, { status: 422 });
+  }
   if (error instanceof SyntaxError) {
     return NextResponse.json({ ok: false, error: 'The request body was not valid JSON.', code: 'malformed' }, { status: 400 });
   }
@@ -52,7 +61,8 @@ function errorResponse(error: unknown) {
       ok: false,
       error: 'The server could not complete that action. Nothing was saved.',
       code: 'server_error',
-      details: error instanceof Error ? error.message : undefined,
+      // Never expose stack traces or infrastructure details in public responses.
+      details: undefined,
     },
     { status: 500 },
   );

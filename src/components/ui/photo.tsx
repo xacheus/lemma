@@ -1,8 +1,8 @@
 'use client';
 
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { optimizeImageUrl, type ImageVariant } from '@/lib/cloudinary/urls';
+import { optimizeImageUrl, representativePhotoUrl, type ImageVariant } from '@/lib/cloudinary/urls';
 
 export function PhotoFrame({
   src,
@@ -22,31 +22,39 @@ export function PhotoFrame({
   variant?: ImageVariant;
 }) {
   const imgRef = useRef<HTMLImageElement>(null);
-  const resolvedSrc = optimizeImageUrl(src, variant);
+  const localSrc = optimizeImageUrl(src, variant);
+  const remoteSrc = representativePhotoUrl(src, variant);
+  const [remoteFailed, setRemoteFailed] = useState(false);
   const [state, setState] = useState<'unknown' | 'loaded' | 'missing'>('unknown');
 
   useEffect(() => {
     setState('unknown');
+    setRemoteFailed(false);
     const el = imgRef.current;
-    if (el && el.complete && el.naturalWidth > 0) {
-      setState('loaded');
-    }
-  }, [resolvedSrc]);
+    if (el && el.complete && el.naturalWidth > 0) setState('loaded');
+  }, [localSrc]);
 
+  const imageSrc = !remoteFailed && remoteSrc ? remoteSrc : localSrc;
   const ready = state === 'loaded';
 
   return (
     <div className={`photo-frame w-full ${className}`} style={{ aspectRatio: ratio }}>
-      {resolvedSrc && state !== 'missing' ? (
+      {imageSrc && state !== 'missing' ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          key={imageSrc}
           ref={imgRef}
-          src={resolvedSrc}
+          src={imageSrc}
           alt={alt}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
           onLoad={() => setState('loaded')}
-          onError={() => setState('missing')}
+          onError={() => {
+            if (remoteSrc && !remoteFailed) {
+              setRemoteFailed(true);
+              setState('unknown');
+            } else setState('missing');
+          }}
           className={`transition-opacity duration-200 ${ready ? 'opacity-100' : 'opacity-0'}`}
         />
       ) : null}
@@ -81,24 +89,51 @@ export function PhotoStrip({
   const list = photos.length ? photos : [''];
   const [active, setActive] = useState(0);
   const idx = Math.min(active, list.length - 1);
+  const current = list[idx];
+  const representative = Boolean(representativePhotoUrl(current, 'thumbnail'));
+
   return (
-    <div className="space-y-2">
-      <PhotoFrame
-        src={list[idx] || undefined}
-        alt={alt}
-        ratio={ratio}
-        variant="detail"
-        caption={captions?.[idx]}
-      />
+    <div className="space-y-3">
+      <div className="relative overflow-hidden rounded-md">
+        <PhotoFrame
+          src={current || undefined}
+          alt={representative ? `Representative photo for ${alt}` : alt}
+          ratio={ratio}
+          variant="detail"
+          caption={captions?.[idx]}
+        />
+        {list.length > 1 ? (
+          <div className="absolute inset-x-3 top-1/2 flex -translate-y-1/2 justify-between">
+            {([-1, 1] as const).map((direction) => (
+              <button
+                type="button"
+                key={direction}
+                aria-label={direction === -1 ? 'Previous photograph' : 'Next photograph'}
+                onClick={() => setActive((i) => (i + direction + list.length) % list.length)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-charcoal-950/70 text-white transition-colors hover:bg-charcoal-950"
+              >
+                {direction === -1 ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
       {list.length > 1 ? (
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
-          {list.slice(0, 10).map((p, i) => (
+        <div className="flex items-center justify-between gap-2 text-[0.75rem] text-navy-500">
+          <span>{captions?.[idx] || `${alt} · photograph ${idx + 1}`}</span>
+          <span className="shrink-0 tabular-nums">{idx + 1} / {list.length}</span>
+        </div>
+      ) : null}
+      {list.length > 1 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label={`${alt} photographs`}>
+          {list.map((p, i) => (
             <button
               key={`${p}-${i}`}
               type="button"
               onClick={() => setActive(i)}
-              aria-label={`Show photograph ${i + 1}`}
-              className={`overflow-hidden rounded-md ring-2 transition ${
+              aria-label={`Show photograph ${i + 1} of ${list.length}`}
+              aria-current={i === idx ? 'true' : undefined}
+              className={`w-[5.5rem] shrink-0 overflow-hidden rounded-md ring-2 transition sm:w-[6.5rem] ${
                 i === idx ? 'ring-navy-800' : 'ring-transparent opacity-80 hover:opacity-100'
               }`}
             >
@@ -106,6 +141,11 @@ export function PhotoStrip({
             </button>
           ))}
         </div>
+      ) : null}
+      {photos.some((p) => Boolean(representativePhotoUrl(p, 'thumbnail'))) ? (
+        <p className="text-[0.76rem] text-navy-500">
+          Photos are representative, not taken at this property. Ask reception for current apartment photographs.
+        </p>
       ) : null}
     </div>
   );

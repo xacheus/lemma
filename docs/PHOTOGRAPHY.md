@@ -1,56 +1,63 @@
-# Photography
+# Apartment photography
 
-The product is built around real apartment photography. **No images are shipped in this repository and none are invented** — every frame you see is a correctly-sized placeholder waiting for the file named in its caption.
+The three original example listings have **six interior photographs each**. These are
+real Pexels stock photographs, **not photographs of Lemma Apartments**. Guest-facing
+pages label the images as representative and label the original units as example
+listings; the displayed features, rates, and inventory should be confirmed with
+reception before a guest pays. Do not claim that a stock room is at the property.
 
-## Where files go
+## Sources and reuse terms
 
-```
-public/images/
-├── lobby.jpg                      sign-in screen side panel (16 / 7)
-├── hero/
-│   ├── home-1.jpg                 public home page hero (21 / 9)
-│   └── home-2.jpg                 secondary hero tile (4 / 3)
-├── apartments/
-│   └── apt-01/ … apt-NN/
-│       ├── 01.jpg                 primary card image — 16 / 10
-│       ├── 02.jpg … 05.jpg        gallery frames — 4 / 3
-├── property/
-│   ├── exterior.jpg               3 / 2
-│   ├── kitchen.jpg                4 / 3
-│   └── amenities/*.jpg            1 / 1
-└── og/
-    └── share.jpg                  1200 × 630 social card
-```
+The photographs below came from [Pexels](https://www.pexels.com/). The
+[Pexels License](https://www.pexels.com/license/) permits free personal and
+commercial use, including edits, without mandatory attribution. It prohibits
+selling unaltered copies as stock or implying that people or brands in an image
+endorse the property. Source links are retained here for provenance and photographer
+credit. Review the license if the usage changes.
 
-Apartment folders are zero-padded to two digits. Each apartment's `photos` array holds the paths in display order, and the admin UI (Apartments → Edit → *Photograph paths*, one path per line) is how you change them — no code edit needed. The `PhotoFrame` component listens for a failed load and quietly swaps back to the placeholder, so adding a file is the whole deployment: drop it in the folder, refresh, done.
+| Local photograph | Pexels photograph |
+| --- | --- |
+| `/images/apartments/apt-01/01.jpg` | [Photo 26571206](https://www.pexels.com/photo/26571206/) |
+| `/images/apartments/apt-01/02.jpg` | [Photo 7166561](https://www.pexels.com/photo/7166561/) |
+| `/images/apartments/apt-01/03.jpg` | [Photo 6447393](https://www.pexels.com/photo/6447393/) |
+| `/images/apartments/apt-01/04.jpg` | [Photo 7512042](https://www.pexels.com/photo/7512042/) |
+| `/images/apartments/apt-01/05.jpg` | [Photo 6207941](https://www.pexels.com/photo/6207941/) |
+| `/images/apartments/apt-01/06.jpg` | [Photo 23985794](https://www.pexels.com/photo/23985794/) |
+| `/images/apartments/apt-02/01.jpg` | [Photo 6489119](https://www.pexels.com/photo/6489119/) |
+| `/images/apartments/apt-02/02.jpg` | [Photo 29252557](https://www.pexels.com/photo/29252557/) |
+| `/images/apartments/apt-02/03.jpg` | [Photo 7533919](https://www.pexels.com/photo/7533919/) |
+| `/images/apartments/apt-02/04.jpg` | [Photo 7147294](https://www.pexels.com/photo/7147294/) |
+| `/images/apartments/apt-02/05.jpg` | [Photo 7587806](https://www.pexels.com/photo/7587806/) |
+| `/images/apartments/apt-02/06.jpg` | [Photo 7534295](https://www.pexels.com/photo/7534295/) |
+| `/images/apartments/apt-03/01.jpg` | [Photo 6585598](https://www.pexels.com/photo/6585598/) |
+| `/images/apartments/apt-03/02.jpg` | [Photo 7195856](https://www.pexels.com/photo/7195856/) |
+| `/images/apartments/apt-03/03.jpg` | [Photo 10099254](https://www.pexels.com/photo/10099254/) |
+| `/images/apartments/apt-03/04.jpg` | [Photo 29252560](https://www.pexels.com/photo/29252560/) |
+| `/images/apartments/apt-03/05.jpg` | [Photo 6265836](https://www.pexels.com/photo/6265836/) |
+| `/images/apartments/apt-03/06.jpg` | [Photo 20534251](https://www.pexels.com/photo/20534251/) |
 
-## Sizing
+The app requests higher-resolution versions from Pexels for browsers with internet
+access, with the smaller checked-in JPEGs as offline fallbacks. The original generated-
+looking interiors and banner have been removed. No guest, vehicle, or document images
+are included in the stock gallery.
 
-| Use | Aspect | Minimum width | Notes |
-| --- | --- | --- | --- |
-| Card / list primary | 16 / 10 | 1600 px | Cropped by CSS (`object-cover`), so keep the subject centred |
-| Gallery | 4 / 3 | 1600 px | One image per feature: bedroom, bathroom, kitchen, view |
-| Hero | 21 / 9 | 2400 px | Darker left third for headline legibility; no text burned in |
-| Social / print header | 1200 × 630 | — | Safe margin of 60 px |
+## Replacing these with property photographs
 
-Export as `.jpg`, quality 80, sRGB, no GPS/EXIF beyond orientation. Target under 400 KB per file; the placeholder frames assume a 3-second load budget on Lusaka 4G.
+1. Photograph each actual apartment (living room, bedrooms, bathrooms, kitchen,
+   entrance, and useful facilities) with permission from the property owner. Do not
+   include guests, vehicle plates, IDs, or paperwork; remove location/EXIF metadata.
+2. From **Admin → Apartments → [unit] → Photographs**, add the images in the correct
+   order and choose a cover. Alternatively use **Admin → Media Library** and assign
+   each upload to the unit. JPEG/PNG/WebP images up to 10 MB are supported, 24 per
+   upload. Images should ideally be at least 1600 px wide for room detail.
+3. Check the live public page. The example-listing marker is tied to the original
+   sample unit IDs. If the listing is now a verified real unit, create its real
+   inventory record and unpublish the old example rather than treating new photos as
+   proof that the old example's rate, location, layout, and features are accurate.
+4. In production, connect signed Cloudinary storage first. A serverless deployment
+   without photo storage rejects new uploads; it must not store them on temporary disk.
+   Local development may use the `.data/media` fallback.
 
-## What to shoot (property list)
-
-For each unit, in this order — the sequence is what the gallery slots expect:
-
-1. **Wide entry shot** from the doorway, showing the living space and the window
-2. **Bedroom**, lights on, bed dressed, no personal items
-3. **Bathroom**, towels folded, mirror clean
-4. **Kitchen / kitchenette**, counters empty
-5. **The view or balcony** (only genuinely available on floors 1–2 and the penthouse)
-
-Plus property-wide: facade from the pavement at dusk, gate and parking, lobby/reception, laundry, backup power and borehole plant (guests ask about load-shedding and water), and one human-scale shot (staff member at the desk, hand over keys) for trust.
-
-## Handling guest images
-
-Never publish a photograph that shows a guest, their vehicle plate, or documents on a desk. When a unit is photographed between stays, remove or blur anything left behind rather than showing it.
-
-## Placeholder behaviour, on purpose
-
-`PhotoFrame` renders a soft sand-toned frame with a hairline grid, the alt text and a caption — "Property photograph — to be supplied". It is deliberately visible so the gap reads as *pending*, not as a broken build. The layout, ratios and cropping are final, so real images drop in without touching any component.
+Until verified property photos are supplied, keep the representative-photo disclosure
+visible. If an image fails to load, the page shows a neutral frame, not a replacement
+image masquerading as the apartment.

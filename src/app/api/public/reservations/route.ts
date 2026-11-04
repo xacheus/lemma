@@ -3,6 +3,7 @@ import { publicBookingSchema } from '@/lib/api/schemas';
 import { runAtomicTransaction } from '@/lib/db/store';
 import { createReservation, paymentQuote } from '@/lib/domain/operations';
 import { take } from '@/lib/api/rate-limit';
+import { isSampleListing } from '@/lib/domain/sample-listings';
 import { getSession } from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
        * the reference. Nothing is charged here; the guest pays outside the site and
        * submits the proof for verification.
        */
+      const sample = isSampleListing(db.apartments.find((a) => a.id === reservation.apartmentId)!);
       const quote = paymentQuote(db, reservation);
       const chosen =
         quote.methods.find((m) => m.id === input.paymentMethod) ?? quote.methods[0] ?? null;
@@ -75,7 +77,8 @@ export async function POST(req: Request) {
         checkOut: reservation.checkOut,
         nights: reservation.nights,
         totalAmount: reservation.totalAmount,
-        depositDue: Math.round((reservation.totalAmount * db.settings.booking.depositPercent) / 100),
+        depositDue: sample ? 0 : Math.round((reservation.totalAmount * db.settings.booking.depositPercent) / 100),
+        sample,
         apartmentName: db.apartments.find((a) => a.id === reservation.apartmentId)?.name ?? '',
         apartmentNumber: db.apartments.find((a) => a.id === reservation.apartmentId)?.number ?? 0,
         depositPercent: db.settings.booking.depositPercent,
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
         checkOutTime: db.settings.booking.checkOutTime,
         contactPhone: db.settings.property.phone,
         contactWhatsapp: db.settings.property.whatsapp,
-        payment: chosen
+        payment: chosen && !sample
           ? {
               method: chosen.id,
               label: chosen.label,
@@ -97,7 +100,7 @@ export async function POST(req: Request) {
               proofUploadEnabled: quote.proofUploadEnabled,
             }
           : null,
-        methods: quote.methods.map((m) => ({ id: m.id, label: m.label })),
+        methods: sample ? [] : quote.methods.map((m) => ({ id: m.id, label: m.label })),
       };
     });
 
@@ -113,7 +116,7 @@ export async function POST(req: Request) {
         code: err.code ?? 'server_error',
         ...(err.details ? { details: err.details } : {}),
       },
-      { status: status >= 400 && status < 500 ? status : 500 },
+      { status: status >= 400 && status <= 503 ? status : 500 },
     );
   }
 }

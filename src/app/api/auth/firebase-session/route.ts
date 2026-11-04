@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { sessionToken } from '@/lib/auth/session';
 import { readBody, sessionCookie } from '@/lib/api/http';
 import { firebaseSessionSchema } from '@/lib/api/schemas';
-import { ensureCloudFirestoreHydrated, runAtomicTransaction } from '@/lib/db/store';
+import { ensureCloudFirestoreHydrated, runAtomicTransaction, StoreUnavailableError } from '@/lib/db/store';
 import { ensureProfileForFirebaseUser } from '@/lib/domain/production-ops';
 import { OperationError } from '@/lib/domain/operations';
 import { getAdminAuth, isFirebaseAdminConfigured, syncFirebaseRoleClaims } from '@/lib/firebase/admin';
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     response.cookies.set(sessionCookie(sessionToken(user.uid, user.sessionVersion ?? 1)));
     return response;
   } catch (error: unknown) {
-    if (error instanceof OperationError) {
+    if (error instanceof OperationError || error instanceof StoreUnavailableError) {
       return NextResponse.json(
         { ok: false, error: error.message, code: error.code },
         { status: error.status },

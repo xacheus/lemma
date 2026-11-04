@@ -23,7 +23,8 @@ export const GET = publicRoute(async ({ params, search, session }) => {
   const allowedByOwner = Boolean(
     session &&
       (quotation.userId === session.uid ||
-        (quotation.customerEmail &&
+        (db.users?.some((u) => u.uid === session.uid && u.emailVerified) &&
+          quotation.customerEmail &&
           quotation.customerEmail.toLowerCase() === session.user.email.toLowerCase())),
   );
 

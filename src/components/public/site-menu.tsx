@@ -18,7 +18,8 @@ import {
   MessageCircle,
   Phone,
   ShieldCheck,
-  Sparkles,
+  Info,
+  SprayCan,
   User,
   UserRound,
   X,
@@ -58,8 +59,8 @@ const PUBLIC_LINKS: MenuLink[] = [
   { href: '/apartments', label: 'Apartments', icon: Building2, note: 'Every unit, with photographs' },
   { href: '/apartments#availability', label: 'Check availability', icon: CalendarDays, note: 'Pick your dates' },
   { href: '/account', label: 'My bookings', icon: CalendarCheck, note: 'Stays, receipts and balances' },
-  { href: '/about', label: 'About us', icon: Sparkles },
-  { href: '/contact', label: 'Contact', icon: MapPin, note: 'Barlaston Park, Lusaka' },
+  { href: '/about', label: 'About us', icon: Info },
+  { href: '/contact', label: 'Contact', icon: MapPin, note: 'Lusaka, Zambia' },
 ];
 
 const GUEST_EXTRA: MenuLink[] = [
@@ -141,7 +142,7 @@ export function SiteMenu({
       staffLinks.push({
         href: '/portal/cleaning',
         label: 'Cleaning dashboard',
-        icon: Sparkles,
+        icon: SprayCan,
         note: 'Your turnovers for today',
       });
     } else {

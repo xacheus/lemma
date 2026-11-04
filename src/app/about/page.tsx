@@ -29,7 +29,7 @@ export default async function AboutPage() {
               About {property.name}
             </p>
             <h1 className="mt-2 text-[2rem] font-bold leading-tight tracking-tight text-navy-900">
-              Apartments to stay in, run by the people who own them.
+              Find a comfortable place to stay in Lusaka.
             </h1>
             <p className="mt-4 text-[0.94rem] leading-relaxed text-navy-600">
               {property.name} is at {property.addressLine} in {property.city},{' '}
@@ -37,15 +37,13 @@ export default async function AboutPage() {
               {publishedCount > 0
                 ? `${publishedCount} furnished ${publishedCount === 1 ? 'apartment' : 'apartments'}`
                 : 'furnished apartments'}{' '}
-              night by night, from a compact studio to a two-bedroom family unit. There is no
-              booking agent in the middle: reception takes the booking, housekeeping turns the
-              apartment, and the same people answer the phone when something needs fixing.
+              night by night. Browse the available apartments, then speak to reception to confirm
+              the layout and dates for your stay.
             </p>
             <p className="mt-3 text-[0.94rem] leading-relaxed text-navy-600">
-              Most of our guests are in Lusaka for work, for family, or while a house is being
-              finished. People who want a kitchen, a reliable internet connection and a quiet
-              place to sleep rather than a hotel lobby. Rates are quoted and paid in Kwacha, and
-              every payment you make is receipted against your booking.
+              Looking for a kitchen and room to settle in while you are in Lusaka? Explore the
+              available options and ask reception about the amenities, rate and payment terms
+              for your dates.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -65,21 +63,21 @@ export default async function AboutPage() {
             <div className="sm:col-span-2">
               <PhotoFrame
                 src="/images/apartments/apt-02/01.jpg"
-                alt="Living room of a one-bedroom apartment"
+                alt="Representative apartment living room"
                 ratio="16 / 9"
                 variant="detail"
-                caption="Illustrative interior. Replace with property photography."
+                caption="Representative photography"
               />
             </div>
             <PhotoFrame
               src="/images/apartments/apt-02/02.jpg"
-              alt="Bedroom"
+              alt="Representative apartment bedroom"
               ratio="4 / 3"
               variant="card"
             />
             <PhotoFrame
               src="/images/apartments/apt-03/01.jpg"
-              alt="Family apartment living and dining area"
+              alt="Representative living and dining area"
               ratio="4 / 3"
               variant="card"
             />

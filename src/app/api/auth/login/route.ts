@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sessionToken } from '@/lib/auth/session';
-import { runAtomicTransaction } from '@/lib/db/store';
+import { runAtomicTransaction, StoreUnavailableError } from '@/lib/db/store';
 import { HttpError, readBody, sessionCookie } from '@/lib/api/http';
 import { loginSchema } from '@/lib/api/schemas';
 import { authenticateAccount, OperationError } from '@/lib/domain/operations';
@@ -46,11 +46,12 @@ export async function POST(req: Request) {
 
     const user = await runAtomicTransaction((db) => {
       if (firebaseUid) {
-        const found = (db.users ?? []).find(
-          (u) => u.uid === firebaseUid || (firebaseEmail && u.email.toLowerCase() === firebaseEmail.toLowerCase()),
-        );
+        const found = (db.users ?? []).find((u) => u.uid === firebaseUid);
         if (!found) {
           throw new OperationError('User profile not found for this Firebase account.', 404, 'not_found');
+        }
+        if (firebaseEmail && found.email.toLowerCase() !== firebaseEmail.toLowerCase()) {
+          throw new OperationError('Account email does not match. Contact reception.', 403, 'account_conflict');
         }
         if (found.accountStatus !== 'active') {
           throw new OperationError(
@@ -107,7 +108,7 @@ export async function POST(req: Request) {
         { status: 401 },
       );
     }
-    if (error instanceof HttpError || error instanceof OperationError) {
+    if (error instanceof HttpError || error instanceof OperationError || error instanceof StoreUnavailableError) {
       return NextResponse.json(
         { ok: false, error: error.message, code: error.code },
         { status: error.status },

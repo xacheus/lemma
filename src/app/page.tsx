@@ -22,7 +22,8 @@ import { addISO, businessToday } from '@/lib/domain/dates';
 import { searchAvailability } from '@/lib/domain/availability';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { formatKwacha } from '@/lib/domain/money';
-import { isIllustrativeImage } from '@/lib/cloudinary/urls';
+import { isSampleListing } from '@/lib/domain/sample-listings';
+import { isRepresentativeImage } from '@/lib/cloudinary/urls';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
 import { Reveal } from '@/components/ui/motion';
@@ -89,20 +90,15 @@ export default async function HomePage({
         : hit?.available
           ? 'Available for these dates'
           : 'Booked for these dates',
-      illustrative: isIllustrativeImage(photos[0]),
+      representative: isRepresentativeImage(photos[0]),
+      sample: isSampleListing(apt),
     };
   });
 
-  /**
-   * Hero frames: one large interior per published apartment, in the order the
-   * operator set their photographs. The owner replaces these in Admin → Apartments
-   * (cover photograph / gallery order) — nothing here is hard-coded. Units with no
-   * photograph are skipped rather than filled with a stock image.
-   */
+  /** Cycle through the first two gallery photographs of each published apartment. */
   const heroSlides = slides
-    .filter((s) => s.photos.length > 0)
-    .map((s) => ({
-      id: s.id,
+    .flatMap((s) => s.photos.slice(0, 2).map((photo, photoIndex) => ({
+      id: `${s.id}-${photoIndex}`,
       slug: s.slug,
       name: s.name,
       code: s.code,
@@ -111,11 +107,12 @@ export default async function HomePage({
       maxGuests: s.maxGuests,
       bedrooms: s.bedrooms,
       bathrooms: s.bathrooms,
-      photo: s.photos[0],
-      illustrative: s.illustrative,
+      photo,
+      representative: isRepresentativeImage(photo),
+      sample: s.sample,
       available: s.available,
       availabilityNote: s.availabilityNote,
-    }));
+    })));
 
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
   const stayQuery = `checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`;
@@ -148,12 +145,19 @@ export default async function HomePage({
                 <span className="block text-navy-500">you can book by the night.</span>
               </h1>
               <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-navy-600">
-                Apartments at Barlaston Park, Lusaka. Check the dates you need and see the real rate
-                in Kwacha.
+                Find an apartment in Lusaka. Explore options, then confirm the unit and rate
+                with reception before your stay.
               </p>
             </div>
           </section>
         )}
+
+        {published.some(isSampleListing) ? (
+          <div className="border-b border-sand-200 bg-sand-50 px-4 py-3 text-center text-[0.8rem] text-navy-700">
+            Example listings: unit details, availability and rates need confirmation from reception.
+            Photos marked representative are stock images, not photographs of this property.
+          </div>
+        ) : null}
 
         {/* Availability search — directly under the hero, above the fold. */}
         <section className="border-b border-sand-200 bg-white">
@@ -298,9 +302,9 @@ export default async function HomePage({
                               : `Sleeps ${apt.maxGuests}`}
                           </span>
                         </div>
-                        {isIllustrativeImage(cover) ? (
+                        {isRepresentativeImage(cover) ? (
                           <span className="absolute bottom-3 right-3 rounded-sm bg-charcoal-950/70 px-2 py-1 text-[0.62rem] font-medium uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm">
-                            Illustrative image
+                            Representative photo
                           </span>
                         ) : null}
                       </div>
@@ -311,6 +315,7 @@ export default async function HomePage({
                         <span className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-lemma-dark">
                           {apt.code} · {APARTMENT_TIER_LABELS[apt.tier] ?? apt.tier}
                         </span>
+                        {isSampleListing(apt) ? <span className="text-[0.7rem] font-medium text-navy-500">Example listing</span> : null}
                       </div>
                       <Link href={`/apartments/${apt.slug}?${stayQuery}`}>
                         <h3 className="mt-1.5 text-[1.1rem] font-semibold leading-snug text-navy-900 hover:text-lemma-dark">
@@ -369,7 +374,7 @@ export default async function HomePage({
                             href={`/apartments/${apt.slug}?${stayQuery}#book`}
                             className="btn btn-primary flex-1 justify-center py-2 text-[0.8rem]"
                           >
-                            Book now
+                            {isSampleListing(apt) ? 'Send an enquiry' : 'Book now'}
                           </Link>
                         </div>
                       </div>
@@ -426,9 +431,9 @@ export default async function HomePage({
                       ratio={i === 2 ? '16 / 8' : '4 / 3'}
                       variant="card"
                     />
-                    {isIllustrativeImage(photo) ? (
+                    {isRepresentativeImage(photo) ? (
                       <span className="absolute bottom-2 right-2 rounded-sm bg-charcoal-950/70 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.08em] text-white/85">
-                        Illustrative
+                        Representative
                       </span>
                     ) : null}
                   </div>
@@ -529,9 +534,4 @@ export default async function HomePage({
       <PublicFooter property={property} />
     </div>
   );
-}
-
-function formatShort(iso: string): string {
-  const d = new Date(`${iso}T12:00:00Z`);
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }

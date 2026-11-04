@@ -1,27 +1,11 @@
 import type { Apartment } from '../domain/types';
 
 /**
- * Starting catalogue for Lemma Apartments.
- *
- * These three listings exist so a brand-new install has a real, bookable
- * catalogue on the website instead of an empty page. Every one of them is a
- * normal apartment record: the administrator can edit the rate, the copy, the
- * photographs or delete the unit entirely from Admin → Apartments, and the
- * change is live on the public site immediately.
- *
- * The photographs are AI-generated illustrations of the *kind* of interior the
- * property offers — they are not photographs of Barlaston Park. Anything served
- * from `/images/apartments/**` is therefore labelled "Illustrative image" in the
- * interface (see `isIllustrativePhoto` in src/lib/cloudinary/urls.ts). The moment
- * an administrator uploads the owner's real photographs through the media
- * library they are served from Cloudinary and the label disappears.
+ * Starter listings for local development. These are editable records, not verified
+ * property inventory. Photographs here are Pexels stock and must always be disclosed
+ * as representative, never presented as a specific room at the property.
+ * A fresh cloud project starts without these listings.
  */
-
-export const ILLUSTRATIVE_PHOTO_PREFIX = '/images/apartments/';
-
-export function isIllustrativePhoto(url: string | undefined | null): boolean {
-  return Boolean(url && url.startsWith(ILLUSTRATIVE_PHOTO_PREFIX));
-}
 
 interface SeedUnit {
   key: string;
@@ -75,7 +59,7 @@ const UNITS: SeedUnit[] = [
       '24/7 security',
       'Private parking',
     ],
-    photos: ['01.jpg', '02.jpg', '03.jpg'].map((f) => `/images/apartments/apt-01/${f}`),
+    photos: ['01.jpg', '02.jpg', '03.jpg', '04.jpg', '05.jpg', '06.jpg'].map((f) => `/images/apartments/apt-01/${f}`),
   },
   {
     key: 'one_bed',
@@ -109,7 +93,7 @@ const UNITS: SeedUnit[] = [
       'Private parking',
       'In-room safe',
     ],
-    photos: ['01.jpg', '02.jpg', '03.jpg', '04.jpg'].map((f) => `/images/apartments/apt-02/${f}`),
+    photos: ['01.jpg', '02.jpg', '03.jpg', '04.jpg', '05.jpg', '06.jpg'].map((f) => `/images/apartments/apt-02/${f}`),
   },
   {
     key: 'family',
@@ -143,19 +127,18 @@ const UNITS: SeedUnit[] = [
       'Private parking',
       'Step-free access',
     ],
-    photos: ['01.jpg', '02.jpg', '03.jpg'].map((f) => `/images/apartments/apt-03/${f}`),
+    photos: ['01.jpg', '02.jpg', '03.jpg', '04.jpg', '05.jpg', '06.jpg'].map((f) => `/images/apartments/apt-03/${f}`),
   },
 ];
 
-export interface SeededCatalogue {
+export interface StartingCatalogue {
   apartments: Apartment[];
 }
 
 /**
- * Builds the starting units. Called once by the store on a genuinely empty
- * install; the marker it writes means deleting a unit keeps it deleted.
+ * Builds local starting units. The marker prevents deleted units being re-created.
  */
-export function buildIllustrativeCatalogue(now: string): SeededCatalogue {
+export function buildStartingCatalogue(now: string): StartingCatalogue {
   const apartments: Apartment[] = UNITS.map((unit) => ({
     id: `apt-${unit.key}`,
     number: unit.number,
@@ -187,7 +170,7 @@ export function buildIllustrativeCatalogue(now: string): SeededCatalogue {
       url,
       publicId: url.replace(/^\//, ''),
       title: `${unit.name}, photograph ${index + 1}`,
-      description: 'Illustrative interior. Replace with the property’s own photography in Admin → Apartments.',
+      description: 'Representative stock photography, not taken at the property.',
       order: index,
       isCover: index === 0,
       mediaType: 'image' as const,
@@ -196,7 +179,7 @@ export function buildIllustrativeCatalogue(now: string): SeededCatalogue {
     publicationStatus: 'published',
     active: true,
     outOfService: false,
-    houseNotes: 'Illustrative listing created on first run. Edit or delete it from Admin → Apartments.',
+    houseNotes: 'Confirm the rate and unit details with reception before confirming a stay.',
     updatedAt: now,
   }));
   return { apartments };

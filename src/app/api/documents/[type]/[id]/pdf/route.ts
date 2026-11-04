@@ -41,6 +41,9 @@ function ownsGuestOrReservation(
 export const GET = publicRoute(async ({ params, search, session }) => {
   await ensureCloudFirestoreHydrated();
   const db = getDb();
+  const verifiedEmail = session && db.users?.some((u) => u.uid === session.uid && u.emailVerified)
+    ? session.user.email
+    : '';
   const docType = params.type;
   const id = params.id;
   const download = search.get('download') === '1';
@@ -62,7 +65,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       Boolean(shareToken && q.shareToken === shareToken) ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, session.user.email, {
+          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
             userId: q.userId,
             guestId: q.guestId,
             reservationId: q.reservationId,
@@ -81,7 +84,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       isStaff ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, session.user.email, {
+          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
             userId: inv.userId,
             guestId: inv.guestId,
             reservationId: inv.reservationId,
@@ -145,7 +148,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       isStaff ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, session.user.email, {
+          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
             userId: rc.userId,
             guestId: rc.guestId,
             reservationId: rc.reservationId,
@@ -164,7 +167,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       isStaff ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, session.user.email, {
+          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
             userId: r.userId,
             guestId: r.guestId,
             reservationId: r.id,

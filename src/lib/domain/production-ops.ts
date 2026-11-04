@@ -155,12 +155,12 @@ export function registerCustomerAccount(
     profilePhoto: '',
     role: 'guest',
     accountStatus: 'active',
-    emailVerified: false,
+    emailVerified: Boolean(input.firebaseUid),
     createdAt: now,
     updatedAt: now,
     lastLoginAt: now,
     passwordHash: input.password ? hashPassword(input.password) : undefined,
-    emailVerificationToken: verificationToken,
+    emailVerificationToken: input.firebaseUid ? null : verificationToken,
     passwordResetToken: null,
     passwordResetExpiresAt: null,
     sessionVersion: 1,
@@ -168,24 +168,10 @@ export function registerCustomerAccount(
 
   db.users.unshift(user);
 
-  // Link or create Guest CRM profile and bind any matching bookings
-  const guest = findOrCreateGuest(db, {
-    fullName,
-    phone: phoneNumber || email,
-    email,
-    source: 'website',
-  });
-  guest.userId = uid;
-  for (const r of db.reservations) {
-    if (r.guestId === guest.id && !r.userId) {
-      r.userId = uid;
-    }
-  }
-  for (const p of db.payments) {
-    if (p.guestId === guest.id && !p.userId) {
-      p.userId = uid;
-    }
-  }
+  // A new account has not proved ownership of this email or phone yet. Do not
+  // attach any earlier booking by matching contact text: that would let a stranger
+  // register with another guest's email and read their reservation and ID details.
+  // New bookings made while signed in carry the account UID directly.
 
   appendAuditLog(db, {
     category: 'auth',
@@ -284,6 +270,20 @@ export function verifyUserEmailToken(db: Database, token: string): UserRecord {
   user.emailVerified = true;
   user.emailVerificationToken = null;
   user.updatedAt = nowISO();
+  // Email ownership is now proved; link earlier visitor bookings for this address,
+  // but never take a booking that already belongs to another account.
+  const matches = db.guests.filter(
+    (g) => g.email?.toLowerCase() === user.email.toLowerCase() && !g.userId,
+  );
+  for (const guest of matches) {
+    guest.userId = user.uid;
+    for (const booking of db.reservations) {
+      if (booking.guestId === guest.id && !booking.userId) booking.userId = user.uid;
+    }
+    for (const payment of db.payments) {
+      if (payment.guestId === guest.id && !payment.userId) payment.userId = user.uid;
+    }
+  }
   return user;
 }
 
@@ -606,7 +606,7 @@ export function requestBookingCancellation(
       db.guests.some(
         (g) =>
           g.id === r.guestId &&
-          (g.userId === actorUid || (g.email && g.email.toLowerCase() === user.email.toLowerCase())),
+          (g.userId === actorUid || (user.emailVerified && g.email && g.email.toLowerCase() === user.email.toLowerCase())),
       ));
 
   if (!ownsBooking && !['super_admin', 'admin', 'receptionist'].includes(user?.role ?? 'guest')) {
@@ -746,13 +746,22 @@ export function ensureProfileForFirebaseUser(
 ): UserRecord {
   db.users = db.users ?? [];
   const email = (firebase.email ?? '').trim().toLowerCase();
-  const existing = db.users.find(
-    (u) => u.uid === firebase.uid || (!!email && u.email.toLowerCase() === email),
-  );
+  const existing = db.users.find((u) => u.uid === firebase.uid);
+  if (email && db.users.some((u) => u.email.toLowerCase() === email && u.uid !== firebase.uid)) {
+    throw new OperationError(
+      'This email already belongs to another account. Sign in with that account or contact reception.',
+      409,
+      'account_conflict',
+    );
+  }
   if (existing) {
     // An account that signs in through Firebase is not held to the demo password
     // rule; keep the uid authoritative if the row was created before Auth linked it.
+    if (email && existing.email.toLowerCase() !== email) {
+      throw new OperationError('This account email does not match. Contact reception.', 409, 'account_conflict');
+    }
     if (!existing.firebaseLinked) existing.firebaseLinked = true;
+    if (firebase.emailVerified) existing.emailVerified = true;
     return existing;
   }
 
@@ -1025,7 +1034,7 @@ export function createQuotation(
   const matchedUser =
     guest.userId ||
     (guest.email
-      ? (db.users ?? []).find((u) => u.email.toLowerCase() === guest.email.toLowerCase())?.uid ?? null
+      ? (db.users ?? []).find((u) => u.emailVerified && u.email.toLowerCase() === guest.email.toLowerCase())?.uid ?? null
       : null);
 
   const quotation: Quotation = {

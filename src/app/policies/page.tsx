@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Booking terms, cancellation and privacy',
   description:
-    'How bookings, deposits, cancellations and guest information work at Lemma Apartments, Barlaston Park, Lusaka.',
+    'How bookings, deposits, cancellations and guest information work at Lemma Apartments in Lusaka.',
 };
 
 /**
@@ -95,7 +95,7 @@ export default async function PoliciesPage() {
     {
       heading: 'How it is stored',
       body: [
-        'Records are stored in Google Cloud Firestore (Firebase) with server-side access controls, and photographs are hosted by Cloudinary.',
+        'Booking and account records are accessible only through authorised accounts. Photographs are stored separately from guest records.',
         'Access to staff screens requires an authenticated account with the right role. Sensitive identity fields are restricted to roles permitted to see them, and every privileged action is written to an audit log.',
       ],
     },

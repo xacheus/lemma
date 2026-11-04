@@ -10,7 +10,6 @@ import {
   Loader2,
   Star,
   Trash2,
-  TriangleAlert,
 } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
 import { Alert } from '@/components/ui';
@@ -70,30 +69,33 @@ export function ApartmentPhotoManager({ apartmentId, photos, onChanged }: Props)
   }, [error]);
 
   async function uploadFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
+    if (!files?.length || busy) return;
+    const list = Array.from(files);
+    if (list.length > 24) {
+      setError('Choose up to 24 photographs at a time. You can add the rest in another upload.');
+      return;
+    }
     setBusy('upload');
     setError(null);
+    let uploaded = 0;
     try {
-      const list = Array.from(files).slice(0, 12);
-      let ticket: CloudinaryTicket | null = null;
-      try {
-        ticket = await request<CloudinaryTicket>('/api/media/signature', {
-          method: 'POST',
-          data: { category: 'apartment', apartmentId },
-        });
-      } catch {
-        ticket = null;
-      }
-
-      let index = 0;
       for (const file of list) {
-        index += 1;
-        setProgress(`Uploading ${index} of ${list.length}…`);
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+          throw new Error(`${file.name}: please choose a JPEG, PNG or WebP photograph.`);
+        }
         if (file.size > 10 * 1024 * 1024) {
           throw new Error(`${file.name} is larger than 10 MB. Resize it before uploading.`);
         }
+        setProgress(`Uploading ${uploaded + 1} of ${list.length}…`);
 
-        if (ticket?.configured && ticket.signature && ticket.apiKey) {
+        // A signature covers its exact public_id. Each file needs its own ticket;
+        // reusing one and appending an index makes Cloudinary reject every upload.
+        const ticket = await request<CloudinaryTicket>('/api/media/signature', {
+          method: 'POST',
+          data: { category: 'apartment', apartmentId },
+        });
+
+        if (ticket.configured && ticket.signature && ticket.apiKey) {
           const form = new FormData();
           form.append('file', file);
           form.append('api_key', ticket.apiKey);
@@ -101,14 +103,14 @@ export function ApartmentPhotoManager({ apartmentId, photos, onChanged }: Props)
           form.append('signature', ticket.signature);
           form.append('upload_preset', ticket.uploadPreset);
           form.append('folder', ticket.folder);
-          form.append('public_id', `${ticket.publicId}-${index}`);
+          form.append('public_id', ticket.publicId);
 
           const response = await fetch(ticket.uploadUrl, { method: 'POST', body: form });
           const payload = (await response.json().catch(() => null)) as
             | { secure_url?: string; public_id?: string; width?: number; height?: number; error?: { message?: string } }
             | null;
-          if (!response.ok || !payload?.secure_url) {
-            throw new Error(payload?.error?.message || 'Cloudinary rejected the upload.');
+          if (!response.ok || !payload?.secure_url || !payload.public_id) {
+            throw new Error(payload?.error?.message || 'The photograph could not be uploaded.');
           }
 
           await request('/api/media', {
@@ -117,44 +119,45 @@ export function ApartmentPhotoManager({ apartmentId, photos, onChanged }: Props)
               url: payload.secure_url,
               thumbnailUrl: payload.secure_url,
               detailUrl: payload.secure_url,
-              publicId: payload.public_id ?? '',
+              publicId: payload.public_id,
               category: 'apartment',
               title: file.name.replace(/\.[^.]+$/, ''),
               description: '',
               apartmentId,
-              isCover: ordered.length === 0 && index === 1,
-              mimeType: file.type || 'image/jpeg',
+              isCover: ordered.length === 0 && uploaded === 0,
+              mimeType: file.type,
               sizeBytes: file.size,
               width: payload.width ?? null,
               height: payload.height ?? null,
             },
           });
         } else {
-          // Server-side storage fallback (no Cloudinary credentials configured).
+          // Local development can store photographs without Cloudinary credentials.
           const form = new FormData();
           form.append('file', file);
           form.append('category', 'apartment');
           form.append('apartmentId', apartmentId);
           form.append('title', file.name.replace(/\.[^.]+$/, ''));
-          form.append('isCover', ordered.length === 0 && index === 1 ? 'true' : 'false');
+          form.append('isCover', ordered.length === 0 && uploaded === 0 ? 'true' : 'false');
 
           const response = await fetch('/api/media', { method: 'POST', body: form });
           const payload = await response.json().catch(() => null);
           if (!response.ok || !payload?.ok) {
-            throw new Error(payload?.error || 'The server could not store that photograph.');
+            throw new Error(payload?.error || 'The photograph could not be saved.');
           }
         }
+        uploaded += 1;
       }
 
       toast({
         tone: 'success',
-        title: list.length === 1 ? 'Photograph uploaded' : `${list.length} photographs uploaded`,
-        body: 'Saved to the apartment gallery — the website shows them immediately.',
+        title: uploaded === 1 ? 'Photograph added' : `${uploaded} photographs added`,
       });
       await refresh();
       onChanged?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The upload did not complete.');
+      if (uploaded) await refresh();
+      setError(`${uploaded ? `${uploaded} of ${list.length} photographs were saved. ` : ''}${err instanceof Error ? err.message : 'The upload did not complete.'}`);
     } finally {
       setBusy(null);
       setProgress(null);
@@ -248,8 +251,7 @@ export function ApartmentPhotoManager({ apartmentId, photos, onChanged }: Props)
 
       {ordered.length === 0 ? (
         <p className="rounded-md border border-sand-200 bg-white px-3 py-4 text-center text-[0.82rem] text-navy-500">
-          No photographs yet. The website shows a labelled placeholder until the first one is
-          uploaded.
+          No photographs for this apartment yet.
         </p>
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -331,16 +333,6 @@ export function ApartmentPhotoManager({ apartmentId, photos, onChanged }: Props)
         </ul>
       )}
 
-      {ordered.some((p) => p.url.startsWith('/images/apartments/')) ? (
-        <p className="flex items-start gap-2 rounded-md border border-sand-200 bg-sand-50 px-3 py-2 text-[0.76rem] leading-relaxed text-navy-600">
-          <TriangleAlert size={14} className="mt-0.5 shrink-0 text-lemma-dark" />
-          <span>
-            Some frames are AI-generated illustrations that ship with the site. They are labelled
-            &ldquo;Illustrative image&rdquo; on the public pages. Replace them with the owner&rsquo;s
-            own photographs and the label disappears automatically.
-          </span>
-        </p>
-      ) : null}
     </div>
   );
 }

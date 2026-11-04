@@ -21,6 +21,7 @@ import type { SnapshotView } from '@/lib/view-types';
 import { BOOKING_STATUS_META, PAYMENT_STATUS_META } from '@/lib/domain/status';
 import type { PaymentStage } from '@/lib/domain/types';
 import { formatKwacha } from '@/lib/domain/money';
+import { isSampleListing } from '@/lib/domain/sample-listings';
 import { GuestNotifications } from './guest-notifications';
 import { GuestPaymentPanel } from './guest-payment-panel';
 
@@ -120,9 +121,11 @@ export function GuestAccountClient({
   const [cancelErr, setCancelErr] = useState<string | null>(null);
 
   const reservations = snapshot.reservations ?? [];
-  const owed = reservations
-    .filter((r) => r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status))
-    .reduce((sum, r) => sum + r.balanceDue, 0);
+  const payable = reservations.filter(
+    (r) => r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status) &&
+      !(r.status === 'inquiry' && isSampleListing({ id: r.apartmentId })),
+  );
+  const owed = payable.reduce((sum, r) => sum + r.balanceDue, 0);
   const quotations = snapshot.quotations ?? [];
   const invoices = snapshot.invoices ?? [];
   const receipts = snapshot.receipts ?? [];
@@ -276,9 +279,7 @@ export function GuestAccountClient({
             type="button"
             className="btn btn-primary py-2 text-[0.82rem]"
             onClick={() => {
-              const target = reservations.find(
-                (r) => r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status),
-              );
+              const target = payable[0];
               if (target) setPayTarget({ id: target.id, reference: target.reference });
             }}
           >
@@ -348,6 +349,7 @@ export function GuestAccountClient({
           ) : (
             reservations.map((r) => {
               const myReceipts = receiptsFor(r.id);
+              const pendingExample = r.status === 'inquiry' && isSampleListing({ id: r.apartmentId });
               const bMeta = BOOKING_STATUS_META[r.status];
               const pMeta = PAYMENT_STATUS_META[r.paymentStatus];
               const canRequestCancel = ['inquiry', 'pending_confirmation', 'reserved', 'fully_paid'].includes(
@@ -400,14 +402,16 @@ export function GuestAccountClient({
                       ) : null}
                       {r.balanceDue > 0 ? (
                         <p className="text-[0.8rem] font-semibold text-navy-800">
-                          Balance Due: K{r.balanceDue.toLocaleString('en-US')}
+                          {pendingExample ? 'Indicative total' : 'Balance Due'}: K{r.balanceDue.toLocaleString('en-US')}
                         </p>
                       ) : null}
                     </div>
                   </div>
 
                   <div className="rounded-md border border-sand-200 bg-sand-50/70 px-3 py-2 text-[0.79rem] leading-relaxed text-navy-700">
-                    <p>{STAGE_META[r.paymentStage]?.note ?? ''}</p>
+                    <p>{pendingExample
+                      ? 'This is an example listing. Reception will confirm the actual unit and final rate. Please do not pay yet.'
+                      : (STAGE_META[r.paymentStage]?.note ?? '')}</p>
                     {r.latestClaim ? (
                       <p className="mt-0.5 text-[0.75rem] text-navy-500">
                         {r.latestClaim.status === 'rejected' ? 'Declined' : 'Submitted'}{' '}
@@ -433,7 +437,7 @@ export function GuestAccountClient({
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-200 pt-3.5">
                     <div className="flex flex-wrap gap-2">
-                      {r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status) ? (
+                      {r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status) && !pendingExample ? (
                         <button
                           type="button"
                           onClick={() => setPayTarget({ id: r.id, reference: r.reference })}
@@ -444,12 +448,12 @@ export function GuestAccountClient({
                           <span className="tabular-nums">· {formatKwacha(r.balanceDue)}</span>
                         </button>
                       ) : null}
-                      <a
+                      {!pendingExample ? <a
                         href={`/api/documents/confirmation/${r.id}/pdf?download=1`}
                         className="btn btn-secondary py-1.5 text-[0.78rem]"
                       >
                         <Download size={13} /> Booking Confirmation PDF
-                      </a>
+                      </a> : null}
                       {r.quotationId ? (
                         <a
                           href={`/api/documents/quotation/${r.quotationId}/pdf?download=1`}

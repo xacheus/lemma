@@ -13,13 +13,14 @@ import {
   Pencil,
   Ruler,
   ShieldAlert,
-  Sparkles,
+  Image as ImageIcon,
+  SprayCan,
   Users,
   Wrench,
 } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
 import { PageHeader, useShell } from '@/components/admin/shell';
-import { Alert, Avatar, EmptyState, Panel, Progress, Skeleton, StatusChip } from '@/components/ui';
+import { Alert, EmptyState, Panel, Progress, Skeleton, StatusChip } from '@/components/ui';
 import { PhotoStrip } from '@/components/ui/photo';
 import { ApartmentEditor } from '@/components/admin/apartment-editor';
 import { formatKwacha, formatKwachaCompact, percent } from '@/lib/domain/money';
@@ -144,7 +145,7 @@ export default function ApartmentDetailPage({ params }: { params: Promise<{ id: 
 
       <div className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
         <div className="space-y-4">
-          <Panel title="Photographs" subtitle="Frames stay empty until real images are dropped into the folder named in each caption." icon={Sparkles}>
+          <Panel title="Photographs" subtitle="Add, reorder and choose a cover photo below." icon={ImageIcon}>
             <div className="p-4">
               <PhotoStrip photos={apartment.photos} alt={`Apartment ${apartment.number} — ${apartment.name}`} />
             </div>
@@ -261,7 +262,7 @@ export default function ApartmentDetailPage({ params }: { params: Promise<{ id: 
             </div>
           </Panel>
 
-          <Panel title="Housekeeping" subtitle="Cleaning state is derived from departures, not typed by hand" icon={Sparkles} bodyClass="p-4 space-y-3">
+          <Panel title="Housekeeping" subtitle="Cleaning state is derived from departures, not typed by hand" icon={SprayCan} bodyClass="p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <StatusChip className={CLEANING_STATUS_META[apartment.cleaningStatus].chip} dot="bg-current">
                 {CLEANING_STATUS_META[apartment.cleaningStatus].label}

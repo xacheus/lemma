@@ -258,9 +258,9 @@ export const paymentCreateSchema = z.object({
     .object({
       fileName: z.string().max(120),
       mimeType: z.string().max(60),
-      dataUrl: z.string().max(8_000_000),
+      dataUrl: z.string().max(750_000, 'Please use a proof image or PDF under 500 KB.'),
       publicId: z.string().max(240).optional(),
-      sizeBytes: z.coerce.number().min(0),
+      sizeBytes: z.coerce.number().min(0).max(500 * 1024, 'Proof must be under 500 KB. You can submit a transaction reference without an attachment.'),
     })
     .nullable()
     .optional(),
@@ -281,10 +281,19 @@ export const guestPaymentClaimSchema = z.object({
     .object({
       fileName: z.string().max(120),
       mimeType: z.string().max(60),
-      dataUrl: z.string().max(8_000_000),
+      dataUrl: z.string().max(750_000, 'Please use a proof image or PDF under 500 KB.'),
       publicId: z.string().max(240).optional(),
-      sizeBytes: z.coerce.number().min(0),
+      sizeBytes: z.coerce.number().min(0).max(500 * 1024, 'Proof must be under 500 KB. You can submit a transaction reference without an attachment.'),
     })
+    .refine((proof) => {
+      if (!proof) return true;
+      if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(proof.mimeType)) return false;
+      const prefix = `data:${proof.mimeType};base64,`;
+      if (!proof.dataUrl.startsWith(prefix)) return false;
+      const encoded = proof.dataUrl.slice(prefix.length);
+      return /^[A-Za-z0-9+/]+={0,2}$/.test(encoded) &&
+        Buffer.from(encoded, 'base64').byteLength === proof.sizeBytes;
+    }, 'The proof file could not be read. Please choose a smaller image or PDF.')
     .nullable()
     .optional(),
 });

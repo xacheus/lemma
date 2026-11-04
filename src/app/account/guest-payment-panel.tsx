@@ -115,8 +115,8 @@ export function GuestPaymentPanel({
   async function pickProof(file: File | null) {
     setProofError(null);
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setProofError('That image is over 5 MB. Take a smaller screenshot or upload a PDF.');
+    if (file.size > 500 * 1024) {
+      setProofError('That image is over 500 KB. Use a smaller screenshot, or submit the transaction reference without an attachment.');
       return;
     }
     if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type)) {

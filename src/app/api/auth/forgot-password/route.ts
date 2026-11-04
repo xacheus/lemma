@@ -14,11 +14,10 @@ export const POST = publicRoute(async ({ req }) => {
     propertyName: db.settings.property.name,
   }));
 
-  let emailDelivered = false;
   if (resetToken) {
     const origin = new URL(req.url).origin;
     const resetUrl = `${origin}/forgot-password?token=${encodeURIComponent(resetToken)}`;
-    const sent = await sendEmailNotification({
+    await sendEmailNotification({
       to: email,
       subject: `Password reset — ${propertyName}`,
       textBody: `Use this link within 60 minutes to reset your password:\n${resetUrl}`,
@@ -32,17 +31,13 @@ export const POST = publicRoute(async ({ req }) => {
         ],
       }),
     });
-    emailDelivered = sent.ok;
   }
 
   return NextResponse.json({
     ok: true,
     data: {
       requested: true,
-      emailDelivered,
-      message: emailDelivered
-        ? 'If an active account matches that email, a password reset link has been sent.'
-        : 'Password reset token recorded. Connect RESEND_API_KEY or Firebase Auth client email reset in production to deliver reset emails automatically.',
+      message: 'If an active account matches that email and email delivery is available, a reset link will be sent. If you do not receive it, contact reception.',
     },
   });
 });

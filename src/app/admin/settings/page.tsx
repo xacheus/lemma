@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Database, Info, Lock, RefreshCw, Save, ShieldCheck } from 'lucide-react';
+import { Database, Lock, RefreshCw, Save } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
 import { PageHeader } from '@/components/admin/shell';
 import { Alert, EmptyState, Panel, Skeleton, StatusChip, Toggle } from '@/components/ui';
@@ -113,7 +113,7 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Settings"
-        description="Property configuration. The booking engine, the payment rules and the reminder sweep all read from this page — nothing here is display-only."
+        description="Manage property details, payment policies, and guest communication preferences."
         actions={
           <div className="flex items-center gap-2">
             {dirty ? <span className="chip bg-gold-50 text-gold-700">Unsaved changes</span> : <span className="chip">Saved</span>}
@@ -638,29 +638,15 @@ export default function SettingsPage() {
                 <p className="col-span-4 text-navy-400">Storage figures unavailable — the data endpoint did not answer.</p>
               )}
             </dl>
-            <p className="mt-2 text-[0.74rem] leading-relaxed text-navy-400">
-              Every apartment, booking, receipt and job in this app is written to the property database and survives a restart. Nothing on this screen regenerates records:
-              what is stored is exactly what was entered or booked.{' '}
-              {stats
-                ? `Store ${stats.file} (${Math.round(stats.sizeBytes / 1024)} KB), backend ${stats.backendMode.replace(/_/g, ' ')}, business date ${stats.today}.`
-                : ''}
+            <p className="mt-2 text-[0.74rem] leading-relaxed text-navy-500">
+              These figures reflect the bookings, payments and apartments currently on record.
+              {stats ? ` Last updated for ${stats.today}.` : ''}
             </p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              <span className="chip">Records are never seeded or fabricated</span>
-              <span className="flex items-center gap-1 text-[0.74rem] text-navy-400">
-                <Info size={12} /> New units, guests and staff are added from their own screens.
-              </span>
-            </div>
           </div>
           <SectionFooter onSave={() => saveSection('locale', 'Locale')} busy={saving === 'locale'} dirty={dirty} />
         </Panel>
       </div>
 
-      <p className="flex items-start gap-1.5 text-[0.76rem] leading-relaxed text-navy-400">
-        <ShieldCheck size={13} className="mt-px shrink-0 text-st-available" />
-        Passwords are salted SHA-256 hashes stored with the staff record, and the session is an HMAC-signed cookie that expires after 12 hours. A production deployment would move the
-        hashes behind bcrypt or argon2 and the ledger behind PostgreSQL — the API layer is already the only place that reads the store.
-      </p>
     </div>
   );
 }

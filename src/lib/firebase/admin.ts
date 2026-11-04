@@ -1,4 +1,4 @@
-import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
+import { cert, getApp, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import type { AccountStatus, Role } from '../domain/types';
@@ -58,8 +58,8 @@ export function getFirebaseAdminApp(): App | null {
   if (!isFirebaseAdminConfigured()) return null;
   if (adminApp) return adminApp;
 
-  if (getApps().length > 0) {
-    adminApp = getApps()[0]!;
+  if (getApps().some((app) => app.name === 'lemma-server')) {
+    adminApp = getApp('lemma-server');
     return adminApp;
   }
 
@@ -70,7 +70,7 @@ export function getFirebaseAdminApp(): App | null {
       // Same normalisation the check above used, so the two can never disagree.
       privateKey: normalisePrivateKey(process.env.FIREBASE_PRIVATE_KEY!)!,
     }),
-  });
+  }, 'lemma-server');
   return adminApp;
 }
 

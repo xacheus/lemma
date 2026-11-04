@@ -1,11 +1,15 @@
 import fs from 'node:fs';
+import { ZodError } from 'zod';
 import os from 'node:os';
 import path from 'node:path';
 import type { Database } from '../domain/types';
 import { businessToday } from '../domain/dates';
 import { getAdminFirestore, isFirebaseAdminConfigured } from '../firebase/admin';
+import type { Firestore, Transaction, QuerySnapshot, DocumentSnapshot } from 'firebase-admin/firestore';
+import { cloudDocumentChanges, CLOUD_COLLECTIONS, cloudDocuments } from './cloud-documents';
+import { userRecordToStaffView } from '../domain/staff-view';
 import { DEFAULT_SETTINGS } from './default-settings';
-import { buildIllustrativeCatalogue } from './illustrative-catalogue';
+import { buildStartingCatalogue } from './starting-catalogue';
 
 /**
  * Renames that must follow the business identity. Settings written by an earlier
@@ -69,38 +73,41 @@ function upgradeRenamedDefaults(db: Database) {
   }
 }
 
-/**
- * Creates the starting catalogue exactly once, on an install that has never had
- * one. The marker is written whether or not units are created, so an operator who
- * deletes every apartment is not given them back on the next page load.
- */
-function seedStartingCatalogue(db: Database) {
+/** Starting records exist only in a fresh local preview. Cloud installs begin empty. */
+function seedLocalStartingCatalogue(db: Database) {
   if (db.catalogueSeededAt) return;
   db.catalogueSeededAt = new Date().toISOString();
-  if (db.apartments.length > 0) return;
-  const { apartments } = buildIllustrativeCatalogue(db.catalogueSeededAt);
-  db.apartments = apartments;
+  if (db.apartments.length === 0) {
+    db.apartments = buildStartingCatalogue(db.catalogueSeededAt).apartments;
+  }
+}
+
+/** Expand untouched sample galleries without overwriting real owner uploads. */
+function upgradeRepresentativePhotos(db: Database) {
+  const starting = buildStartingCatalogue(db.createdAt).apartments;
+  for (const original of starting) {
+    const existing = db.apartments.find((apt) => apt.id === original.id);
+    if (!existing || !existing.gallery?.length || !existing.photos?.length) continue;
+    if (!existing.gallery.every((photo) => photo.id.startsWith(`${original.id.slice(4)}-ph-`) &&
+        photo.url.startsWith('/images/apartments/'))) continue;
+    if (!existing.photos.every((url) => url.startsWith('/images/apartments/'))) continue;
+    const urls = new Set(existing.gallery.map((g) => g.url));
+    const additions = original.gallery?.filter((g) => !urls.has(g.url)) ?? [];
+    if (additions.length === 0) continue;
+    existing.gallery.push(...additions.map((g, index) => ({ ...g, order: existing.gallery!.length + index, isCover: false })));
+    existing.photos = existing.gallery.map((g) => g.url);
+  }
 }
 import { computeDashboardSummary } from './summary';
 
 /**
  * Unified Transactional Data Store (Cloud Firestore + Local Persistence)
  *
- * The store starts empty: there is no sample building, no sample guests and no
- * sample money anywhere in this codebase. Staff roles are appointed by setting
- * `role` on the account's `users/{uid}` document in the Firebase Console — the
- * session resolver reads that document, so the change applies on the next request.
- * Every apartment, guest, booking and payment is entered by a person.
- *
- * - In Cloud Production (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` set):
- *     Hydrates from and writes diffed document batches & atomic transactions directly to
- *     Cloud Firestore collections (`users`, `apartments`, `bookings`, `guests`, `payments`,
- *     `quotations`, `invoices`, `receipts`, `staff_tasks`, `maintenance`, `media`,
- *     `notifications`, `audit_logs`, `settings/*`) while keeping hot in-memory read cache
- *     to minimize Firestore read billing.
- * - In Local / Sandbox Environments (before cloud env vars are populated):
- *     Persists atomically to `.data/lemma-db.json` with identical collection semantics,
- *     serialization mutex for atomic reservation checks, and aggregation summaries.
+ * Firestore is authoritative when configured. Every cloud mutation reads a fresh
+ * snapshot inside a Firestore transaction, and succeeds only after the commit is
+ * acknowledged. Reads refresh the in-memory view regularly; a failed read never
+ * replays a stale local file as the current inventory. Local development without
+ * cloud credentials uses an atomic, on-disk JSON store instead.
  */
 
 function resolveDataDir(): string {
@@ -128,7 +135,6 @@ const SCHEMA_VERSION = 3;
 
 let cache: Database | null = null;
 let cacheForDate = '';
-let firestoreHydrated = false;
 
 /** Serializes concurrent mutations so overlapping reservation checks are strictly atomic. */
 let txTail: Promise<unknown> = Promise.resolve();
@@ -223,7 +229,6 @@ function ensureSchemaCollections(db: Database): Database {
   };
   db.version = SCHEMA_VERSION;
   upgradeRenamedDefaults(db);
-  seedStartingCatalogue(db);
   if (!db.dashboardSummary) computeDashboardSummary(db);
   return db;
 }
@@ -251,6 +256,8 @@ function load(): Database {
 
   db.__today = today;
   db = ensureSchemaCollections(db);
+  seedLocalStartingCatalogue(db);
+  upgradeRepresentativePhotos(db);
   computeDashboardSummary(db);
   cache = db;
   cacheForDate = today;
@@ -258,244 +265,169 @@ function load(): Database {
   return db;
 }
 
-/**
- * How long one request will wait on Cloud Firestore before giving up.
- *
- * Every request path funnels through this hydration and through the batched write, so a
- * slow or unreachable Firestore held the whole request open. gRPC retried the
- * unreachable connection for two minutes, which is longer than any serverless function
- * is allowed to live: the browser saw a request that never completed, and registration
- * appeared to hang rather than fail.
- *
- * A single round trip against a healthy project is tens of milliseconds, so anything
- * past a few seconds is an availability problem, not slowness. Bounding it here lets
- * the app fall back to its local dataset and answer the user.
- */
-const FIRESTORE_TIMEOUT_MS = 4_000;
+/** Firestore errors are retryable service failures, not a successful local save. */
+export class StoreUnavailableError extends Error {
+  readonly status = 503;
+  readonly code = 'storage_unavailable';
+  readonly details?: never;
+  constructor(message = 'Our booking records are temporarily unavailable. Please try again shortly.') {
+    super(message);
+  }
+}
 
-/**
- * After a timeout, stop trying for a while.
- *
- * Without this, every request during an outage paid the full timeout again: the site
- * stayed up but every page took seconds. A short cooldown means the first request
- * discovers the problem and the rest are served immediately from the local dataset,
- * which is what a guest notices.
- */
-const FIRESTORE_TIMEOUT_COOLDOWN_MS = 30_000;
-let firestoreUnavailableUntil = 0;
+/** Never use a disposable serverless filesystem for account or booking data. */
+function requireBackend(): Firestore | null {
+  if (process.env.VERCEL && (!process.env.LEMMA_SESSION_SECRET ||
+      process.env.LEMMA_SESSION_SECRET.length < 32 ||
+      process.env.LEMMA_SESSION_SECRET.startsWith('replace-'))) {
+    throw new StoreUnavailableError('Sign in is temporarily unavailable. Please contact reception.');
+  }
+  const configured = isFirebaseAdminConfigured();
+  const partiallyConfigured = Boolean(
+    process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_PRIVATE_KEY,
+  );
+  if (!configured && (partiallyConfigured || process.env.VERCEL)) {
+    throw new StoreUnavailableError('Booking records are unavailable. Please contact reception or try again later.');
+  }
+  return configured ? getAdminFirestore() : null;
+}
 
-function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`firestore_timeout: ${label} exceeded ${FIRESTORE_TIMEOUT_MS}ms`));
-    }, FIRESTORE_TIMEOUT_MS);
+const CLOUD_READ_TIMEOUT_MS = 8_000;
+const CLOUD_CACHE_MS = 3_000;
+let lastCloudRefresh = 0;
+let cloudRevision = 0;
+let hydrateInFlight: Promise<void> | null = null;
+
+function withReadTimeout<T>(promise: Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new StoreUnavailableError()), CLOUD_READ_TIMEOUT_MS);
     promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (err) => {
-        clearTimeout(timer);
-        reject(err);
-      },
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); },
     );
   });
 }
 
-/**
- * Hydrates from Cloud Firestore once per server instance when Firebase Admin is configured.
- * Avoids repeated full-collection scans on subsequent requests.
- */
-export async function ensureCloudFirestoreHydrated(): Promise<void> {
-  if (!isFirebaseAdminConfigured()) return;
-  if (Date.now() < firestoreUnavailableUntil) return;
-  // Concurrent requests must share one attempt. Without this, every request that arrived
-  // while the first was still waiting started its own scan, so an outage multiplied the
-  // delay instead of being paid once. A rejected attempt is cleared so the next request
-  // can try again; a completed one is kept and never repeated for this instance.
+/** Reads ALL rows (including empty collections); a deleted row must not reappear. */
+async function readCloudDatabase(adminDb: Firestore, tx?: Transaction): Promise<Database> {
+  const collectionReads = CLOUD_COLLECTIONS.map(({ collection }) => {
+    const ref = adminDb.collection(collection);
+    return tx ? tx.get(ref) : ref.get();
+  });
+  const docRef = (id: string) => adminDb.collection('settings').doc(id);
+  const documentReads = ['business', 'google_business', 'counters'].map((id) => {
+    const ref = docRef(id);
+    return tx ? tx.get(ref) : ref.get();
+  });
+  const [collectionSnaps, documentSnaps] = await Promise.all([
+    Promise.all(collectionReads),
+    Promise.all(documentReads),
+  ]);
+  const [business, googleBusiness, counters] = documentSnaps as DocumentSnapshot[];
+  const counterData = counters.data() as
+    | (Partial<Database['sequences']> & { cleaningState?: Database['cleaningState']; createdAt?: string; updatedAt?: string })
+    | undefined;
+  const db = createEmptyDatabase(businessToday());
+  for (let i = 0; i < CLOUD_COLLECTIONS.length; i += 1) {
+    const { field, key } = CLOUD_COLLECTIONS[i];
+    (db as unknown as Record<string, unknown>)[field] =
+      (collectionSnaps[i] as QuerySnapshot).docs.map((doc) => ({
+        ...doc.data(),
+        [key]: doc.id,
+      }));
+  }
+  db.settings = business.exists
+    ? { ...db.settings, ...(business.data() as Partial<Database['settings']>) }
+    : db.settings;
+  if (googleBusiness.exists) {
+    db.settings.googleBusiness = googleBusiness.data() as Database['settings']['googleBusiness'];
+  }
+  db.sequences = { ...db.sequences, ...counterData };
+  db.cleaningState = counterData?.cleaningState ?? {};
+  db.createdAt = counterData?.createdAt ?? db.createdAt;
+  db.updatedAt = counterData?.updatedAt ?? db.updatedAt;
+  db.staff = (db.users ?? [])
+    .filter((user) => user.role !== 'guest')
+    .map((user) => ({ ...userRecordToStaffView(user), passwordHash: user.passwordHash }));
+  ensureSchemaCollections(db);
+  computeDashboardSummary(db);
+  return db;
+}
+
+export async function ensureCloudFirestoreHydrated(force = false): Promise<void> {
+  const adminDb = requireBackend();
+  if (!adminDb) return;
+  if (!force && cache && cacheForDate === businessToday() && Date.now() - lastCloudRefresh < CLOUD_CACHE_MS) {
+    return;
+  }
   if (!hydrateInFlight) {
-    hydrateInFlight = hydrateFromCloud();
+    hydrateInFlight = (async () => {
+      const startedAtRevision = cloudRevision;
+      try {
+        const loaded = await withReadTimeout(readCloudDatabase(adminDb));
+        // A commit may have finished after this read began. Never replace the
+        // confirmed post-write cache with an older read from another request.
+        if (cloudRevision !== startedAtRevision) return;
+        upgradeRepresentativePhotos(loaded);
+        computeDashboardSummary(loaded);
+        cache = loaded;
+        cacheForDate = loaded.__today;
+        lastCloudRefresh = Date.now();
+      } catch (error) {
+        console.error('[firestore] Read failed:', error);
+        throw new StoreUnavailableError();
+      }
+    })().finally(() => { hydrateInFlight = null; });
   }
   await hydrateInFlight;
 }
 
-let hydrateInFlight: Promise<void> | null = null;
-
-async function hydrateFromCloud(): Promise<void> {
-  if (firestoreHydrated) return;
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return;
-  firestoreHydrated = true;
-
+/** The one place that can commit cloud changes, deletions and booking counters. */
+async function cloudTransaction<T>(adminDb: Firestore, fn: (db: Database) => Promise<T> | T): Promise<T> {
   try {
-    const [
-      aptSnap,
-      usersSnap,
-      guestsSnap,
-      bookingsSnap,
-      paymentsSnap,
-      quotationsSnap,
-      invoicesSnap,
-      receiptsSnap,
-      tasksSnap,
-      maintSnap,
-      mediaSnap,
-      notifSnap,
-      claimSnap,
-      auditSnap,
-      businessDoc,
-      gbpDoc,
-      summaryDoc,
-      countersDoc,
-    ] = await withTimeout(Promise.all([
-      adminDb.collection('apartments').limit(200).get(),
-      adminDb.collection('users').limit(200).get(),
-      adminDb.collection('guests').limit(200).get(),
-      adminDb.collection('bookings').orderBy('createdAt', 'desc').limit(300).get(),
-      adminDb.collection('payments').orderBy('createdAt', 'desc').limit(300).get(),
-      adminDb.collection('quotations').orderBy('createdAt', 'desc').limit(100).get(),
-      adminDb.collection('invoices').orderBy('createdAt', 'desc').limit(100).get(),
-      adminDb.collection('receipts').orderBy('createdAt', 'desc').limit(150).get(),
-      adminDb.collection('staff_tasks').limit(200).get(),
-      adminDb.collection('maintenance').limit(100).get(),
-      adminDb.collection('media').limit(200).get(),
-      adminDb.collection('notifications').orderBy('createdAt', 'desc').limit(100).get(),
-      adminDb.collection('payment_claims').orderBy('createdAt', 'desc').limit(200).get(),
-      adminDb.collection('audit_logs').orderBy('createdAt', 'desc').limit(100).get(),
-      adminDb.collection('settings').doc('business').get(),
-      adminDb.collection('settings').doc('google_business').get(),
-      adminDb.collection('settings').doc('dashboard_summary').get(),
-      adminDb.collection('settings').doc('counters').get(),
-    ]), 'hydrate');
-
-    const localDb = load();
-
-    // An empty project is a fresh install, not a reason to write anything.
-    if (aptSnap.empty && usersSnap.empty) return;
-
-    if (!aptSnap.empty) localDb.apartments = aptSnap.docs.map((d) => d.data() as Database['apartments'][number]);
-    if (!usersSnap.empty) localDb.users = usersSnap.docs.map((d) => d.data() as NonNullable<Database['users']>[number]);
-    if (!guestsSnap.empty) localDb.guests = guestsSnap.docs.map((d) => d.data() as Database['guests'][number]);
-    if (!bookingsSnap.empty) localDb.reservations = bookingsSnap.docs.map((d) => d.data() as Database['reservations'][number]);
-    if (!paymentsSnap.empty) localDb.payments = paymentsSnap.docs.map((d) => d.data() as Database['payments'][number]);
-    if (!quotationsSnap.empty) localDb.quotations = quotationsSnap.docs.map((d) => d.data() as NonNullable<Database['quotations']>[number]);
-    if (!invoicesSnap.empty) localDb.invoices = invoicesSnap.docs.map((d) => d.data() as NonNullable<Database['invoices']>[number]);
-    if (!receiptsSnap.empty) localDb.receipts = receiptsSnap.docs.map((d) => d.data() as NonNullable<Database['receipts']>[number]);
-    if (!tasksSnap.empty) localDb.housekeeping = tasksSnap.docs.map((d) => d.data() as Database['housekeeping'][number]);
-    if (!maintSnap.empty) localDb.maintenance = maintSnap.docs.map((d) => d.data() as NonNullable<Database['maintenance']>[number]);
-    if (!mediaSnap.empty) localDb.media = mediaSnap.docs.map((d) => d.data() as NonNullable<Database['media']>[number]);
-    if (!notifSnap.empty) localDb.notifications = notifSnap.docs.map((d) => d.data() as Database['notifications'][number]);
-    if (!claimSnap.empty) localDb.paymentClaims = claimSnap.docs.map((d) => d.data() as NonNullable<Database['paymentClaims']>[number]);
-    if (!auditSnap.empty) localDb.auditLogs = auditSnap.docs.map((d) => d.data() as NonNullable<Database['auditLogs']>[number]);
-    if (businessDoc.exists) {
-      localDb.settings = { ...localDb.settings, ...(businessDoc.data() as Partial<Database['settings']>) };
-    }
-    if (gbpDoc.exists) {
-      localDb.settings.googleBusiness = gbpDoc.data() as Database['settings']['googleBusiness'];
-    }
-    if (summaryDoc.exists) {
-      localDb.dashboardSummary = summaryDoc.data() as Database['dashboardSummary'];
-    }
-    if (countersDoc.exists) {
-      const c = countersDoc.data() as Partial<Database['sequences']> & { cleaningState?: Database['cleaningState'] };
-      if (c.cleaningState) localDb.cleaningState = c.cleaningState;
-      localDb.sequences = { ...localDb.sequences, ...c };
-    }
-
-    // Staff mirror the Firebase accounts that exist in this project; never invent rows.
-    localDb.staff = localDb.staff.filter((s) => localDb.users!.some((u) => u.uid === s.id));
-    computeDashboardSummary(localDb);
-    writeLocal(localDb);
-  } catch (err) {
-    // Leave `firestoreHydrated` false only for a timeout, so the next request tries again
-    // instead of serving a partial view for the life of the instance. Any other failure
-    // (bad credentials, missing permissions) will not fix itself, so do not retry it.
-    if (err instanceof Error && err.message.startsWith('firestore_timeout')) {
-      firestoreHydrated = false;
-      hydrateInFlight = null;
-      firestoreUnavailableUntil = Date.now() + FIRESTORE_TIMEOUT_COOLDOWN_MS;
-    }
-    console.warn('[firestore] Cloud hydration warning, continuing with cached dataset:', err);
+    const { result, committed } = await adminDb.runTransaction(async (tx) => {
+      const db = await readCloudDatabase(adminDb, tx);
+      const before = cloudDocuments(db);
+      upgradeRepresentativePhotos(db);
+      const result = await fn(db);
+      db.updatedAt = new Date().toISOString();
+      computeDashboardSummary(db);
+      const changes = cloudDocumentChanges(before, cloudDocuments(db));
+      // Firestore caps a transaction at 500 document writes. Fail BEFORE committing,
+      // rather than silently dropping the rest or splitting an atomic booking.
+      if (changes.length > 496) throw new StoreUnavailableError();
+      for (const change of changes) {
+        const ref = adminDb.doc(change.path);
+        if (change.data) tx.set(ref, change.data);
+        else tx.delete(ref);
+      }
+      tx.set(adminDb.collection('settings').doc('dashboard_summary'), JSON.parse(JSON.stringify(db.dashboardSummary)));
+      // Every writer touches counters: concurrent writers retry with a fresh snapshot
+      // even if they would otherwise have changed different documents.
+      tx.set(adminDb.collection('settings').doc('counters'), {
+        ...db.sequences,
+        cleaningState: db.cleaningState,
+        createdAt: db.createdAt,
+        updatedAt: db.updatedAt,
+      });
+      return { result, committed: db };
+    }, { maxAttempts: 5 });
+    cloudRevision += 1;
+    cache = committed;
+    cacheForDate = committed.__today;
+    lastCloudRefresh = Date.now();
+    return result;
+  } catch (error) {
+    if (error instanceof StoreUnavailableError) throw error;
+    // Domain errors have a status/code and must not be turned into storage errors.
+    if (error instanceof ZodError) throw error;
+    if (error instanceof Error && 'status' in error) throw error;
+    console.error('[firestore] Transaction failed:', error);
+    throw new StoreUnavailableError();
   }
 }
 
-/**
- * Diff-aware batched write to Cloud Firestore (never rewrites unchanged docs).
- */
-const lastWrittenDigests = new Map<string, string>();
-
-async function persistSnapshotToCloudFirestore(db: Database): Promise<void> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return;
-
-  const entries: Array<{ col: string; id: string; data: unknown }> = [];
-  const pushAll = <T extends object>(col: string, list: T[] | undefined, idKey: keyof T) => {
-    for (const item of list ?? []) {
-      const id = String(item[idKey] ?? '');
-      if (!id) continue;
-      entries.push({ col, id, data: item });
-    }
-  };
-
-  pushAll('users', db.users, 'uid');
-  pushAll('apartments', db.apartments, 'id');
-  pushAll('guests', db.guests, 'id');
-  pushAll('bookings', db.reservations, 'id');
-  pushAll('payments', db.payments, 'id');
-  pushAll('quotations', db.quotations, 'id');
-  pushAll('invoices', db.invoices, 'id');
-  pushAll('receipts', db.receipts, 'id');
-  pushAll('staff_tasks', db.housekeeping, 'id');
-  pushAll('maintenance', db.maintenance, 'id');
-  pushAll('media', db.media, 'id');
-  pushAll('notifications', db.notifications.slice(0, 60), 'id');
-  pushAll('payment_claims', (db.paymentClaims ?? []).slice(0, 200), 'id');
-  pushAll('audit_logs', (db.auditLogs ?? []).slice(0, 80), 'id');
-
-  entries.push({ col: 'settings', id: 'business', data: db.settings });
-  if (db.settings.googleBusiness) {
-    entries.push({ col: 'settings', id: 'google_business', data: db.settings.googleBusiness });
-  }
-  if (db.dashboardSummary) {
-    entries.push({ col: 'settings', id: 'dashboard_summary', data: db.dashboardSummary });
-  }
-  entries.push({
-    col: 'settings',
-    id: 'counters',
-    data: { ...db.sequences, cleaningState: db.cleaningState, updatedAt: db.updatedAt },
-  });
-
-  // Filter out unchanged documents to strictly avoid redundant Firestore writes
-  const dirty = entries.filter((e) => {
-    const key = `${e.col}/${e.id}`;
-    const serialized = JSON.stringify(e.data);
-    if (lastWrittenDigests.get(key) === serialized) return false;
-    lastWrittenDigests.set(key, serialized);
-    return true;
-  });
-
-  for (let i = 0; i < dirty.length; i += 400) {
-    const chunk = dirty.slice(i, i + 400);
-    const batch = adminDb.batch();
-    for (const row of chunk) {
-      batch.set(adminDb.collection(row.col).doc(row.id), JSON.parse(JSON.stringify(row.data)));
-    }
-    try {
-      await withTimeout(batch.commit(), 'commit');
-    } catch (err) {
-      // A write that did not land must be retried by the next mutation, so drop the
-      // digests for this chunk. Leaving them cached would make the next run believe
-      // these documents were already stored and skip them silently.
-      for (const row of chunk) lastWrittenDigests.delete(`${row.col}/${row.id}`);
-      throw err;
-    }
-  }
-}
-
-/**
- * Runs the reminder sweep inside the store's transaction so reminders cannot
- * duplicate under two concurrent scheduler calls. Used by /api/cron/reminders.
- */
+/** Runs on the scheduler through the same cross-instance atomic write path. */
 export async function runReminderSweepOnStore(): Promise<{
   created: number;
   skipped: number;
@@ -505,88 +437,46 @@ export async function runReminderSweepOnStore(): Promise<{
   return runAtomicTransaction((db) => runReminderSweep(db));
 }
 
+/** Call ensureCloudFirestoreHydrated() before reading in cloud mode. */
 export function getDb(): Database {
+  if (requireBackend()) {
+    if (!cache) throw new StoreUnavailableError();
+    return cache;
+  }
   return load();
 }
 
-export function mutate<T>(fn: (db: Database) => T): T {
-  const db = getDb();
-  const result = fn(db);
-  db.updatedAt = new Date().toISOString();
-  computeDashboardSummary(db);
-  writeLocal(db);
-  if (isFirebaseAdminConfigured()) {
-    void persistSnapshotToCloudFirestore(db).catch((err) =>
-      console.warn('[firestore] Background batch sync failed:', err),
-    );
-  }
-  return result;
-}
-
-/**
- * Persists a committed change to Firestore without letting an outage undo it.
- *
- * The local write has already happened by the time this runs, so the user's action is
- * not lost. Reporting a hard failure here would be a lie in the other direction: the
- * account or booking exists, and the caller would tell the guest it did not. Warn, and
- * let the next successful mutation carry the change up, because every write is a full
- * diff-aware snapshot rather than a delta.
- */
-async function persistOrWarn(db: Database, what: string): Promise<void> {
-  if (Date.now() < firestoreUnavailableUntil) {
-    // Known-unreachable: skip the attempt rather than making the user wait for it.
-    console.warn(`[firestore] ${what} persisted locally; cloud sync deferred (cooldown)`);
-    return;
-  }
-  try {
-    await persistSnapshotToCloudFirestore(db);
-    firestoreUnavailableUntil = 0;
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith('firestore_timeout')) {
-      firestoreUnavailableUntil = Date.now() + FIRESTORE_TIMEOUT_COOLDOWN_MS;
-    }
-    console.warn(`[firestore] ${what} persisted locally, cloud sync pending:`, err);
-  }
-}
-
-/**
- * Serialized Atomic Transaction (`runAtomicTransaction`)
- *
- * Guarantees strict mutual exclusion for concurrent reservation / payment / role
- * requests in the Node runtime AND executes inside Cloud Firestore's `runTransaction`
- * when Firebase Admin is active.
- */
-export async function runAtomicTransaction<T>(
-  fn: (db: Database) => Promise<T> | T,
-): Promise<T> {
+/** All mutations are serialized locally and transactional across cloud instances. */
+export async function runAtomicTransaction<T>(fn: (db: Database) => Promise<T> | T): Promise<T> {
   const run = async (): Promise<T> => {
-    await ensureCloudFirestoreHydrated();
-    const db = getDb();
+    const adminDb = requireBackend();
+    if (adminDb) {
+      await ensureCloudFirestoreHydrated();
+      return cloudTransaction(adminDb, fn);
+    }
+    // Do not alter the cached object until the entire operation has succeeded.
+    const db = JSON.parse(JSON.stringify(load())) as Database;
     const result = await fn(db);
     db.updatedAt = new Date().toISOString();
     computeDashboardSummary(db);
     writeLocal(db);
-    if (isFirebaseAdminConfigured()) {
-      await persistOrWarn(db, 'Transaction');
-    }
+    cache = db;
+    cacheForDate = db.__today;
     return result;
   };
-
   const next = txTail.then(run, run);
-  txTail = next.then(
-    () => undefined,
-    () => undefined,
-  );
+  txTail = next.then(() => undefined, () => undefined);
   return next;
 }
 
 export function dbStats() {
   const db = getDb();
+  const cloud = Boolean(requireBackend());
   return {
-    backendMode: isFirebaseAdminConfigured() ? 'firebase_cloud_firestore' : 'local_firestore_compatible',
-    file: DB_FILE.replace(process.cwd() + path.sep, ''),
-    exists: fs.existsSync(DB_FILE),
-    sizeBytes: fs.existsSync(DB_FILE) ? fs.statSync(DB_FILE).size : 0,
+    backendMode: cloud ? 'firebase_cloud_firestore' : 'local',
+    file: cloud ? '' : DB_FILE.replace(process.cwd() + path.sep, ''),
+    exists: cloud || fs.existsSync(DB_FILE),
+    sizeBytes: !cloud && fs.existsSync(DB_FILE) ? fs.statSync(DB_FILE).size : 0,
     createdAt: db.createdAt,
     today: db.__today,
     counts: {
