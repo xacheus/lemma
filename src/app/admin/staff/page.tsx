@@ -431,7 +431,7 @@ function StaffEditor({
             onChange={(e) => set({ role: e.target.value as Role, permissions: [] })}
             options={(Object.keys(ROLE_META) as Role[]).map((r) => ({ value: r, label: ROLE_META[r].label, note: `${ROLE_PERMISSIONS[r].length} permissions` }))}
           />
-          <TextInput label="Email" type="email" value={draft.email} onChange={(e) => set({ email: e.target.value })} placeholder="mary@lemmaheights.zm" />
+          <TextInput label="Email" type="email" value={draft.email} onChange={(e) => set({ email: e.target.value })} placeholder="mary@example.com" />
           <TextInput label="Phone" value={draft.phone} onChange={(e) => set({ phone: e.target.value })} placeholder="+260 966 555 0184" />
           {draft.role === 'cleaner' ? (
             <SelectInput

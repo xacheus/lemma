@@ -56,12 +56,12 @@ export default function SetupAdminPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/logo.jpg"
-            alt="Lemma Heights Apartments"
+            alt="Lemma Apartments"
             className="h-10 w-10 rounded-md object-cover ring-1 ring-sand-300"
           />
           <div>
             <p className="text-[0.95rem] font-semibold tracking-[0.12em] text-navy-900">
-              LEMMA HEIGHTS
+              LEMMA APARTMENTS
             </p>
             <p className="text-[0.66rem] uppercase tracking-[0.16em] text-navy-500">
               Initial Super-Admin Provisioning

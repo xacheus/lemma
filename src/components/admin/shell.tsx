@@ -145,10 +145,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <Link href="/admin" className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
       <span className="shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/logo.jpg" alt="Lemma Heights Apartments" className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/15" />
+        <img src="/brand/logo.jpg" alt="Lemma Apartments" className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/15" />
       </span>
       <span className="min-w-0">
-        <span className="block truncate font-display text-[0.9rem] leading-none tracking-[0.14em] text-white">LEMMA HEIGHTS</span>
+        <span className="block truncate font-display text-[0.9rem] leading-none tracking-[0.14em] text-white">LEMMA APARTMENTS</span>
         <span className="mt-1 block truncate text-[0.62rem] uppercase tracking-[0.16em] text-navy-300">Property management</span>
       </span>
     </Link>

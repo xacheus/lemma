@@ -183,7 +183,7 @@ export function ApartmentBookingWidget({
           )}
           {waDigits ? (
             <a
-              href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello Lemma Heights Reception, I just submitted booking ${created.reference} for ${created.apartmentName} (${created.checkIn} to ${created.checkOut}).`)}`}
+              href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello Lemma Apartments Reception, I just submitted booking ${created.reference} for ${created.apartmentName} (${created.checkIn} to ${created.checkOut}).`)}`}
               target="_blank"
               rel="noreferrer"
               className="btn btn-secondary justify-center"

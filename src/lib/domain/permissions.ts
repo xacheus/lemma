@@ -134,7 +134,10 @@ export const ROLE_PERMISSIONS: Record<Role, PermissionKey[]> = {
     'housekeeping.complete',
     'housekeeping.maintenance',
   ],
-  guest: [],
+  // A registered guest gets exactly one capability: reading and acknowledging the
+  // notifications that belong to their own bookings. Nothing else is granted here,
+  // and the snapshot projection limits those to their own records.
+  guest: ['notifications.view'],
 };
 
 export function permissionsFor(user: Pick<StaffUser, 'role' | 'permissions'>): Set<PermissionKey> {

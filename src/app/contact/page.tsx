@@ -103,7 +103,7 @@ export default async function ContactPage() {
                 </Link>
                 {waDigits ? (
                   <a
-                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Heights Reception, I would like to request a stay quotation.')}`}
+                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments Reception, I would like to request a stay quotation.')}`}
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-secondary"
@@ -140,7 +140,7 @@ export default async function ContactPage() {
             <div className="card img-zoom overflow-hidden p-3">
               <PhotoFrame
                 src="/images/property/reception.jpg"
-                alt="Lemma Heights Reception"
+                alt="Lemma Apartments Reception"
                 ratio="16 / 10"
                 variant="detail"
               />

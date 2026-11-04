@@ -67,7 +67,7 @@ export function LoginPage({
           />
           <div>
             <p className="font-display text-[1rem] font-semibold leading-none tracking-[0.14em]">
-              LEMMA HEIGHTS
+              LEMMA APARTMENTS
             </p>
             <p className="mt-1 text-[0.68rem] uppercase tracking-[0.2em] text-navy-200">
               Serviced Apartments · Lusaka
@@ -115,7 +115,7 @@ export function LoginPage({
             />
             <div>
               <p className="text-[0.95rem] font-semibold tracking-[0.12em] text-navy-900">
-                LEMMA HEIGHTS
+                LEMMA APARTMENTS
               </p>
               <p className="text-[0.65rem] uppercase tracking-[0.16em] text-navy-500">
                 Apartments · Lusaka

@@ -5,6 +5,50 @@ import type { Database } from '../domain/types';
 import { businessToday } from '../domain/dates';
 import { getAdminFirestore, isFirebaseAdminConfigured } from '../firebase/admin';
 import { DEFAULT_SETTINGS } from './default-settings';
+import { buildIllustrativeCatalogue } from './illustrative-catalogue';
+
+/**
+ * Renames that must follow the business identity. Settings written by an earlier
+ * build of this platform carry the previous trading name; rather than leaving it
+ * on receipts and the public site, a stored value that exactly matches the old
+ * default is upgraded to the current one. A name an operator typed deliberately
+ * (anything else) is never touched.
+ */
+const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string; from: string; to: string }[] = [
+  { section: 'property', field: 'name', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.property.name },
+  { section: 'property', field: 'legalName', from: 'Lemma Heights (Private) Limited', to: DEFAULT_SETTINGS.property.legalName },
+  { section: 'property', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.property.addressLine },
+  { section: 'property', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.property.phone },
+  { section: 'property', field: 'whatsapp', from: '+260 977 220 001', to: DEFAULT_SETTINGS.property.whatsapp },
+  { section: 'property', field: 'email', from: 'reception@lemmaheights.zm', to: DEFAULT_SETTINGS.property.email },
+  { section: 'property', field: 'website', from: 'https://lemmaheights.zm', to: DEFAULT_SETTINGS.property.website },
+  { section: 'property', field: 'taxPayerId', from: '14/220887/001', to: DEFAULT_SETTINGS.property.taxPayerId },
+  { section: 'property', field: 'tagline', from: 'Serviced apartments on Great East Road, Chainama Lands, Lusaka', to: DEFAULT_SETTINGS.property.tagline },
+  { section: 'googleBusiness', field: 'businessName', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.googleBusiness!.businessName },
+  { section: 'googleBusiness', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.googleBusiness!.addressLine },
+  { section: 'googleBusiness', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.googleBusiness!.phone },
+  { section: 'googleBusiness', field: 'website', from: 'https://lemmaheights.zm', to: DEFAULT_SETTINGS.googleBusiness!.website },
+];
+
+function upgradeRenamedDefaults(db: Database) {
+  for (const rule of RENAMED_DEFAULTS) {
+    const section = db.settings?.[rule.section] as unknown as Record<string, unknown> | undefined;
+    if (section && section[rule.field] === rule.from) section[rule.field] = rule.to;
+  }
+}
+
+/**
+ * Creates the starting catalogue exactly once, on an install that has never had
+ * one. The marker is written whether or not units are created, so an operator who
+ * deletes every apartment is not given them back on the next page load.
+ */
+function seedStartingCatalogue(db: Database) {
+  if (db.catalogueSeededAt) return;
+  db.catalogueSeededAt = new Date().toISOString();
+  if (db.apartments.length > 0) return;
+  const { apartments } = buildIllustrativeCatalogue(db.catalogueSeededAt);
+  db.apartments = apartments;
+}
 import { computeDashboardSummary } from './summary';
 
 /**
@@ -143,6 +187,8 @@ function ensureSchemaCollections(db: Database): Database {
     invoice: db.sequences?.invoice ?? fresh.sequences.invoice,
   };
   db.version = SCHEMA_VERSION;
+  upgradeRenamedDefaults(db);
+  seedStartingCatalogue(db);
   if (!db.dashboardSummary) computeDashboardSummary(db);
   return db;
 }

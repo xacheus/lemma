@@ -2,454 +2,523 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Bath,
-  Building2,
   BedDouble,
   CheckCircle2,
   Clock,
+  Mail,
   MapPin,
-  Maximize2,
   MessageCircle,
   Phone,
-  ShieldCheck,
-  Sparkles,
-  Sun,
+  ShoppingBasket,
   Users,
+  UtensilsCrossed,
+  Waves,
   Wifi,
+  Zap,
 } from 'lucide-react';
 import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
 import { getSession } from '@/lib/auth/session';
-import { addISO } from '@/lib/domain/dates';
+import { addISO, businessToday } from '@/lib/domain/dates';
+import { searchAvailability } from '@/lib/domain/availability';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
+import { formatKwacha } from '@/lib/domain/money';
+import { isIllustrativeImage } from '@/lib/cloudinary/urls';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
-import { CountUp, Reveal } from '@/components/ui/motion';
+import { Reveal } from '@/components/ui/motion';
+import { ApartmentShowcase, type ShowcaseSlide } from '@/components/public/apartment-showcase';
 
 export const dynamic = 'force-dynamic';
 
-export default async function HomePage() {
+const AMENITY_ICONS: Record<string, typeof Wifi> = {
+  'Wi-Fi': Wifi,
+  'Backup power': Zap,
+  'Fully fitted kitchen': UtensilsCrossed,
+  'Fridge / freezer': ShoppingBasket,
+  Washer: Waves,
+};
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkIn?: string; checkOut?: string; guests?: string }>;
+}) {
   await ensureCloudFirestoreHydrated();
   const db = getDb();
   const session = await getSession();
-  const { property, booking } = db.settings;
+  const { property, booking, payments } = db.settings;
+  const sp = await searchParams;
+  const today = db.__today || businessToday();
 
-  const publishedApartments = db.apartments
+  const checkIn = sp.checkIn && /^\d{4}-\d{2}-\d{2}$/.test(sp.checkIn) && sp.checkIn >= today ? sp.checkIn : today;
+  const checkOut =
+    sp.checkOut && /^\d{4}-\d{2}-\d{2}$/.test(sp.checkOut) && sp.checkOut > checkIn
+      ? sp.checkOut
+      : addISO(checkIn, 2);
+  const guests = Math.max(1, Math.min(12, Number(sp.guests || 2)));
+
+  const published = db.apartments
     .filter((a) => a.active && a.publicationStatus !== 'draft')
     .sort((a, b) => a.number - b.number);
-  const featured = publishedApartments.slice(0, 6);
 
-  const defaultCheckIn = db.__today;
-  const defaultCheckOut = addISO(db.__today, 3);
+  const availability = searchAvailability(db, { checkIn, checkOut, guests, today });
+  const hitById = new Map(availability.hits.map((h) => [h.apartment.id, h]));
+
+  const slides: ShowcaseSlide[] = published.map((apt) => {
+    const hit = hitById.get(apt.id);
+    const fits = apt.maxGuests >= guests;
+    const photos = [apt.coverPhoto, ...(apt.gallery?.map((g) => g.url) ?? apt.photos)].filter(
+      (p): p is string => Boolean(p),
+    );
+    return {
+      id: apt.id,
+      slug: apt.slug,
+      name: apt.name,
+      code: apt.code,
+      tagline: apt.tagline || apt.description.slice(0, 130),
+      nightlyRate: apt.nightlyRate,
+      maxGuests: apt.maxGuests,
+      bedrooms: apt.bedrooms,
+      bathrooms: apt.bathrooms,
+      photos: Array.from(new Set(photos)),
+      available: Boolean(hit?.available) && fits,
+      availabilityNote: !fits
+        ? `Sleeps up to ${apt.maxGuests}`
+        : hit?.available
+          ? 'Available for these dates'
+          : 'Booked for these dates',
+      illustrative: isIllustrativeImage(photos[0]),
+    };
+  });
+
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
+  const stayQuery = `checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`;
+  const nights = availability.nights;
+  const featuredPhotos = published
+    .flatMap((apt) => apt.gallery?.map((g) => g.url) ?? apt.photos)
+    .filter((p): p is string => Boolean(p));
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-navy-900">
       <PublicHeader property={property} session={session} activePath="/" />
 
       <main className="flex-1">
-        {/* Hero Banner */}
-        <section className="relative isolate overflow-hidden bg-charcoal-950 text-white">
-          {/* Photograph layer: settles in once, then holds still */}
-          <div className="absolute inset-0 -z-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/hero-banner.jpg"
-              alt=""
-              aria-hidden="true"
-              fetchPriority="high"
-              className="hero-settle h-full w-full object-cover object-[62%_center] opacity-[0.92]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-charcoal-950 via-charcoal-950/85 to-charcoal-950/25" />
-            <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950 via-transparent to-charcoal-950/40" />
-            {/* Architectural hairline grid, faint */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 opacity-[0.18]"
-              style={{
-                backgroundImage:
-                  'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
-                backgroundSize: '72px 72px',
-              }}
-            />
-          </div>
-
-          <div className="mx-auto max-w-7xl px-4 pb-14 pt-16 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
-            <div className="max-w-2xl">
-              <div className="hero-line flex items-center gap-3" style={{ animationDelay: '0.05s' }}>
-                <span className="relative flex h-1.5 w-1.5">
-                  {/* emerald is the one non-brand accent, reserved for "open / live" */}
-                  <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-[#34d399]" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#34d399]" />
-                </span>
-                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-white/70">
-                  Serviced Residences · {property.city}, {property.country}
-                </p>
-              </div>
-
-              <h1
-                className="hero-line mt-5 text-[2.3rem] font-semibold leading-[1.08] tracking-[-0.02em] sm:text-[3.1rem] lg:text-[3.4rem]"
-                style={{ animationDelay: '0.12s' }}
-              >
-                A quiet base in Lusaka,
-                <span className="block text-white/70">run like a house, not a hotel.</span>
-              </h1>
-
-              <p
-                className="hero-line mt-5 max-w-xl text-[0.98rem] leading-relaxed text-white/75"
-                style={{ animationDelay: '0.2s' }}
-              >
-                {publishedApartments.length > 0
-                  ? `${publishedApartments.length} furnished ${
-                      publishedApartments.length === 1 ? 'apartment' : 'apartments'
-                    } on Great East Road — solar backup, 200Mbps fibre, full kitchens and honest Kwacha billing.`
-                  : 'Furnished apartments on Great East Road — solar backup, 200Mbps fibre, full kitchens and honest Kwacha billing.'}
+        {/* ---------------------------------------------------------------- hero */}
+        <section className="border-b border-sand-200 bg-sand-50">
+          <div className="mx-auto grid max-w-7xl items-end gap-8 px-4 pb-8 pt-10 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:gap-14 lg:pb-10 lg:pt-14 lg:px-8">
+            <div>
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-lemma-dark">
+                {property.addressLine} · {property.city}, {property.country}
               </p>
-
-              <div
-                className="hero-line mt-7 flex flex-wrap items-center gap-3"
-                style={{ animationDelay: '0.28s' }}
-              >
-                <Link
-                  href="/apartments"
-                  className="btn shine bg-white px-6 py-3 text-[0.9rem] font-semibold text-charcoal-900 transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:bg-white/90"
-                >
-                  Check availability <ArrowRight size={16} />
-                </Link>
-                <a
-                  href={`tel:${property.phone}`}
-                  className="btn border border-white/25 px-5 py-3 text-[0.88rem] text-white transition-colors duration-300 hover:border-white/50 hover:bg-white/10"
-                >
-                  <Phone size={15} /> {property.phone}
-                </a>
-              </div>
+              <h1 className="mt-3 text-[2.15rem] font-semibold leading-[1.06] tracking-[-0.02em] text-navy-900 sm:text-[2.9rem] lg:text-[3.15rem]">
+                Furnished apartments
+                <span className="block text-navy-500">you can book by the night.</span>
+              </h1>
+              <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-navy-600">
+                {published.length > 0
+                  ? `${published.length} apartment${published.length === 1 ? '' : 's'}, each with its own kitchen, bathroom and living space. Check the dates you need, see the real rate in Kwacha, and reserve in a couple of minutes.`
+                  : 'Apartments at Barlaston Park, Lusaka. Call or message reception and we will confirm availability and hold your dates.'}
+              </p>
             </div>
 
-            {/* Floating availability card */}
+            {/* Availability search — submits to the apartments page */}
             <form
               action="/apartments"
               method="get"
-              className="hero-line mt-10 grid gap-3 rounded-xl border border-white/15 bg-white/95 p-4 text-navy-900 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.6)] backdrop-blur-md sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.7fr_auto] lg:items-end"
-              style={{ animationDelay: '0.36s' }}
+              className="rounded-lg border border-sand-200 bg-white p-4 shadow-[0_12px_32px_-24px_rgba(18,23,30,0.5)]"
             >
-              <div>
-                <label className="label mb-1 block" htmlFor="hero-checkin">
-                  Check-in
-                </label>
-                <input
-                  id="hero-checkin"
-                  name="checkIn"
-                  type="date"
-                  defaultValue={defaultCheckIn}
-                  min={defaultCheckIn}
-                  className="field"
-                  required
-                />
+              <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-navy-400">
+                Check availability
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="label mb-1 block" htmlFor="home-checkin">
+                    Check-in
+                  </label>
+                  <input
+                    id="home-checkin"
+                    name="checkIn"
+                    type="date"
+                    defaultValue={checkIn}
+                    min={today}
+                    className="field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label mb-1 block" htmlFor="home-checkout">
+                    Check-out
+                  </label>
+                  <input
+                    id="home-checkout"
+                    name="checkOut"
+                    type="date"
+                    defaultValue={checkOut}
+                    min={addISO(checkIn, 1)}
+                    className="field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label mb-1 block" htmlFor="home-guests">
+                    Guests
+                  </label>
+                  <select id="home-guests" name="guests" defaultValue={String(guests)} className="field">
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>
+                        {n} {n === 1 ? 'guest' : 'guests'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button type="submit" className="btn btn-primary h-[38px] w-full justify-center">
+                    Search dates
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="label mb-1 block" htmlFor="hero-checkout">
-                  Check-out
-                </label>
-                <input
-                  id="hero-checkout"
-                  name="checkOut"
-                  type="date"
-                  defaultValue={defaultCheckOut}
-                  min={addISO(defaultCheckIn, 1)}
-                  className="field"
-                  required
-                />
-              </div>
-              <div>
-                <label className="label mb-1 block" htmlFor="hero-guests">
-                  Guests
-                </label>
-                <select id="hero-guests" name="guests" defaultValue="2" className="field">
-                  {[1, 2, 3, 4, 5, 6].map((n) => (
-                    <option key={n} value={n}>
-                      {n} {n === 1 ? 'Guest' : 'Guests'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="submit"
-                className="btn btn-primary shine h-[38px] justify-center px-5 transition-transform duration-300 ease-smooth hover:-translate-y-0.5"
-              >
-                Search dates
-              </button>
+              <p className="mt-3 text-[0.74rem] leading-relaxed text-navy-500">
+                {nights > 0
+                  ? `${nights} night${nights === 1 ? '' : 's'} · rates shown in ZMW per night, no card required to enquire.`
+                  : 'Choose your arrival and departure dates.'}
+              </p>
             </form>
-
-            {/* Trust strip */}
-            <div className="hero-line mt-6 flex flex-wrap items-center gap-x-7 gap-y-3 text-[0.78rem] text-white/65" style={{ animationDelay: '0.44s' }}>
-              {[
-                { icon: Sun, label: 'Solar & inverter backup' },
-                { icon: Wifi, label: '200Mbps fibre' },
-                { icon: ShieldCheck, label: '24/7 gated security' },
-                { icon: Clock, label: `Check-in from ${booking.checkInTime}` },
-              ].map((item) => (
-                <span key={item.label} className="flex items-center gap-1.5">
-                  <item.icon size={14} className="text-white/80" /> {item.label}
-                </span>
-              ))}
-            </div>
           </div>
         </section>
 
-        {/* Featured Apartments */}
+        {/* ---------------------------------------------------- apartment showcase */}
+        {slides.length > 0 ? (
+          <section className="bg-charcoal-950">
+            <ApartmentShowcase slides={slides} checkIn={checkIn} checkOut={checkOut} guests={guests} />
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-[0.76rem] text-white/55 sm:px-6 lg:px-8">
+              <p>
+                Showing our apartments for {formatShort(checkIn)} – {formatShort(checkOut)} · {guests}{' '}
+                {guests === 1 ? 'guest' : 'guests'}
+              </p>
+              <Link href={`/apartments?${stayQuery}`} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white">
+                See every apartment and rate <ArrowRight size={13} />
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {/* ------------------------------------------------------------ apartment grid */}
         <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
-                Residences &amp; Suites
+                The apartments
               </p>
-              <h2 className="mt-1 text-[1.65rem] font-bold tracking-tight text-navy-900">
-                Featured Serviced Apartments
+              <h2 className="mt-1.5 text-[1.7rem] font-semibold tracking-[-0.01em] text-navy-900">
+                Choose the one that fits your stay
               </h2>
             </div>
-            {publishedApartments.length > 0 ? (
+            {published.length > 0 ? (
               <Link
-                href="/apartments"
+                href={`/apartments?${stayQuery}`}
                 className="inline-flex items-center gap-1.5 text-[0.86rem] font-semibold text-navy-900 hover:text-lemma-dark"
               >
-                View all {publishedApartments.length}{' '}
-                {publishedApartments.length === 1 ? 'apartment' : 'apartments'}{' '}
-                <ArrowRight size={15} />
+                All {published.length} apartments <ArrowRight size={15} />
               </Link>
             ) : null}
           </div>
 
-          {featured.length === 0 ? (
+          {published.length === 0 ? (
             <div className="mt-8 rounded-md border border-dashed border-sand-300 bg-sand-50 px-6 py-12 text-center">
-              <Building2 size={22} className="mx-auto text-lemma-dark" />
-              <h3 className="mt-3 text-[1.05rem] font-semibold text-navy-900">
+              <h3 className="text-[1.05rem] font-semibold text-navy-900">
                 Apartments are being prepared for online booking
               </h3>
               <p className="mx-auto mt-2 max-w-xl text-[0.88rem] leading-relaxed text-navy-600">
-                The residence list is not published yet. Call or message reception and we will
-                confirm availability and hold dates for you directly.
+                Nothing is published on the website yet. Call or message reception and we will
+                confirm availability and hold your dates directly.
               </p>
               <div className="mt-5 flex flex-wrap justify-center gap-2.5">
                 <a href={`tel:${property.phone}`} className="btn btn-primary">
-                  <Phone size={15} /> Call reception ({property.phone})
+                  <Phone size={15} /> {property.phone}
                 </a>
-                <Link href="/contact" className="btn btn-secondary">
-                  Contact the front desk
-                </Link>
+                {waDigits ? (
+                  <a
+                    href={`https://wa.me/${waDigits}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-secondary"
+                  >
+                    <MessageCircle size={15} /> WhatsApp reception
+                  </a>
+                ) : null}
               </div>
             </div>
           ) : (
-          <div className="stagger mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((apt) => (
-              <article
-                key={apt.id}
-                className="hover-lift group flex flex-col overflow-hidden rounded-lg border border-sand-200 bg-white hover:border-brand-300 hover:shadow-pop"
-              >
-                <Link href={`/apartments/${apt.slug}`} className="img-zoom block overflow-hidden">
-                  <PhotoFrame
-                    src={apt.coverPhoto || apt.photos[0]}
-                    alt={apt.name}
-                    ratio="16 / 10"
-                    variant="card"
-                  />
-                </Link>
-                <div className="flex flex-1 flex-col p-5">
-                  <div className="flex items-center justify-between gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-lemma-dark">
-                    <span>{APARTMENT_TIER_LABELS[apt.tier] || apt.tier}</span>
-                    <span>Unit {apt.code}</span>
-                  </div>
-                  <Link href={`/apartments/${apt.slug}`}>
-                    <h3 className="mt-1.5 text-[1.08rem] font-semibold text-navy-900 hover:text-lemma-dark">
-                      {apt.name}
-                    </h3>
-                  </Link>
-                  <p className="mt-1.5 line-clamp-2 text-[0.84rem] leading-relaxed text-navy-600">
-                    {apt.tagline || apt.description}
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-3.5 border-t border-sand-200 pt-3.5 text-[0.78rem] text-navy-600">
-                    <span className="inline-flex items-center gap-1">
-                      <Users size={13} /> Up to {apt.maxGuests}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <BedDouble size={13} /> {apt.bedrooms === 0 ? 'Studio' : `${apt.bedrooms} Bed`}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Bath size={13} /> {apt.bathrooms} Bath
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Maximize2 size={13} /> {apt.sizeSqm} m²
-                    </span>
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between pt-1">
-                    <div>
-                      <span className="text-[1.12rem] font-bold text-navy-900 tabular-nums">
-                        K{apt.nightlyRate.toLocaleString('en-US')}
-                      </span>
-                      <span className="text-[0.78rem] text-navy-500"> / night</span>
-                    </div>
-                    <Link
-                      href={`/apartments/${apt.slug}`}
-                      className="btn btn-secondary py-1.5 text-[0.8rem]"
-                    >
-                      Details &amp; Book
+            <div className="stagger mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {published.map((apt) => {
+                const hit = hitById.get(apt.id);
+                const fits = apt.maxGuests >= guests;
+                const available = Boolean(hit?.available) && fits;
+                const cover = apt.coverPhoto || apt.photos[0];
+                const amenityIcons = apt.amenities
+                  .map((a) => AMENITY_ICONS[a])
+                  .filter((icon): icon is typeof Wifi => Boolean(icon))
+                  .slice(0, 3);
+                return (
+                  <article
+                    key={apt.id}
+                    className="group flex flex-col overflow-hidden rounded-lg border border-sand-200 bg-white transition-colors duration-300 hover:border-brand-300"
+                  >
+                    <Link href={`/apartments/${apt.slug}?${stayQuery}`} className="img-zoom block overflow-hidden">
+                      <div className="relative">
+                        <PhotoFrame src={cover} alt={apt.name} ratio="16 / 10" variant="card" />
+                        <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-[0.66rem] font-semibold uppercase tracking-[0.1em] backdrop-blur-sm ${
+                              available
+                                ? 'bg-[#0f3d2b]/85 text-[#a9ecc6]'
+                                : 'bg-charcoal-950/80 text-white/75'
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${available ? 'bg-[#5ed69b]' : 'bg-white/50'}`}
+                            />
+                            {fits
+                              ? available
+                                ? 'Available'
+                                : 'Booked'
+                              : `Sleeps ${apt.maxGuests}`}
+                          </span>
+                        </div>
+                        {isIllustrativeImage(cover) ? (
+                          <span className="absolute bottom-3 right-3 rounded-sm bg-charcoal-950/70 px-2 py-1 text-[0.62rem] font-medium uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm">
+                            Illustrative image
+                          </span>
+                        ) : null}
+                      </div>
                     </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-lemma-dark">
+                          {apt.code} · {APARTMENT_TIER_LABELS[apt.tier] ?? apt.tier}
+                        </span>
+                      </div>
+                      <Link href={`/apartments/${apt.slug}?${stayQuery}`}>
+                        <h3 className="mt-1.5 text-[1.1rem] font-semibold leading-snug text-navy-900 hover:text-lemma-dark">
+                          {apt.name}
+                        </h3>
+                      </Link>
+                      <p className="mt-1.5 line-clamp-2 text-[0.85rem] leading-relaxed text-navy-600">
+                        {apt.tagline || apt.description}
+                      </p>
+
+                      <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[0.79rem] text-navy-600">
+                        <span className="inline-flex items-center gap-1">
+                          <Users size={13} /> {apt.maxGuests} guests
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <BedDouble size={13} /> {apt.bedrooms === 0 ? 'Studio' : `${apt.bedrooms} bed`}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Bath size={13} /> {apt.bathrooms} bath
+                        </span>
+                      </div>
+
+                      {apt.amenities.length > 0 ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.74rem] text-navy-500">
+                          {amenityIcons.length > 0 ? (
+                            amenityIcons.map((Icon, i) => <Icon key={`${apt.id}-icon-${i}`} size={14} />)
+                          ) : null}
+                          <span className="line-clamp-1">
+                            {apt.amenities.slice(0, 3).join(' · ')}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      <div className="mt-auto pt-5">
+                        <div className="flex items-end justify-between gap-3 border-t border-sand-200 pt-3.5">
+                          <div>
+                            <span className="text-[1.15rem] font-semibold tabular-nums text-navy-900">
+                              {formatKwacha(apt.nightlyRate)}
+                            </span>
+                            <span className="text-[0.78rem] text-navy-500"> / night</span>
+                            {apt.nightlyRate > 0 && nights > 0 ? (
+                              <p className="mt-0.5 text-[0.72rem] text-navy-400">
+                                {`${formatKwacha(apt.nightlyRate * nights)} for ${nights} night${nights === 1 ? '' : 's'}`}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Link
+                            href={`/apartments/${apt.slug}?${stayQuery}`}
+                            className="btn btn-secondary flex-1 justify-center py-2 text-[0.8rem]"
+                          >
+                            View details
+                          </Link>
+                          <Link
+                            href={`/apartments/${apt.slug}?${stayQuery}#book`}
+                            className="btn btn-primary flex-1 justify-center py-2 text-[0.8rem]"
+                          >
+                            Book now
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           )}
         </Reveal>
 
-        {/* Amenities & Guest Benefits */}
+        {/* ------------------------------------------------------- what's included */}
         <Reveal as="section" className="border-y border-sand-200 bg-sand-50">
-          <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-            <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.05fr]">
-              <div>
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
-                  Engineered for Reliability
-                </p>
-                <h2 className="mt-1.5 text-[1.65rem] font-bold tracking-tight text-navy-900">
-                  Amenities &amp; Corporate Guest Standards
-                </h2>
-                <p className="mt-3 text-[0.9rem] leading-relaxed text-navy-600">
-                  Every residence is equipped for uninterrupted work and comfortable extended stays
-                  in Lusaka, backed by on-site engineering and reception teams.
-                </p>
-
-                <div className="stagger mt-6 grid gap-4 sm:grid-cols-2">
-                  {[
-                    {
-                      icon: Sun,
-                      title: 'Solar & Inverter Backup',
-                      desc: 'Uninterrupted lighting, refrigeration, Wi-Fi, and workstation power.',
-                    },
-                    {
-                      icon: Wifi,
-                      title: '200Mbps Dedicated Fibre',
-                      desc: 'Reliable video calls and VPN connectivity in every apartment.',
-                    },
-                    {
-                      icon: ShieldCheck,
-                      title: '24/7 Gated Security',
-                      desc: 'Controlled access, perimeter CCTV, and dedicated on-site parking.',
-                    },
-                    {
-                      icon: Sparkles,
-                      title: 'Daily Housekeeping',
-                      desc: 'Scheduled linen service, full kitchens, and inspected turnovers.',
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.title}
-                      className="hover-lift rounded-lg border border-sand-200 bg-white p-4 hover:border-brand-300 hover:shadow-card"
-                    >
-                      <item.icon size={18} className="text-lemma-dark" />
-                      <h3 className="mt-2.5 text-[0.9rem] font-semibold text-navy-900">
-                        {item.title}
-                      </h3>
-                      <p className="mt-1 text-[0.8rem] leading-relaxed text-navy-600">
-                        {item.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <PhotoFrame
-                  src="/images/rooms/kitchen.jpg"
-                  alt="Fitted Apartment Kitchen"
-                  ratio="4 / 3"
-                  variant="card"
-                />
-                <PhotoFrame
-                  src="/images/property/amenities.jpg"
-                  alt="Courtyard Terrace & Gardens"
-                  ratio="4 / 3"
-                  variant="card"
-                />
-                <div className="sm:col-span-2">
-                  <PhotoFrame
-                    src="/images/rooms/living-room.jpg"
-                    alt="Spacious Open-Plan Living Room"
-                    ratio="16 / 8"
-                    variant="detail"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Reveal>
-
-        {/* Numbers band */}
-        <Reveal as="section" className="bg-charcoal-950 text-white">
-          <div className="mx-auto grid max-w-7xl gap-px overflow-hidden px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
-            {[
-              { value: publishedApartments.length, suffix: '', label: 'Serviced apartments', sub: 'Studio to three-bedroom family units' },
-              { value: 200, suffix: 'Mbps', label: 'Fibre in every unit', sub: 'Dedicated, not shared building Wi-Fi' },
-              { value: 24, suffix: '/7', label: 'Gated security', sub: 'Controlled access and on-site parking' },
-              { value: 50, suffix: '%', label: 'Deposit to confirm', sub: 'Balance due on or before check-in' },
-            ].map((stat) => (
-              <div key={stat.label} className="border-l border-white/10 px-5 py-6 first:border-l-0 lg:py-4">
-                <p className="text-[2rem] font-semibold leading-none tracking-tight">
-                  <CountUp value={stat.value} />
-                  <span className="text-[1rem] font-medium text-white/50">{stat.suffix}</span>
-                </p>
-                <p className="mt-2.5 text-[0.86rem] font-semibold text-white/90">{stat.label}</p>
-                <p className="mt-1 text-[0.76rem] leading-relaxed text-white/50">{stat.sub}</p>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-
-        {/* Location & Direct Reception CTA */}
-        <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-8 rounded-lg border border-sand-200 bg-white p-6 sm:p-8 lg:grid-cols-[1.3fr_1fr]">
+          <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:px-8">
             <div>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
-                Location &amp; Direct Desk
+                What every apartment includes
               </p>
-              <h2 className="mt-1 text-[1.45rem] font-bold text-navy-900">
-                Chainama Lands, Great East Road, Lusaka
+              <h2 className="mt-1.5 text-[1.65rem] font-semibold tracking-[-0.01em] text-navy-900">
+                Set up for a week, not just a night
               </h2>
-              <p className="mt-2 text-[0.88rem] leading-relaxed text-navy-600">
-                Conveniently positioned between Kenneth Kaunda International Airport and East Park /
-                Arcades commercial districts. Need an official ZMW corporate quotation before you
-                travel? Contact our front desk directly.
+              <p className="mt-3 text-[0.9rem] leading-relaxed text-navy-600">
+                Each unit is fully furnished and self-catering. The day-to-day costs are included in
+                the nightly rate — there is no separate service charge at check-out.
               </p>
-              <div className="mt-4 flex items-center gap-2 text-[0.84rem] text-navy-700">
-                <MapPin size={15} className="text-lemma-dark" />
-                <span>
-                  {property.addressLine}, {property.city}, {property.country}
-                </span>
-              </div>
+
+              <dl className="mt-6 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                {[
+                  { icon: Wifi, title: 'Wi-Fi included', body: 'Working internet in every apartment, suitable for calls.' },
+                  { icon: Zap, title: 'Backup power', body: 'Lights, internet and the fridge stay on through an outage.' },
+                  { icon: UtensilsCrossed, title: 'Full kitchen', body: 'Hob, fridge, microwave, kettle and cooking utensils.' },
+                  { icon: CheckCircle2, title: 'Linen & housekeeping', body: 'Fresh bedding and towels, with cleaning during your stay.' },
+                  { icon: Clock, title: `Check-in ${booking.checkInTime}`, body: `Check-out by ${booking.checkOutTime}. Late arrivals by arrangement.` },
+                  { icon: MapPin, title: 'Secure parking', body: 'Off-street parking inside the compound, included.' },
+                ].map((item) => (
+                  <div key={item.title} className="flex gap-3">
+                    <item.icon size={17} className="mt-0.5 shrink-0 text-lemma-dark" aria-hidden="true" />
+                    <div>
+                      <dt className="text-[0.86rem] font-semibold text-navy-900">{item.title}</dt>
+                      <dd className="mt-0.5 text-[0.8rem] leading-relaxed text-navy-600">{item.body}</dd>
+                    </div>
+                  </div>
+                ))}
+              </dl>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Link href="/apartments" className="btn btn-primary justify-center py-2.5">
-                Check Dates &amp; Book Online <ArrowRight size={15} />
-              </Link>
-              {waDigits ? (
-                <a
-                  href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Heights Reception, I would like to enquire about apartment availability.')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-secondary justify-center py-2.5"
-                >
-                  <MessageCircle size={15} /> Enquire via WhatsApp
-                </a>
-              ) : null}
-              <a href={`tel:${property.phone}`} className="btn btn-secondary justify-center py-2.5">
-                <Phone size={15} /> Call Reception ({property.phone})
-              </a>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {featuredPhotos.slice(0, 3).map((photo, i) => (
+                <div key={`${photo}-${i}`} className={i === 2 ? 'sm:col-span-2' : ''}>
+                  <div className="relative overflow-hidden rounded-md">
+                    <PhotoFrame
+                      src={photo}
+                      alt="Furnished apartment interior"
+                      ratio={i === 2 ? '16 / 8' : '4 / 3'}
+                      variant="card"
+                    />
+                    {isIllustrativeImage(photo) ? (
+                      <span className="absolute bottom-2 right-2 rounded-sm bg-charcoal-950/70 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.08em] text-white/85">
+                        Illustrative
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </Reveal>
 
+        {/* -------------------------------------------------------------- find us */}
+        <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr]">
+            <div className="rounded-lg border border-sand-200 bg-white p-6 sm:p-8">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
+                Reception
+              </p>
+              <h2 className="mt-1.5 text-[1.5rem] font-semibold tracking-[-0.01em] text-navy-900">
+                Speak to a person before you book
+              </h2>
+              <p className="mt-2 max-w-xl text-[0.9rem] leading-relaxed text-navy-600">
+                Long stay, group booking, or arriving late at night? Message reception directly and
+                we will confirm what is free and what it costs.
+              </p>
+
+              <ul className="mt-5 space-y-3 text-[0.88rem] text-navy-700">
+                <li className="flex items-start gap-3">
+                  <MapPin size={16} className="mt-0.5 shrink-0 text-lemma-dark" />
+                  <span>
+                    {property.addressLine}
+                    {property.city ? `, ${property.city}` : ''}
+                    {property.country ? `, ${property.country}` : ''}
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Phone size={16} className="mt-0.5 shrink-0 text-lemma-dark" />
+                  <a href={`tel:${property.phone.replace(/\s/g, '')}`} className="hover:underline">
+                    {property.phone}
+                  </a>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Mail size={16} className="mt-0.5 shrink-0 text-lemma-dark" />
+                  <a href={`mailto:${property.email}`} className="hover:underline">
+                    {property.email}
+                  </a>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Clock size={16} className="mt-0.5 shrink-0 text-lemma-dark" />
+                  <span>{property.receptionHours}</span>
+                </li>
+              </ul>
+
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                {waDigits ? (
+                  <a
+                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments, I would like to ask about availability.')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-primary"
+                  >
+                    <MessageCircle size={15} /> WhatsApp {property.whatsapp}
+                  </a>
+                ) : null}
+                <Link href="/contact" className="btn btn-secondary">
+                  Contact &amp; directions
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-sand-200 bg-sand-50 p-6 sm:p-8">
+              <h2 className="text-[1.05rem] font-semibold text-navy-900">Paying for your stay</h2>
+              <p className="mt-2 text-[0.85rem] leading-relaxed text-navy-600">
+                We take Airtel Money, MTN Mobile Money, bank transfer and cash at reception. A{' '}
+                {booking.depositPercent}% deposit is required to hold your dates; the balance is due
+                before or on arrival.
+              </p>
+              <ul className="mt-4 space-y-2 text-[0.85rem] text-navy-700">
+                {payments.methods
+                  .filter((m) => m.enabled)
+                  .map((m) => (
+                    <li key={m.id} className="flex items-center gap-2">
+                      <CheckCircle2 size={14} className="shrink-0 text-lemma-dark" />
+                      {m.label}
+                    </li>
+                  ))}
+              </ul>
+              <p className="mt-4 border-t border-sand-200 pt-4 text-[0.78rem] leading-relaxed text-navy-500">
+                Payments are confirmed by a member of staff once the money arrives — an uploaded
+                proof is a claim, not a cleared payment. You will see the status in your account.
+              </p>
+              <Link href="/policies" className="mt-3 inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-navy-900 hover:text-lemma-dark">
+                Booking terms &amp; cancellation policy <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </Reveal>
       </main>
 
       <PublicFooter property={property} />
     </div>
   );
+}
+
+function formatShort(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }

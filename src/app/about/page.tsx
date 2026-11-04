@@ -28,20 +28,23 @@ export default async function AboutPage() {
               About {property.name}
             </p>
             <h1 className="mt-2 text-[2rem] font-bold leading-tight tracking-tight text-navy-900">
-              Dependable corporate and family residences in Lusaka.
+              Apartments to stay in, run by the people who own them.
             </h1>
             <p className="mt-4 text-[0.94rem] leading-relaxed text-navy-600">
-              Located at {property.addressLine} in {property.city}, {property.name} offers{' '}
+              {property.name} is at {property.addressLine} in {property.city},{' '}
+              {property.country}. We let{' '}
               {publishedCount > 0
-                ? `${publishedCount} privately serviced ${publishedCount === 1 ? 'apartment' : 'apartments'}`
-                : 'privately serviced apartments'}{' '}
-              ranging from efficient executive studios to spacious family residences. Every unit is
-              managed directly by our on-site hospitality, housekeeping, and facilities teams.
+                ? `${publishedCount} furnished ${publishedCount === 1 ? 'apartment' : 'apartments'}`
+                : 'furnished apartments'}{' '}
+              night by night, from a compact studio to a two-bedroom family unit. There is no
+              booking agent in the middle: reception takes the booking, housekeeping turns the
+              apartment, and the same people answer the phone when something needs fixing.
             </p>
             <p className="mt-3 text-[0.94rem] leading-relaxed text-navy-600">
-              Whether visiting Lusaka for project consulting, NGO missions, regional conferences, or
-              relocation, guests enjoy predictable ZMW invoicing, verified payment receipts, and
-              calm residential privacy off Great East Road.
+              Most of our guests are in Lusaka for work, for family, or while a house is being
+              finished — people who want a kitchen, a reliable internet connection and a quiet
+              place to sleep rather than a hotel lobby. Rates are quoted and paid in Kwacha, and
+              every payment you make is receipted against your booking.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -49,7 +52,10 @@ export default async function AboutPage() {
                 Explore Apartments <ArrowRight size={15} />
               </Link>
               <Link href="/contact" className="btn btn-secondary">
-                Contact Front Desk
+                Contact reception
+              </Link>
+              <Link href="/policies" className="btn btn-ghost">
+                Terms &amp; cancellation policy
               </Link>
             </div>
           </div>
@@ -57,21 +63,22 @@ export default async function AboutPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <PhotoFrame
-                src="/images/hero/exterior-building.jpg"
-                alt="Lemma Heights Exterior"
+                src="/images/apartments/apt-02/01.jpg"
+                alt="Living room of a one-bedroom apartment"
                 ratio="16 / 9"
                 variant="detail"
+                caption="Illustrative interior — replace with property photography"
               />
             </div>
             <PhotoFrame
-              src="/images/property/reception.jpg"
-              alt="Reception Desk"
+              src="/images/apartments/apt-02/02.jpg"
+              alt="Bedroom"
               ratio="4 / 3"
               variant="card"
             />
             <PhotoFrame
-              src="/images/property/amenities.jpg"
-              alt="Courtyard Gardens"
+              src="/images/apartments/apt-03/01.jpg"
+              alt="Family apartment living and dining area"
               ratio="4 / 3"
               variant="card"
             />
@@ -82,18 +89,18 @@ export default async function AboutPage() {
           {[
             {
               icon: Sun,
-              title: 'Uninterrupted Power & Water',
-              text: 'Dedicated solar/inverter backup and pressurized borehole water storage keep every suite operational around the clock.',
+              title: 'Power that stays on',
+              text: 'Backup power keeps the lights, the fridge and the Wi-Fi running through a load-shedding window.',
             },
             {
               icon: Wifi,
-              title: 'Enterprise Connectivity',
-              text: 'High-speed fibre Wi-Fi and ergonomic work desks in every apartment support remote teams and executive calls.',
+              title: 'Internet for real work',
+              text: 'Wi-Fi in every apartment and a desk to sit at, so a video call is not a gamble.',
             },
             {
               icon: ShieldCheck,
-              title: 'Transparent Corporate Billing',
-              text: 'Itemised ZMW quotations, tax invoices with TPIN details, and verified payment receipts for finance teams.',
+              title: 'Payments you can trace',
+              text: 'A 50% deposit holds your dates, every payment is verified by a person, and your receipt is in your account.',
             },
           ].map((c) => (
             <div key={c.title} className="card hover-lift p-6 hover:border-brand-300 hover:shadow-pop">
@@ -122,8 +129,9 @@ export default async function AboutPage() {
             <div className="flex items-start gap-2">
               <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-lemma-dark" />
               <span>
-                <strong>Confirmation Deposit:</strong> Standard deposit of {booking.depositPercent}%
-                via Airtel Money, MTN MoMo, Bank Transfer, or Cash at reception.
+                <strong>Confirmation deposit:</strong> {booking.depositPercent}% of the stay total,
+                by Airtel Money, MTN Mobile Money, bank transfer or cash at reception. Proof of
+                payment is checked by a member of staff before it counts against your balance.
               </span>
             </div>
             <div className="sm:col-span-2 flex items-start gap-2">
@@ -146,7 +154,7 @@ export default async function AboutPage() {
                 Ready to hold dates at {property.name}?
               </h2>
               <p className="mt-1 text-[0.86rem] text-white/60">
-                Live availability, instant Kwacha pricing, no booking fee.
+                Live availability, honest Kwacha pricing, no booking fee.
               </p>
             </div>
             <div className="flex flex-wrap gap-2.5">
@@ -157,7 +165,7 @@ export default async function AboutPage() {
                 Check availability <ArrowRight size={15} />
               </Link>
               <a
-                href={`tel:${property.phone}`}
+                href={`tel:${property.phone.replace(/\s/g, '')}`}
                 className="btn border border-white/25 px-4 py-2.5 text-[0.85rem] transition-colors hover:bg-white/10"
               >
                 Call reception
