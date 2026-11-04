@@ -324,6 +324,9 @@ export interface Guest {
   nationalId: string;
   idType: 'nrc' | 'passport';
   nationality: string;
+  countryOfResidence?: string;
+  countryOfOrigin?: string;
+  residentialAddress?: string;
   city: string;
   company: string;
   vip: boolean;
@@ -416,6 +419,7 @@ export interface Reservation {
   invoiceId?: ID | null;
   source: BookingSource;
   arrivalTime: string;
+  purposeOfVisit?: 'business' | 'holiday' | 'family_visit' | 'work' | 'other' | '';
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -981,6 +985,8 @@ export interface Database {
   notifications: NotificationRecord[];
   /** Claims guests have submitted from their account, awaiting staff verification. */
   paymentClaims?: GuestSubmittedPayment[];
+  /** Private bearer capability hashes, readable only by the trusted server. */
+  bookingAccess?: { id: string; reservationId: string; expiresAt: string }[];
   settings: Settings;
   dashboardSummary?: DashboardSummaryDoc;
   /**

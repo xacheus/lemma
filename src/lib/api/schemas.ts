@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-export const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the date picker (YYYY-MM-DD).');
+export const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the date picker (YYYY-MM-DD).')
+  .refine((value) => { const d = new Date(`${value}T00:00:00Z`); return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === value; }, 'Enter a valid calendar date.');
 export const timeStr = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:mm.');
 
 export const firebaseSessionSchema = z.object({
@@ -534,9 +535,16 @@ export const notificationSendSchema = z.object({
 
 export const publicBookingSchema = z
   .object({
-    fullName: z.string().min(2, 'Please tell us your full name.'),
-    phone: z.string().min(6, 'A reachable phone number is required.'),
-    email: z.string().email('Enter a valid email address.').or(z.literal('')).optional(),
+    fullName: z.string().trim().min(2, 'Please tell us your full legal name.').max(100),
+    phone: z.string().trim().max(28).refine((v) => /^[+() .\d-]+$/.test(v) && v.replace(/\D/g, '').length >= 9 && v.replace(/\D/g, '').length <= 15, 'Enter a valid phone number including its country code.'),
+    email: z.string().trim().toLowerCase().email('Enter a valid email address.'),
+    countryOfResidence: z.string().trim().min(1, 'Enter your country of residence.').max(100),
+    nationality: z.string().trim().min(1, 'Enter your nationality.').max(100),
+    residentialAddress: z.string().trim().max(250).optional(),
+    city: z.string().trim().max(100).optional(),
+    countryOfOrigin: z.string().trim().max(100).optional(),
+    purposeOfVisit: z.enum(['business', 'holiday', 'family_visit', 'work', 'other', '']).optional(),
+    arrivalTime: z.union([timeStr, z.literal('')]).optional(),
     nationalId: z.string().max(32).optional(),
     idType: z.enum(['nrc', 'passport']).optional(),
     apartmentId: z.string().min(1, 'Choose an apartment.'),

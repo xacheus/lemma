@@ -44,18 +44,24 @@ function check(name, condition, detail) {
 }
 
 const jar = new Map();
+const bookingCookies = new Map();
 function cookieHeader() {
   return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
 }
 async function call(path, { method = 'GET', body, session = 'admin', raw } = {}) {
   const headers = {};
   if (body !== undefined) headers['content-type'] = 'application/json';
-  if (session && jar.has(session)) headers.cookie = `${session === 'admin' ? 'lemma_session' : 'lemma_session'}=${jar.get(session)}`;
+  const cookies = [];
+  if (session && jar.has(session)) cookies.push(`lemma_session=${jar.get(session)}`);
+  if (session && bookingCookies.has(session)) cookies.push(bookingCookies.get(session));
+  if (cookies.length) headers.cookie = cookies.join('; ');
   const res = await fetch(`${BASE}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const setCookie = res.headers.get('set-cookie');
   if (setCookie) {
     const m = setCookie.match(/lemma_session=([^;]+)/);
     if (m) jar.set(session, m[1]);
+    const bookingCookie = setCookie.match(/(lemma_booking_[^=;,]+=[^;,]+)/);
+    if (bookingCookie && session) bookingCookies.set(session, bookingCookie[1]);
   }
   if (raw) return { status: res.status, res };
   const json = await res.json().catch(() => null);
@@ -75,7 +81,7 @@ async function book(body, session = null) {
   const wait = lastBookingAt + 2200 - Date.now();
   if (wait > 0) await sleep(wait);
   lastBookingAt = Date.now();
-  return call('/api/public/reservations', { method: 'POST', session, body });
+  return call('/api/public/reservations', { method: 'POST', session, body: { countryOfResidence: 'Test country', nationality: 'Test nationality', ...body } });
 }
 
 const run = async () => {
@@ -215,6 +221,7 @@ const run = async () => {
     overlapAfter.json?.ok === false && overlapAfter.status >= 400,
     `status ${overlapAfter.status} · ${overlapAfter.json?.error ?? ''}`,
   );
+  check('public conflict response hides other guests and booking references', !JSON.stringify(overlapAfter.json).includes('Chanda Banda') && !JSON.stringify(overlapAfter.json).includes(reservationId) && !overlapAfter.json?.details);
   const sameDay = await book({ ...bookingBody, checkIn: isoAdd(33), checkOut: isoAdd(35) });
   check('check-out day is free for the next arrival', sameDay.json?.ok === true, JSON.stringify(sameDay.json).slice(0, 200));
   const backToBackId = sameDay.json?.data?.id;
@@ -381,7 +388,7 @@ const run = async () => {
     fullName: 'Namwali Zulu',
     checkIn: isoAdd(400),
     checkOut: isoAdd(403),
-  });
+  }, 'visitor');
   check('a visitor can book without an account', visitorBooking.json?.ok === true, JSON.stringify(visitorBooking.json).slice(0, 200));
   const visitorId = visitorBooking.json?.data?.id;
   const visitorTotal = visitorBooking.json?.data?.totalAmount;
@@ -394,9 +401,20 @@ const run = async () => {
   const proofPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAWklEQVR4nO3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfg0QQAABbXy0zAAAAAElFTkSuQmCC';
   const proofSizeBytes = Buffer.from(proofPng.split(',')[1], 'base64').byteLength;
   if (visitorId) {
+    const withCapability = await call(`/api/public/booking-access?reservationId=${visitorId}`, { session: 'visitor' });
+    check('visitor capability opens only their booking', withCapability.status === 200 && withCapability.json?.data?.id === visitorId);
+    const withoutCapability = await call(`/api/public/booking-access?reservationId=${visitorId}`, { session: null });
+    check('a booking ID alone cannot open visitor details', withoutCapability.status === 404);
+    const wrongCapability = await fetch(`${BASE}/api/public/booking-access?reservationId=${visitorId}`, { headers: { cookie: `lemma_booking_${visitorId}=${'A'.repeat(43)}` } });
+    check('a wrong visitor capability is rejected', wrongCapability.status === 404);
+    const invalidExchange = await call('/api/public/booking-access', { method: 'POST', session: null, body: { action: 'exchange', token: 'A'.repeat(43) } });
+    check('an invalid recovery token cannot be exchanged', invalidExchange.status === 400);
+    const recovery = await call('/api/public/booking-access', { method: 'POST', session: null, body: { action: 'request', reference: visitorBooking.json.data.reference, email: visitorEmail } });
+    const mismatch = await call('/api/public/booking-access', { method: 'POST', session: null, body: { action: 'request', reference: visitorBooking.json.data.reference, email: 'wrong@example.invalid' } });
+    check('recovery response does not disclose whether the details match', recovery.json?.data?.message === mismatch.json?.data?.message && recovery.status === 200 && mismatch.status === 200);
     const visitorClaim = await call('/api/payments/claims', {
       method: 'POST',
-      session: null,
+      session: 'visitor',
       body: {
         reservationId: visitorId,
         amount: Math.max(50, Math.round(visitorTotal * 0.5)),
@@ -415,7 +433,7 @@ const run = async () => {
       session: null,
       body: { reservationId: visitorId, amount: 10, method: 'airtel_money', reference: 'X' },
     });
-    check('a second visitor claim is refused while one is waiting', outsider.json?.ok === false, JSON.stringify(outsider.json).slice(0, 140));
+    check('an unauthorized visitor claim is refused', outsider.json?.ok === false, JSON.stringify(outsider.json).slice(0, 140));
     const anonymousPeek = await fetch(`${BASE}/api/payments/claims?reservationId=${visitorId}&method=airtel_money`);
     const peekBody = await anonymousPeek.text();
     check(

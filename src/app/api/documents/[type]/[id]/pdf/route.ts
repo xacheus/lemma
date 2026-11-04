@@ -1,3 +1,4 @@
+import { ownsGuestResource } from '@/lib/domain/ownership';
 import { NextResponse } from 'next/server';
 import { HttpError, publicRoute } from '@/lib/api/http';
 import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
@@ -10,33 +11,6 @@ import {
 } from '@/lib/pdf/documents';
 
 export const runtime = 'nodejs';
-
-function ownsGuestOrReservation(
-  db: ReturnType<typeof getDb>,
-  uid: string,
-  email: string,
-  opts: { userId?: string | null; guestId?: string | null; reservationId?: string | null; docEmail?: string | null },
-): boolean {
-  if (opts.userId && opts.userId === uid) return true;
-  if (opts.docEmail && email && opts.docEmail.toLowerCase() === email.toLowerCase()) return true;
-  if (opts.guestId) {
-    const g = db.guests.find((x) => x.id === opts.guestId);
-    if (g && (g.userId === uid || (g.email && g.email.toLowerCase() === email.toLowerCase()))) {
-      return true;
-    }
-  }
-  if (opts.reservationId) {
-    const r = db.reservations.find((x) => x.id === opts.reservationId);
-    if (r) {
-      if (r.userId === uid) return true;
-      const g = db.guests.find((x) => x.id === r.guestId);
-      if (g && (g.userId === uid || (g.email && g.email.toLowerCase() === email.toLowerCase()))) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
 
 export const GET = publicRoute(async ({ params, search, session }) => {
   await ensureCloudFirestoreHydrated();
@@ -65,7 +39,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       Boolean(shareToken && q.shareToken === shareToken) ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
+          ownsGuestResource(db, session.uid, verifiedEmail, {
             userId: q.userId,
             guestId: q.guestId,
             reservationId: q.reservationId,
@@ -84,7 +58,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       isStaff ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
+          ownsGuestResource(db, session.uid, verifiedEmail, {
             userId: inv.userId,
             guestId: inv.guestId,
             reservationId: inv.reservationId,
@@ -148,7 +122,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       isStaff ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
+          ownsGuestResource(db, session.uid, verifiedEmail, {
             userId: rc.userId,
             guestId: rc.guestId,
             reservationId: rc.reservationId,
@@ -167,7 +141,7 @@ export const GET = publicRoute(async ({ params, search, session }) => {
       isStaff ||
       Boolean(
         session &&
-          ownsGuestOrReservation(db, session.uid, verifiedEmail, {
+          ownsGuestResource(db, session.uid, verifiedEmail, {
             userId: r.userId,
             guestId: r.guestId,
             reservationId: r.id,

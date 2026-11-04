@@ -46,3 +46,24 @@
 - **Scope:** One property, Zambian Kwacha, English-language interface. A confirmed
   booking holds the night; an enquiry does not. Real fiscalisation, bank provider
   settlement, and a multi-property data model are outside this release.
+- **Guest booking access:** The booking browser receives an HTTP-only capability cookie;
+  losing it requires the reference and booking email to request a one-time access link.
+  Confirmation and recovery email require `RESEND_API_KEY`, an authorised `EMAIL_FROM`,
+  and an explicit HTTPS `NEXT_PUBLIC_SITE_URL` (localhost HTTP is allowed in development).
+  Email provider acceptance is not proof of delivery. Without configuration or delivery,
+  contact reception. Email delivery and link exchange have not been tested against a live
+  provider. The current process-local rate limiter is not a distributed abuse defense;
+  deploy a shared edge/IP and recipient throttle before exposing recovery publicly.
+  Matching requests wait for the provider while mismatches do not, so response timing may
+  also reveal whether a reference/email pair matched; move delivery to a durable,
+  timing-independent queue before production. The guest page and token records do not
+  currently have a cleanup job for expired tokens.
+- **Firestore access:** Client SDK reads and writes are denied because the app uses
+  server-side, role-projected APIs; the Admin SDK bypasses these rules. Deploy the rules
+  with the app. External clients that previously accessed collections directly must move
+  to authorised server APIs. These rules have not been tested against a Firebase emulator
+  or production project in this environment.
+- **Booking registration and mobile QA:** The form does not yet offer inline Firebase
+  account creation, and visitor submissions deliberately do not merge by unverified
+  contact details. Mobile/browser and external-service testing of these new flows remains
+  necessary. Existing local storage fallback is not suitable for production bookings.

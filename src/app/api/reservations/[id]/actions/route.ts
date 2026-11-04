@@ -51,6 +51,9 @@ export const POST = apiRoute({
             STATUS_PERMISSION[input.status] ?? 'reservations.edit',
             `Moving a booking to “${input.status.replace(/_/g, ' ')}” needs extra authority.`,
           );
+          if (input.status === 'checked_in' || input.status === 'checked_out') {
+            throw new HttpError('Use the check-in or check-out action for this transition.', 422, 'invalid_action');
+          }
           return {
             result: setReservationStatus(db, session.user.id, params.id, input.status, input.note),
             snapshot: buildSnapshot(db, session),

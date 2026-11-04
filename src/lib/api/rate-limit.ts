@@ -10,6 +10,7 @@ const buckets = new Map<string, { tokens: number; updatedAt: number }>();
 /** Separate caps so a burst of availability look-ups cannot use up booking attempts. */
 const PROFILES: Record<string, { capacity: number; perMinute: number }> = {
   booking: { capacity: 8, perMinute: 8 },
+  'booking-access': { capacity: 5, perMinute: 1 },
   // Sign-up is cheap to send and expensive to undo, so it is tighter than the default:
   // five accounts an hour from one address is ample for a person and useless to a script.
   register: { capacity: 3, perMinute: 3 },

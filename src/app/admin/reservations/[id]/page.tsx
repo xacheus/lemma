@@ -239,6 +239,8 @@ export default function ReservationDetailPage() {
               <Item label="Nights" value={String(r.nights)} sub={relativeDayLabel(r.checkIn, snapshot.today)} />
               <Item label="Apartment" value={`Apt ${apartment?.number}`} sub={apartment?.name} href={apartment ? `/admin/apartments/${apartment.id}` : undefined} />
               <Item label="Guests" value={`${r.guestCount} of ${apartment?.maxGuests ?? 0}`} sub={apartment?.bedConfiguration} />
+              <Item label="Purpose of visit" value={r.purposeOfVisit ? r.purposeOfVisit.replace(/_/g, ' ') : 'Not provided'} />
+              <Item label="Account" value={r.userId ? 'Registered account' : 'Guest booking'} />
               <Item label="Rate" value={`${formatKwacha(r.nightlyRate)} / night`} sub={apartment && r.nightlyRate !== apartment.nightlyRate ? `rack rate ${formatKwacha(apartment.nightlyRate)}` : 'matches rack rate'} />
               {r.discount ? <Item label="Discount" value={`− ${formatKwacha(r.discount)}`} sub="concession recorded on the folio" /> : null}
             </dl>
@@ -278,6 +280,10 @@ export default function ReservationDetailPage() {
                     sub={can('guests.viewPii') ? guest.nationality : 'guests.viewPii permission required'}
                   />
                   <Item label="City" value={guest.city || '—'} />
+                  <Item label="Country of residence" value={guest.countryOfResidence || '—'} />
+                  <Item label="Nationality" value={guest.nationality || '—'} />
+                  <Item label="Country of origin" value={guest.countryOfOrigin || '—'} />
+                  <Item label="Address" value={guest.residentialAddress || '—'} />
                   <Item label="Lifetime banked" value={formatKwacha(snapshot.guestTotals?.[guest.id]?.totalSpent ?? 0)} sub={`${snapshot.guestTotals?.[guest.id]?.stays ?? 0} stays`} />
                   <Item
                     label="Outstanding"

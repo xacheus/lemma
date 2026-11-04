@@ -1,3 +1,4 @@
+import { ownsGuestResource } from '../domain/ownership';
 import { DEFAULT_SETTINGS } from '../db/default-settings';
 import { publicPaymentMethod } from '../domain/payment-details';
 import type {
@@ -167,61 +168,33 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
   // Guest Account Portal Projection — strictly own bookings & documents
   if (isGuest) {
     const emailLower = userRec?.emailVerified ? user.email.toLowerCase() : '';
-    const myGuests = db.guests.filter(
-      (g) =>
-        g.userId === user.id ||
-        (emailLower && g.email && g.email.toLowerCase() === emailLower),
-    );
+    // Verified email may claim unowned visitor records, never a profile or
+    // booking already associated with another account.
+    const myGuests = db.guests.filter((g) => g.userId === user.id ||
+      (!g.userId && Boolean(emailLower) && g.email?.toLowerCase() === emailLower));
     const myGuestIds = new Set(myGuests.map((g) => g.id));
-    const myRawReservations = db.reservations.filter(
-      (r) => r.userId === user.id || myGuestIds.has(r.guestId),
-    );
-    const myReservationIds = new Set(myRawReservations.map((r) => r.id));
+    const ownBookings = db.reservations.filter((r) =>
+      r.userId === user.id || (!r.userId && myGuestIds.has(r.guestId)));
+    const myReservationIds = new Set(ownBookings.map((r) => r.id));
+    const myReservations = decorateAll(db, ownBookings.sort((a, b) => (a.checkIn < b.checkIn ? 1 : -1)))
+      .map((r) => ({ ...r, guest: r.guest && (!r.guest.userId || r.guest.userId === user.id) ? { ...r.guest, internalNotes: '' } : null }));
 
-    /**
-     * A guest who registered with the same email they booked under still needs to see
-     * those bookings: the reservation's guest record carries the email but its
-     * `userId` is null, because the booking was made by a visitor. Matching on the
-     * verified account email closes that gap without loosening anything else.
-     */
-    const mineByEmail = db.reservations.filter(
-      (r) =>
-        !myReservationIds.has(r.id) &&
-        Boolean(emailLower) &&
-        db.guests.some((g) => g.id === r.guestId && g.email && g.email.toLowerCase() === emailLower),
-    );
-    for (const r of mineByEmail) myReservationIds.add(r.id);
-    const guestIdByEmail = new Set(
-      db.guests
-        .filter((g) => emailLower && g.email && g.email.toLowerCase() === emailLower)
-        .map((g) => g.id),
-    );
-    for (const id of guestIdByEmail) myGuestIds.add(id);
-
-    const myReservations = decorateAll(
-      db,
-      [...myRawReservations, ...mineByEmail].sort((a, b) => (a.checkIn < b.checkIn ? 1 : -1)),
-    );
     const myPayments = db.payments.filter(
-      (p) => p.userId === user.id || myReservationIds.has(p.reservationId),
+      (p) => p.userId === user.id || (!p.userId && myReservationIds.has(p.reservationId)),
     );
-    const myQuotations = (db.quotations ?? []).filter(
-      (q) =>
-        q.userId === user.id ||
-        (q.guestId && myGuestIds.has(q.guestId)) ||
-        (emailLower && (q.customerEmail ?? '').toLowerCase() === emailLower),
-    );
+    const myQuotations = (db.quotations ?? []).filter((q) => ownsGuestResource(db, user.id, emailLower, {
+      userId: q.userId, reservationId: q.reservationId, guestId: q.guestId, docEmail: q.customerEmail,
+    }));
     const myInvoices = (db.invoices ?? []).filter(
       (inv) =>
         inv.userId === user.id ||
-        (inv.reservationId && myReservationIds.has(inv.reservationId)) ||
-        (inv.guestId && myGuestIds.has(inv.guestId)),
+        (!inv.userId && (inv.reservationId ? myReservationIds.has(inv.reservationId) :
+          (inv.guestId && myGuestIds.has(inv.guestId)))),
     );
     const myReceipts = (db.receipts ?? []).filter(
       (rc) =>
         rc.userId === user.id ||
-        (rc.reservationId && myReservationIds.has(rc.reservationId)) ||
-        (rc.guestId && myGuestIds.has(rc.guestId)),
+        (!rc.userId && myReservationIds.has(rc.reservationId)),
     );
     const myNotifications = db.notifications.filter((n) => {
       if (n.recipientUid) return n.recipientUid === user.id;
@@ -262,7 +235,7 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
       },
       apartments: publicApts,
       cleaningState: {},
-      guests: myGuests,
+      guests: myGuests.map((g) => ({ ...g, internalNotes: '' })),
       staff: [],
       users: [],
       reservations: myReservations,
@@ -277,7 +250,7 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
       dashboardSummary: null,
       notifications: myNotifications,
       paymentClaims: (db.paymentClaims ?? []).filter(
-        (c) => c.userId === user.id || (c.guestId && myGuestIds.has(c.guestId)),
+        (c) => c.userId === user.id || (!c.userId && myReservationIds.has(c.reservationId)),
       ),
       metrics: null,
       guestTotals: null,

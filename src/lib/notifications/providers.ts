@@ -21,6 +21,7 @@ export async function dispatchExternalNotification(input: {
   recipientContact: string;
   title: string;
   body: string;
+  htmlBody?: string;
 }): Promise<DispatchAttemptResult> {
   if (input.channel === 'in_app') {
     return {
@@ -150,7 +151,7 @@ export async function dispatchExternalNotification(input: {
           from,
           to: [input.recipientContact],
           subject: input.title,
-          html: buildBrandedEmailHtml({ subject: input.title, body: input.body }),
+          html: input.htmlBody || buildBrandedEmailHtml({ subject: input.title, body: input.body }),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
@@ -193,6 +194,7 @@ export async function sendEmailNotification(input: {
     recipientContact: input.to,
     title: input.subject,
     body: input.textBody,
+    htmlBody: input.htmlBody,
   });
   return {
     ok: res.status === 'sent',
