@@ -186,7 +186,7 @@ export function buildIllustrativeCatalogue(now: string): SeededCatalogue {
       id: `${unit.key}-ph-${index + 1}`,
       url,
       publicId: url.replace(/^\//, ''),
-      title: `${unit.name} — photograph ${index + 1}`,
+      title: `${unit.name}, photograph ${index + 1}`,
       description: 'Illustrative interior. Replace with the property’s own photography in Admin → Apartments.',
       order: index,
       isCover: index === 0,

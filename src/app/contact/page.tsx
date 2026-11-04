@@ -42,7 +42,7 @@ export default async function ContactPage() {
                 </span>
                 <div>
                   <h2 className="text-[1.05rem] font-semibold leading-tight text-navy-900">Reception Details</h2>
-                  <p className="text-[0.75rem] text-navy-400">Reach the desk directly — no call centre</p>
+                  <p className="text-[0.75rem] text-navy-400">Reach the desk directly. No call centre.</p>
                 </div>
               </div>
               <ul className="space-y-3 text-[0.88rem] text-navy-700">

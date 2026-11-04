@@ -24,6 +24,22 @@ const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string;
   { section: 'property', field: 'website', from: 'https://lemmaheights.zm', to: DEFAULT_SETTINGS.property.website },
   { section: 'property', field: 'taxPayerId', from: '14/220887/001', to: DEFAULT_SETTINGS.property.taxPayerId },
   { section: 'property', field: 'tagline', from: 'Serviced apartments on Great East Road, Chainama Lands, Lusaka', to: DEFAULT_SETTINGS.property.tagline },
+  // The tagline shipped with an em dash until it was removed from the public copy. An
+  // install that stored that exact string is upgraded; wording an operator typed is not.
+  {
+    section: 'property',
+    field: 'tagline',
+    from: 'Furnished apartments at Barlaston Park, Lusaka — booked night by night.',
+    to: DEFAULT_SETTINGS.property.tagline,
+  },
+  // Opening hours are shown on the home, about and contact pages; the en dash between
+  // the two times was replaced with a plain word.
+  {
+    section: 'property',
+    field: 'receptionHours',
+    from: 'Daily, 07:00 – 21:00. Late check-in by arrangement on WhatsApp.',
+    to: DEFAULT_SETTINGS.property.receptionHours,
+  },
   { section: 'googleBusiness', field: 'businessName', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.googleBusiness!.businessName },
   { section: 'googleBusiness', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.googleBusiness!.addressLine },
   { section: 'googleBusiness', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.googleBusiness!.phone },
@@ -34,6 +50,22 @@ function upgradeRenamedDefaults(db: Database) {
   for (const rule of RENAMED_DEFAULTS) {
     const section = db.settings?.[rule.section] as unknown as Record<string, unknown> | undefined;
     if (section && section[rule.field] === rule.from) section[rule.field] = rule.to;
+  }
+
+  // The bank-transfer instructions shipped with an em dash. An operator who has not
+  // edited that field gets the corrected wording; anything else is left alone.
+  const methods = db.settings?.payments?.methods;
+  if (Array.isArray(methods)) {
+    for (const method of methods) {
+      if (
+        method?.id === 'bank_transfer' &&
+        method.accountNumber ===
+          'Lemma Apartments — account details are confirmed by reception before any transfer is made'
+      ) {
+        method.accountNumber =
+          'Lemma Apartments. Account details are confirmed by reception before any transfer is made';
+      }
+    }
   }
 }
 

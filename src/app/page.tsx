@@ -393,7 +393,7 @@ export default async function HomePage({
               </h2>
               <p className="mt-3 text-[0.9rem] leading-relaxed text-navy-600">
                 Each unit is fully furnished and self-catering. The day-to-day costs are included in
-                the nightly rate — there is no separate service charge at check-out.
+                the nightly rate. There is no separate service charge at check-out.
               </p>
 
               <dl className="mt-6 grid gap-x-6 gap-y-4 sm:grid-cols-2">
@@ -515,7 +515,7 @@ export default async function HomePage({
                   ))}
               </ul>
               <p className="mt-4 border-t border-sand-200 pt-4 text-[0.78rem] leading-relaxed text-navy-500">
-                Payments are confirmed by a member of staff once the money arrives — an uploaded
+                Payments are confirmed by a member of staff once the money arrives. An uploaded
                 proof is a claim, not a cleared payment. You will see the status in your account.
               </p>
               <Link href="/policies" className="mt-3 inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-navy-900 hover:text-lemma-dark">

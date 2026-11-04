@@ -51,7 +51,7 @@ export default async function PoliciesPage() {
         `We accept ${payments.methods
           .filter((m) => m.enabled)
           .map((m) => m.label)
-          .join(', ')}. Account and merchant details are confirmed by reception on your booking confirmation — never send money to an account number you have not had confirmed by a member of staff.`,
+          .join(', ')}. Account and merchant details are confirmed by reception on your booking confirmation. Never send money to an account number you have not had confirmed by a member of staff.`,
         `When you upload proof of payment, a member of staff checks it against the statement or mobile-money record before it is counted against your balance. Until then the payment shows as awaiting verification and the balance does not move.`,
         `An official receipt is issued for every verified payment and is available from your account.`,
       ],
@@ -79,7 +79,7 @@ export default async function PoliciesPage() {
       heading: 'What we collect',
       body: [
         'Your name, phone number and email address, so we can confirm the booking and reach you before arrival. If you create an account we also store a password hash and the date the account was created.',
-        'Identity details (NRC or passport number) where they are required at check-in. These are kept against the guest record and are visible only to authorised staff — never on a public page.',
+        'Identity details (NRC or passport number) where they are required at check-in. These are kept against the guest record and are visible only to authorised staff, never on a public page.',
         'The booking details themselves: apartment, dates, guest count, payments and receipts.',
         'Your IP address is recorded briefly when you submit a public booking, purely to rate-limit spam submissions.',
       ],
@@ -88,7 +88,7 @@ export default async function PoliciesPage() {
       heading: 'Who can see it',
       body: [
         'You can see your own bookings, payments and receipts in your account.',
-        'Reception and administration can see booking and payment records they need to run the property. Housekeeping staff see only the apartment, dates and any notes about cleaning — not your identity document or financial details.',
+        'Reception and administration can see booking and payment records they need to run the property. Housekeeping staff see only the apartment, dates and any notes about cleaning, not your identity document or financial details.',
         'We do not sell guest data, and we do not share it with advertisers. We would disclose records only where Zambian law requires it.',
       ],
     },
@@ -121,7 +121,7 @@ export default async function PoliciesPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-[0.92rem] leading-relaxed text-navy-600">
           The practical version of how a stay works here. If anything is unclear, ask reception
-          before you pay a deposit — we would rather explain it first.
+          before you pay a deposit. We would rather explain it first.
         </p>
 
         <div className="mt-8 rounded-lg border border-sand-200 bg-sand-50 p-5">
@@ -194,7 +194,7 @@ export default async function PoliciesPage() {
         <section className="mt-10 rounded-lg border border-sand-200 p-5">
           <h2 className="text-[1rem] font-semibold text-navy-900">Questions about this stay</h2>
           <p className="mt-1.5 text-[0.86rem] leading-relaxed text-navy-600">
-            Speak to {property.name} reception — a person answers, not a chatbot.
+            Speak to {property.name} reception. A person answers, not a chatbot.
           </p>
           <div className="mt-3 flex flex-wrap gap-2.5">
             {waDigits ? (

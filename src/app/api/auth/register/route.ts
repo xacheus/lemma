@@ -6,10 +6,29 @@ import { registerSchema } from '@/lib/api/schemas';
 import { registerCustomerAccount, OperationError } from '@/lib/domain/operations';
 import { getAdminAuth } from '@/lib/firebase/admin';
 import { buildBrandedEmailHtml, sendEmailNotification } from '@/lib/notifications/providers';
+import { take } from '@/lib/api/rate-limit';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
+  // The public sign-up form is unauthenticated, so it is throttled before any work is
+  // done. Without this a script can create accounts as fast as the database accepts them.
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    'local';
+  const limit = take(`register:${ip}`);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Too many sign-up attempts. Please wait ${limit.retryAfterSeconds} seconds and try again.`,
+        code: 'rate_limited',
+      },
+      { status: 429, headers: { 'retry-after': String(limit.retryAfterSeconds) } },
+    );
+  }
+
   try {
     // Reject any attempt to smuggle a privileged role in the raw JSON body
     const rawJson = (await req.clone().json().catch(() => ({}))) as Record<string, unknown>;

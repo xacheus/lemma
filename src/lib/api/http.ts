@@ -112,12 +112,24 @@ export async function readBody<T>(req: { json(): Promise<unknown> }, schema: Zod
   const raw = await req.json();
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
-    const first = parsed.error.issues[0];
+    // A guest reading "email: Enter a valid email address." on a sign-up form is reading a
+    // schema path, not a sentence. The message is surfaced exactly as written, and when
+    // the form has finished validating the duplicate issue for an empty field, only the
+    // issues that carry no field path (or one issue) are described.
+    const issues = parsed.error.issues;
+    const first = issues[0];
+    const distinct = issues.filter(
+      (issue, index) => issues.findIndex((other) => other.message === issue.message) === index,
+    );
+    const message =
+      distinct.length <= 1
+        ? (first?.message ?? 'Please check the details you entered and try again.')
+        : 'Please check the details you entered and try again.';
     throw new HttpError(
-      first ? `${first.path.join('.') || 'Request'}: ${first.message}` : 'The request was not acceptable.',
+      message,
       422,
       'validation',
-      parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
+      issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
     );
   }
   return parsed.data;

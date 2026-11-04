@@ -147,7 +147,7 @@ export function LoginPage({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/30 to-transparent" />
             <p className="absolute bottom-3 left-4 right-4 text-[0.76rem] text-white/80">
-              Chainama Lands, Great East Road — 20 minutes from Kenneth Kaunda International Airport.
+              Chainama Lands, Great East Road. 20 minutes from Kenneth Kaunda International Airport.
             </p>
           </div>
         </div>

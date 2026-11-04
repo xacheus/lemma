@@ -43,7 +43,7 @@ export default async function AboutPage() {
             </p>
             <p className="mt-3 text-[0.94rem] leading-relaxed text-navy-600">
               Most of our guests are in Lusaka for work, for family, or while a house is being
-              finished — people who want a kitchen, a reliable internet connection and a quiet
+              finished. People who want a kitchen, a reliable internet connection and a quiet
               place to sleep rather than a hotel lobby. Rates are quoted and paid in Kwacha, and
               every payment you make is receipted against your booking.
             </p>
@@ -68,7 +68,7 @@ export default async function AboutPage() {
                 alt="Living room of a one-bedroom apartment"
                 ratio="16 / 9"
                 variant="detail"
-                caption="Illustrative interior — replace with property photography"
+                caption="Illustrative interior. Replace with property photography."
               />
             </div>
             <PhotoFrame

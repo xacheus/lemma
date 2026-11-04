@@ -10,7 +10,7 @@ export const DEFAULT_SETTINGS: Settings = {
     name: 'Lemma Apartments',
     legalName: 'Lemma Apartments',
     logoUrl: '/brand/logo.jpg',
-    tagline: 'Furnished apartments at Barlaston Park, Lusaka — booked night by night.',
+    tagline: 'Furnished apartments at Barlaston Park, Lusaka. Booked night by night.',
     addressLine: 'Barlaston Park',
     city: 'Lusaka',
     country: 'Zambia',
@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
     email: 'lemmaheights@gmail.com',
     website: '',
     taxPayerId: '',
-    receptionHours: 'Daily, 07:00 – 21:00. Late check-in by arrangement on WhatsApp.',
+    receptionHours: 'Daily, 07:00 to 21:00. Late check-in by arrangement on WhatsApp.',
   },
   tax: {
     enabled: false,
@@ -108,7 +108,7 @@ export const DEFAULT_SETTINGS: Settings = {
         instructions:
           'Transfer in ZMW to the corporate account below using your Booking or Quotation Number as the payment reference.',
         accountLabel: 'Bank / Account',
-        accountNumber: 'Lemma Apartments — account details are confirmed by reception before any transfer is made',
+        accountNumber: 'Lemma Apartments. Account details are confirmed by reception before any transfer is made',
       },
       {
         id: 'cash',
