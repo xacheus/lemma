@@ -7,13 +7,15 @@
   confirmation before a guest is shown payment instructions. Replace the examples
   with verified inventory and property photos when available; see
   [PHOTOGRAPHY.md](PHOTOGRAPHY.md).
-- **Persistence:** Firestore is the supported production store. If it cannot be read
-  or a transaction cannot commit, requests fail instead of claiming that disposable
-  local data was saved. Local development uses an atomic JSON file in one process;
-  it is not a multi-instance database. Cloud reads cache for up to three seconds;
-  mutations re-read inside a Firestore transaction. Firestore transactions still have
-  document and size limits; the current approach reads the property's collections
-  together, so very large portfolios would need a more targeted data model.
+- **Persistence:** Cloud Firestore is the durable multi-instance production store.
+  When Firebase Admin is not yet configured or Firestore has not been enabled, the app
+  falls back to an atomic JSON store (`.data/` locally or `os.tmpdir()` on serverless)
+  so public pages, availability search and test flows keep working, but serverless
+  temporary storage does not survive cold starts. Once Cloud Firestore is active on an
+  instance, reads cache for up to three seconds and mutations execute inside a
+  Firestore transaction. Firestore transactions still have document and size limits;
+  the current approach reads the property's collections together, so very large
+  portfolios would need a more targeted data model.
 - **Live verification:** Unit tests cover document diffs, local rollback/serialization,
   account ownership, sample status and signature inputs. The local HTTP suite exercises
   booking, staff and payment flows. No service-account credentials or accessible Vercel

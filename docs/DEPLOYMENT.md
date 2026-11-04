@@ -19,13 +19,15 @@ existing Firestore apartment documents remain in place.
 | `CLOUDINARY_UPLOAD_PRESET` | Signed upload preset; defaults to `lemma_uploads`. |
 | `NEXT_PUBLIC_SITE_URL` | Preferred site origin for canonical links and email links. |
 
-The first four are required for bookings and sign-in. In production, a missing or
-unavailable Firestore connection or missing session secret returns a service error;
-**the app never acknowledges an ephemeral local write as a successful booking**.
-Cloudinary is required for new production photo uploads. If it is missing, uploads
-fail with a readable error rather than writing to disposable Vercel disk. The app
-can still display checked-in representative stock photos and existing Cloudinary
-photographs without upload credentials.
+The first four connect durable, cross-instance persistence and stable sessions.
+When Firebase Admin is not yet configured (or if Cloud Firestore has not been enabled
+yet), the site remains live and serves the labelled starter catalogue using a fallback
+store (`.data/` locally or `os.tmpdir()` on serverless platforms) with a bounded 4s
+timeout and 30s cooldown. Because serverless temporary storage resets on cold starts,
+configure Cloud Firestore and `LEMMA_SESSION_SECRET` before accepting real production
+bookings so accounts and reservations persist permanently across instances.
+Cloudinary is required for new production photo uploads; without it, checked-in
+representative stock photos and existing Cloudinary photographs continue to display.
 
 `FIREBASE_PRIVATE_KEY` comes from **Firebase Console → Project settings → Service
 accounts → Generate new private key**. Keep its BEGIN/END PRIVATE KEY lines. A
@@ -91,33 +93,21 @@ Back up any data before changing project credentials.
   claim must be under 500 KB because they are stored inside a Firestore document;
   a transaction reference may be submitted without an attachment.
 
-## 4. If the deployed site shows an application error
+## 4. Checking cloud storage connectivity
 
-Open `/api/session` on the affected deployment. A JSON response with
-`"code":"storage_unavailable"` and **"Booking records are unavailable"** means
-that `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` or `FIREBASE_PRIVATE_KEY` is
-missing, or that the private key lacks its required PEM markers. The same code with **"Sign in is
-temporarily unavailable"** means the production `LEMMA_SESSION_SECRET` is missing,
-shorter than 32 characters, or still the example placeholder. Neither condition is
-fixed by a successful Vercel build. Do not enable local-file storage on Vercel as a
-workaround: bookings and accounts would disappear between requests or deployments.
+Sign in as an administrator and inspect the integration status in **Admin → Settings**
+(or inspect `integrations.firebaseAdminConfigured` from `/api/session` when signed in).
+If `firebaseAdminConfigured` is `false` after setting credentials in **Vercel →
+Settings → Environment Variables**, check that:
 
-In **Vercel → the project serving this URL → Settings → Environment Variables**,
-check that all four server-only variables above are present in **Production** (not
-just Preview/Development). The Firebase project ID, service-account email and private
-key must all come from the **same** Firebase project; browser `NEXT_PUBLIC_FIREBASE_*`
-settings are not substitutes. A private key must include its BEGIN/END PRIVATE KEY
-lines, with either real newlines or literal `\n` between lines, and no surrounding
-quotes. Enable Cloud Firestore in that Firebase project. Save the values there and
-**redeploy**; changes to environment variables do not change an already-running
-build. Never paste the key in chat, a PR or an issue.
-
-If `/api/session` still responds `storage_unavailable` after redeploy, inspect the
-first relevant Vercel runtime error and share only a **redacted** error message (no
-credentials). A response with `"code":"unauthenticated"` from `/api/session` is
-expected for a signed-out visitor and means the backend was reached. The public
-website shows a contact/retry page during an outage, but enquiries and staff actions
-stay unavailable until durable storage and authentication work.
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` (or a
+  service-account JSON in `FIREBASE_SERVICE_ACCOUNT`) are set for **Production** (and
+  **Preview** if desired).
+- `FIREBASE_PRIVATE_KEY` contains the full `BEGIN PRIVATE KEY` / `END PRIVATE KEY`
+  block (real newlines, escaped `\n`, or base64-encoded PEM) from the same Firebase
+  project, and Cloud Firestore is enabled in that project.
+- You have triggered a **Redeploy** after saving environment variable changes. Never
+  paste private keys in chat, a PR, or an issue.
 
 ## 5. Verification checklist
 

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Building2, CheckCircle2, ShieldCheck, Sun, Wifi } from 'lucide-react';
 import { readPublicSiteData } from '@/lib/public/read-site-data';
-import { SiteUnavailable } from '@/components/public/site-unavailable';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
 import { Reveal } from '@/components/ui/motion';
@@ -10,9 +9,7 @@ import { unreadForSession } from '@/lib/domain/inbox';
 export const dynamic = 'force-dynamic';
 
 export default async function AboutPage() {
-  const state = await readPublicSiteData();
-  if (!state) return <SiteUnavailable />;
-  const { db, session } = state;
+  const { db, session } = await readPublicSiteData();
   const { property, booking } = db.settings;
   const publishedCount = db.apartments.filter(
     (a) => a.active && a.publicationStatus !== 'draft',

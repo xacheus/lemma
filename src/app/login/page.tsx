@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { readPublicSiteData } from '@/lib/public/read-site-data';
-import { SiteUnavailable } from '@/components/public/site-unavailable';
 import { defaultDashboardForRole } from '@/lib/domain/permissions';
 import { LoginPage } from './login-form';
 
@@ -11,9 +10,7 @@ export default async function LoginRoute({
 }: {
   searchParams: Promise<{ next?: string }>;
 }) {
-  const state = await readPublicSiteData();
-  if (!state) return <SiteUnavailable />;
-  const { db, session } = state;
+  const { db, session } = await readPublicSiteData();
   const sp = await searchParams;
   if (session) {
     redirect(sp.next || defaultDashboardForRole(session.user.role));

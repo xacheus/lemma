@@ -1,5 +1,4 @@
 import { readPublicSiteData } from '@/lib/public/read-site-data';
-import { SiteUnavailable } from '@/components/public/site-unavailable';
 import { addISO } from '@/lib/domain/dates';
 import { searchAvailability } from '@/lib/domain/availability';
 import { calculateStayPricing } from '@/lib/domain/pricing';
@@ -14,9 +13,7 @@ export default async function ApartmentsPage({
 }: {
   searchParams: Promise<{ checkIn?: string; checkOut?: string; guests?: string; tier?: string }>;
 }) {
-  const state = await readPublicSiteData();
-  if (!state) return <SiteUnavailable />;
-  const { db, session } = state;
+  const { db, session } = await readPublicSiteData();
   const sp = await searchParams;
 
   const checkIn =
