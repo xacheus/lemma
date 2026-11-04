@@ -8,7 +8,26 @@
  * what the server actually returned — availability refusal, balance arithmetic,
  * role restrictions. Run it against a development instance only.
  */
+import fs from 'node:fs';
+import path from 'node:path';
+
 const BASE = process.argv[2] || 'http://localhost:3000';
+const DATA_FILE = process.env.E2E_DATA_FILE ||
+  (process.env.LEMMA_DATA_DIR ? path.join(process.env.LEMMA_DATA_DIR, 'lemma-db.json') : null);
+const SAMPLE_IDS = new Set(['apt-studio', 'apt-one_bed', 'apt-family']);
+const isSample = (id) => SAMPLE_IDS.has(id);
+
+async function verifyLocalGuest(email, session) {
+  if (!DATA_FILE) return false;
+  const record = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  const token = record.users.find((u) => u.email === email)?.emailVerificationToken;
+  if (!token) return false;
+  const response = await fetch(`${BASE}/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
+    redirect: 'manual',
+    headers: { cookie: `lemma_session=${jar.get(session)}` },
+  });
+  return response.status === 307 || response.status === 302;
+}
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'chanda@lemma.test';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'LemmaAdmin2026!';
 
@@ -52,11 +71,11 @@ function isoAdd(days) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let lastBookingAt = 0;
 /** The public booking endpoint is rate-limited on purpose; space the attempts out. */
-async function book(body, session = 'admin') {
+async function book(body, session = null) {
   const wait = lastBookingAt + 2200 - Date.now();
   if (wait > 0) await sleep(wait);
   lastBookingAt = Date.now();
-  return call('/api/public/reservations', { method: 'POST', session: 'none', body });
+  return call('/api/public/reservations', { method: 'POST', session, body });
 }
 
 const run = async () => {
@@ -69,7 +88,7 @@ const run = async () => {
   const apartments = snap.json?.data?.apartments ?? [];
   check('apartment catalogue loads', apartments.length >= 3, `${apartments.length} units`);
   const unit = apartments.find((a) => a.maxGuests >= 2) ?? apartments[0];
-  check('catalogue unit has photographs', (unit.photos ?? []).length > 0);
+  check('catalogue unit has six photographs', (unit.photos ?? []).length >= 6);
 
   console.log('\n2. Public pages render the catalogue');
   for (const path of ['/', '/apartments', `/apartments/${unit.slug}`, '/contact', '/policies']) {
@@ -79,10 +98,11 @@ const run = async () => {
 
   console.log('\n3. Guest account');
   const guestEmail = `guest-${Date.now()}@lemma.test`;
+  const guestPhone = `+26097${String(Date.now()).slice(-7)}`;
   const reg = await call('/api/auth/register', {
     method: 'POST',
     session: 'guest',
-    body: { fullName: 'Chanda Banda', email: guestEmail, phoneNumber: '+260970000111', password: 'GuestPass2026!' },
+    body: { fullName: 'Chanda Banda', email: guestEmail, phoneNumber: guestPhone, password: 'GuestPass2026!' },
   });
   check('guest can register', reg.json?.ok === true, JSON.stringify(reg.json).slice(0, 200));
   const guestCookie = jar.get('guest');
@@ -137,13 +157,13 @@ const run = async () => {
     checkOut,
     guestCount: 2,
     fullName: 'Chanda Banda',
-    phone: '+260970000111',
+    phone: guestPhone,
     email: guestEmail,
     notes: 'Two adults, arriving late.',
     agreedPolicy: true,
     paymentMethod: 'airtel_money',
   };
-  const booking = await book(bookingBody);
+  const booking = await book(bookingBody, 'guest');
   check('guest can submit a booking request', booking.json?.ok === true, JSON.stringify(booking.json).slice(0, 240));
   const reservationId = booking.json?.data?.id;
   const reference = booking.json?.data?.reference;
@@ -153,12 +173,22 @@ const run = async () => {
 
   console.log('\n4b. Payment instructions follow the chosen method');
   const payInfo = booking.json?.data?.payment;
-  check('the booking returns payment instructions', Boolean(payInfo), JSON.stringify(payInfo));
-  check('the instructions match the chosen channel', payInfo?.method === 'airtel_money', payInfo?.method);
-  check('the destination is configured, not hard-coded', Boolean(payInfo?.accountNumber), payInfo?.accountNumber);
-  check('the booking reference is the payment reference', payInfo?.reference === reference, `${payInfo?.reference} vs ${reference}`);
   const methodList = booking.json?.data?.methods ?? [];
-  check('all four Zambian channels are offered', methodList.length >= 3, JSON.stringify(methodList.map((m) => m.id)));
+  if (isSample(unit.id)) {
+    check('an example listing remains an enquiry, even before confirmation', booking.json?.data?.status === 'inquiry');
+    check('an unconfirmed example does not provide payment instructions', !payInfo && methodList.length === 0);
+    const earlyClaim = await call('/api/payments/claims', {
+      method: 'POST', session: 'guest',
+      body: { reservationId, amount: 100, method: 'airtel_money', reference: 'TOO-EARLY' },
+    });
+    check('payment proof is blocked until reception confirms the example', earlyClaim.status === 409);
+  } else {
+    check('the booking returns payment instructions', Boolean(payInfo), JSON.stringify(payInfo));
+    check('the instructions match the chosen channel', payInfo?.method === 'airtel_money', payInfo?.method);
+    check('the destination is configured', Boolean(payInfo?.accountNumber), payInfo?.accountNumber);
+    check('the booking reference is the payment reference', payInfo?.reference === reference);
+    check('enabled Zambian payment channels are offered', methodList.length >= 3);
+  }
   const settingsSnap = await call('/api/session');
   const configured = settingsSnap.json?.data?.settings?.payments?.methods ?? [];
   const mtm = configured.find((m) => m.id === 'mtn_money');
@@ -175,6 +205,10 @@ const run = async () => {
     body: { kind: 'status', status: 'reserved', note: 'Deposit taken at the desk.' },
   });
   check('staff can confirm the booking', reserved.json?.ok === true, JSON.stringify(reserved.json).slice(0, 200));
+  if (isSample(unit.id)) {
+    const afterConfirmation = await call(`/api/payments/claims?reservationId=${reservationId}`, { session: 'guest' });
+    check('payment instructions become available after confirmation', afterConfirmation.json?.data?.quote?.methods?.length >= 3);
+  }
   const overlapAfter = await book({ ...bookingBody, checkIn: isoAdd(31), checkOut: isoAdd(34) });
   check(
     'overlapping dates are refused once the stay is confirmed',
@@ -185,7 +219,7 @@ const run = async () => {
   check('check-out day is free for the next arrival', sameDay.json?.ok === true, JSON.stringify(sameDay.json).slice(0, 200));
   const backToBackId = sameDay.json?.data?.id;
   if (backToBackId) {
-    await call(`/api/reservations/${backToBackId}/actions`, { method: 'POST', body: { kind: 'cancel', reason: 'e2e cleanup' } });
+    await call(`/api/reservations/${backToBackId}/actions`, { method: 'POST', body: { kind: 'cancel', reason: 'e2e cleanup', refund: false } });
   }
 
   console.log('\n6. Payments and balances');
@@ -351,7 +385,14 @@ const run = async () => {
   check('a visitor can book without an account', visitorBooking.json?.ok === true, JSON.stringify(visitorBooking.json).slice(0, 200));
   const visitorId = visitorBooking.json?.data?.id;
   const visitorTotal = visitorBooking.json?.data?.totalAmount;
+  if (visitorId && isSample(unit.id)) {
+    const confirmedVisitor = await call(`/api/reservations/${visitorId}/actions`, {
+      method: 'POST', body: { kind: 'status', status: 'reserved', note: 'Example confirmed for test.' },
+    });
+    check('reception confirms the visitor enquiry', confirmedVisitor.json?.ok === true);
+  }
   const proofPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAWklEQVR4nO3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfg0QQAABbXy0zAAAAAElFTkSuQmCC';
+  const proofSizeBytes = Buffer.from(proofPng.split(',')[1], 'base64').byteLength;
   if (visitorId) {
     const visitorClaim = await call('/api/payments/claims', {
       method: 'POST',
@@ -362,7 +403,7 @@ const run = async () => {
         method: 'airtel_money',
         reference: `E2E-PROOF-${Date.now()}`,
         paidAt: new Date().toISOString().slice(0, 10),
-        proof: { fileName: 'sms.png', mimeType: 'image/png', dataUrl: proofPng, sizeBytes: 582 },
+        proof: { fileName: 'sms.png', mimeType: 'image/png', dataUrl: proofPng, sizeBytes: proofSizeBytes },
       },
     });
     check('a visitor can upload proof for the booking they just made', visitorClaim.json?.ok === true, JSON.stringify(visitorClaim.json).slice(0, 200));
@@ -389,10 +430,14 @@ const run = async () => {
       session: 'guest',
       body: { fullName: 'Namwali Zulu', email: visitorEmail, phoneNumber: visitorPhone, password: 'VisitorPass2026!' },
     });
-    check('registering with the booking email claims the stay', visitorAccount.json?.ok === true, JSON.stringify(visitorAccount.json).slice(0, 160));
+    check('registering with the booking email creates an account', visitorAccount.json?.ok === true, JSON.stringify(visitorAccount.json).slice(0, 160));
+    const beforeVerify = await call('/api/session', { session: 'guest' });
+    check('an unverified email cannot claim an earlier visitor booking',
+      !(beforeVerify.json?.data?.reservations ?? []).some((r) => r.id === visitorId));
+    if (DATA_FILE) check('verifying the email links the earlier booking', await verifyLocalGuest(visitorEmail, 'guest'));
     const visitorSnap = await call('/api/session', { session: 'guest' });
     const afterProof = (visitorSnap.json?.data?.reservations ?? []).find((r) => r.id === visitorId);
-    check('the guest sees the booking they made as a visitor', Boolean(afterProof), afterProof ? afterProof.status : 'missing');
+    if (DATA_FILE) check('verified guest sees their visitor booking', Boolean(afterProof), afterProof ? afterProof.status : 'missing');
     check('an uploaded receipt leaves the balance untouched', afterProof?.balanceDue === visitorTotal, `${afterProof?.balanceDue} of ${visitorTotal}`);
     check('the guest stage reads as proof submitted', afterProof?.paymentStage === 'proof_submitted', afterProof?.paymentStage);
 
@@ -455,7 +500,7 @@ const run = async () => {
       const rejectionClaim = await call('/api/payments/claims', {
         method: 'POST',
         session: 'guest',
-        body: { reservationId: visitorId, amount: 100, method: 'mtn_money', reference: `E2E-REJECT-${Date.now()}`, proof: { fileName: 'r.png', mimeType: 'image/png', dataUrl: proofPng, sizeBytes: 582 } },
+        body: { reservationId: visitorId, amount: 100, method: 'mtn_money', reference: `E2E-REJECT-${Date.now()}`, proof: { fileName: 'r.png', mimeType: 'image/png', dataUrl: proofPng, sizeBytes: proofSizeBytes } },
       });
       check('a guest can submit another claim on the same booking', rejectionClaim.json?.ok === true, JSON.stringify(rejectionClaim.json).slice(0, 160));
       const rejectId = rejectionClaim.json?.data?.claim?.id;
@@ -613,14 +658,14 @@ const run = async () => {
   console.log('\n12. Homepage hero and full-screen menu');
   const homeHtml = await fetch(`${BASE}/`).then((r) => r.text());
   check('the homepage renders the animated carousel', homeHtml.includes('aria-roledescription="carousel"'));
-  check('the hero offers Check availability and Book now', homeHtml.includes('Check availability') && homeHtml.includes('Book now'));
-  check('the hero frames are real apartment photographs', /\/images\/apartments\//.test(homeHtml));
+  check('the hero offers apartment enquiry links', homeHtml.includes('Check availability') && homeHtml.includes('Send an enquiry'));
+  check('the hero frames use representative stock photography', /\/images\/apartments\//.test(homeHtml) && homeHtml.includes('Representative'));
   check('the menu uses a full-screen dialog', homeHtml.includes('aria-haspopup="dialog"'));
   check('the old short drawer is gone', !homeHtml.includes('max-h-[22rem]'));
   const staffHome = await fetch(`${BASE}/`, { headers: { cookie: `lemma_session=${jar.get('admin')}` } }).then((r) => r.text());
   check('staff see workspace navigation in the menu', staffHome.includes('Workspace'));
   const guestHome = await fetch(`${BASE}/`, { headers: { cookie: `lemma_session=${guestCookie}` } }).then((r) => r.text());
-  check('guests see their own account section', guestHome.includes('Your account'));
+  check('guests see their own account section', guestHome.includes('My Account'));
   check('guests never receive staff menu entries', !guestHome.includes('Staff &amp; Users') && !guestHome.includes('Operations dashboard'));
 
   console.log('\n13. Role permissions');

@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Bath, BedDouble, ChevronLeft, ChevronRight, Pause, Play, Users } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowRight, Bath, BedDouble, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { formatKwacha } from '@/lib/domain/money';
-import { optimizeImageUrl } from '@/lib/cloudinary/urls';
+import { optimizeImageUrl, representativePhotoUrl } from '@/lib/cloudinary/urls';
 
 export interface HeroSlide {
   id: string;
@@ -17,8 +17,8 @@ export interface HeroSlide {
   bedrooms: number;
   bathrooms: number;
   photo: string;
-  /** True when the frame is one of the shipped illustrations, not a real photograph. */
-  illustrative: boolean;
+  representative: boolean;
+  sample: boolean;
   available: boolean;
   availabilityNote: string;
 }
@@ -29,15 +29,14 @@ const FADE_MS = 1400;
 /**
  * Homepage hero.
  *
- * One large interior per apartment, cross-fading on a CSS opacity transition with a
+ * Large apartment photographs cross-fade on a CSS opacity transition with a
  * very slow scale on the active frame — no animation loop, no layout thrash, and the
  * browser can composite it on the GPU. The first frame loads eagerly (it is the
  * largest contentful paint); the rest are lazy.
  *
  * Auto-advance pauses on hover, on focus, while the tab is hidden and whenever the
- * visitor prefers reduced motion. It can also be stopped by hand, which stays stopped
- * for the session. Arrows, dots, keyboard arrows and swipe all work, so nothing
- * depends on the timer.
+ * visitor prefers reduced motion. Arrows, photograph selectors, keyboard arrows
+ * and swipe all work, so nothing depends on the timer.
  *
  * The copy stays deliberately short: one headline, one line of supporting text, and the
  * active apartment's facts. Anything longer fights the photograph it sits on.
@@ -55,7 +54,7 @@ export function HomeHeroCarousel({
 }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [userStopped, setUserStopped] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const touchX = useRef<number | null>(null);
   const count = slides.length;
 
@@ -67,14 +66,17 @@ export function HomeHeroCarousel({
     [count],
   );
 
-  const reducedMotion = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(preference.matches);
+    update();
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
   }, []);
 
   useEffect(() => {
-    if (paused || userStopped || count < 2 || reducedMotion) return;
-    let timer = window.setTimeout(() => undefined, 0);
+    if (paused || count < 2 || reducedMotion) return;
+    let timer: number;
     const schedule = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
@@ -92,7 +94,7 @@ export function HomeHeroCarousel({
       window.clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [paused, userStopped, count, reducedMotion]);
+  }, [paused, count, reducedMotion]);
 
   if (count === 0) return null;
   const active = slides[Math.min(index, count - 1)];
@@ -101,7 +103,7 @@ export function HomeHeroCarousel({
     <section
       className="relative isolate overflow-hidden bg-charcoal-950 text-white"
       aria-roledescription="carousel"
-      aria-label="Apartment interiors"
+      aria-label="Apartment photographs"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
@@ -141,8 +143,14 @@ export function HomeHeroCarousel({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={optimizeImageUrl(slide.photo, 'hero')}
-                alt={`Interior of ${slide.name}${slide.illustrative ? ' (illustrative image)' : ''}`}
+                src={representativePhotoUrl(slide.photo, 'hero') ?? optimizeImageUrl(slide.photo, 'hero')}
+                onError={(event) => {
+                  // A local copy is shipped for offline or CDN-blocked connections.
+                  if (slide.representative && !event.currentTarget.src.endsWith(slide.photo)) {
+                    event.currentTarget.src = slide.photo;
+                  }
+                }}
+                alt={slide.representative ? `Representative furnished interior for ${slide.name}` : `Interior of ${slide.name}`}
                 loading={i === 0 ? 'eager' : 'lazy'}
                 fetchPriority={i === 0 ? 'high' : 'auto'}
                 decoding="async"
@@ -174,8 +182,8 @@ export function HomeHeroCarousel({
               </h1>
 
               <p className="mt-4 max-w-md text-[0.95rem] leading-relaxed text-white/70">
-                {totalApartments} private unit{totalApartments === 1 ? '' : 's'} in Barlaston Park.
-                Live availability, clear Kwacha rates, no card needed to enquire.
+                {totalApartments} apartment option{totalApartments === 1 ? '' : 's'} in Lusaka.
+                Check dates and ask reception to confirm your stay.
               </p>
 
               <div className="mt-6 flex flex-wrap items-center gap-2.5">
@@ -219,13 +227,12 @@ export function HomeHeroCarousel({
                   {formatKwacha(active.nightlyRate)}
                   <span className="font-normal text-white/55"> / night</span>
                 </span>
-                {/* Honest labelling: until the owner supplies real photography, the frame
-                    is a representative interior, and the page says so quietly. */}
-                {active.illustrative ? (
-                  <span className="text-[0.68rem] uppercase tracking-[0.1em] text-white/40">
-                    Representative image
+                {active.representative ? (
+                  <span className="text-[0.68rem] tracking-[0.02em] text-white/70">
+                    Representative stock photo · not of the property
                   </span>
                 ) : null}
+                {active.sample ? <span className="text-[0.68rem] text-white/80">Example listing · confirm details</span> : null}
               </div>
             </div>
           </div>
@@ -238,7 +245,7 @@ export function HomeHeroCarousel({
             <button
               type="button"
               onClick={() => go(index - 1)}
-              aria-label="Previous apartment"
+              aria-label="Previous photo"
               className="absolute bottom-9 left-4 hidden h-9 w-9 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/75 lg:grid xl:left-6"
             >
               <ChevronLeft size={18} />
@@ -246,25 +253,15 @@ export function HomeHeroCarousel({
             <button
               type="button"
               onClick={() => go(index + 1)}
-              aria-label="Next apartment"
+              aria-label="Next photo"
               className="absolute bottom-9 right-4 hidden h-9 w-9 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/75 lg:grid xl:right-6"
             >
               <ChevronRight size={18} />
             </button>
 
-            <div className="absolute right-4 top-3 flex items-center gap-2 sm:right-5 sm:top-5">
-              <span className="rounded-full bg-charcoal-950/45 px-2 py-1 text-[0.66rem] font-medium tabular-nums text-white/80 backdrop-blur-sm">
-                {String(index + 1).padStart(2, '0')} / {String(count).padStart(2, '0')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setUserStopped((v) => !v)}
-                aria-label={userStopped ? 'Resume the slideshow' : 'Pause the slideshow'}
-                className="grid h-8 w-8 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white/80 backdrop-blur-sm transition hover:bg-charcoal-950/70"
-              >
-                {userStopped ? <Play size={13} /> : <Pause size={13} />}
-              </button>
-            </div>
+            <span className="absolute right-4 top-3 rounded-full bg-charcoal-950/45 px-2 py-1 text-[0.66rem] font-medium tabular-nums text-white/80 backdrop-blur-sm sm:right-5 sm:top-5">
+              {String(index + 1).padStart(2, '0')} / {String(count).padStart(2, '0')}
+            </span>
 
             {/* Auto-advance indicator: a thin bar per frame that fills over the interval,
                 so the motion reads as a clock rather than a surprise. It is keyed on the
@@ -284,10 +281,10 @@ export function HomeHeroCarousel({
                   <span className="mt-2 block h-[3px] w-full overflow-hidden rounded-full bg-white/25 transition-colors group-hover:bg-white/40">
                     {i === index ? (
                       <span
-                        key={`${slide.id}-${index}-${userStopped ? 'p' : 'r'}`}
+                        key={`${slide.id}-${index}`}
                         className="block h-full origin-left rounded-full bg-white"
                         style={
-                          userStopped || reducedMotion
+                          reducedMotion
                             ? { transform: 'scaleX(1)' }
                             : { animation: `hero-progress ${INTERVAL_MS}ms linear forwards` }
                         }

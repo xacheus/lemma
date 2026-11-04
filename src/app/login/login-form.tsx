@@ -65,12 +65,15 @@ export function LoginPage({
               router.refresh();
               return;
             }
-            if (payload.code !== 'firebase_not_configured') {
+            if (payload.code !== 'firebase_not_configured' && payload.code !== 'account_conflict') {
               setError(payload.error ?? 'Sign in failed.');
               setBusy(false);
               await signOut(auth).catch(() => undefined);
               return;
             }
+            // An email shared with an older local account must not inherit its role.
+            // Clear the Firebase sign-in and allow the local password check below.
+            await signOut(auth).catch(() => undefined);
           } catch (err) {
             // Do not stop at the first refusal. `auth/invalid-credential` is returned
             // for both a wrong password and an address that has no Firebase Auth
@@ -135,20 +138,20 @@ export function LoginPage({
           <div className="relative mt-8 overflow-hidden rounded-lg ring-1 ring-white/15">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/brand/hero-banner.jpg"
+              src="/images/apartments/apt-02/01.jpg"
               alt=""
               aria-hidden="true"
               className="h-44 w-full object-cover object-[60%_center] opacity-90"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/30 to-transparent" />
             <p className="absolute bottom-3 left-4 right-4 text-[0.76rem] text-white/80">
-              Chainama Lands, Great East Road. 20 minutes from Kenneth Kaunda International Airport.
+              Representative stock photography · Not of the property
             </p>
           </div>
         </div>
 
         <p className="text-[0.74rem] leading-relaxed text-navy-300">
-          {propertyName} · Plot 2144B, Chainama Lands, Great East Road, Lusaka, Zambia
+          {propertyName} · Lusaka, Zambia
         </p>
       </div>
 

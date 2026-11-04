@@ -1,8 +1,9 @@
-import { apiRoute, publicRoute, readBody } from '@/lib/api/http';
+import { publicRoute, readBody } from '@/lib/api/http';
 import { guestPaymentClaimSchema } from '@/lib/api/schemas';
 import { ensureCloudFirestoreHydrated, getDb, runAtomicTransaction } from '@/lib/db/store';
-import { paymentQuote, submitPaymentClaim } from '@/lib/domain/operations';
+import { paymentQuote, submitPaymentClaim, OperationError } from '@/lib/domain/operations';
 import { buildSnapshot } from '@/lib/api/snapshot';
+import { isSampleListing } from '@/lib/domain/sample-listings';
 
 export const runtime = 'nodejs';
 
@@ -22,6 +23,10 @@ export const GET = publicRoute(async ({ search, session }) => {
     const reservation = db.reservations.find((r) => r.id === reservationId);
     if (!reservation) {
       return { quotes: [], detail: 'Choose one of your bookings.' };
+    }
+    const sample = db.apartments.find((a) => a.id === reservation.apartmentId);
+    if (sample && isSampleListing(sample) && reservation.status === 'inquiry') {
+      return { quote: null, detail: 'Reception needs to confirm this example listing before payment.' };
     }
 
     const mine =
@@ -75,6 +80,11 @@ export const GET = publicRoute(async ({ search, session }) => {
 export const POST = publicRoute(async ({ req, session }) => {
     const input = await readBody(req, guestPaymentClaimSchema);
     return runAtomicTransaction((db) => {
+      const reservation = db.reservations.find((r) => r.id === input.reservationId);
+      const sample = db.apartments.find((a) => a.id === reservation?.apartmentId);
+      if (reservation?.status === 'inquiry' && sample && isSampleListing(sample)) {
+        throw new OperationError('Please wait for reception to confirm this apartment before paying.', 409, 'confirmation_required');
+      }
       const claim = submitPaymentClaim(db, {
         reservationId: input.reservationId,
         // A visitor who has not signed in may file one claim against the booking they
@@ -87,10 +97,10 @@ export const POST = publicRoute(async ({ req, session }) => {
         note: input.note,
         proof: input.proof ?? null,
       });
-      const reservation = db.reservations.find((r) => r.id === claim.reservationId)!;
+      const confirmedReservation = db.reservations.find((r) => r.id === claim.reservationId)!;
       return {
         claim,
-        quote: paymentQuote(db, reservation),
+        quote: paymentQuote(db, confirmedReservation),
         // Only a signed-in guest gets their whole snapshot back.
         snapshot: session ? buildSnapshot(db, session) : null,
       };

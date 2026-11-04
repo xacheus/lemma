@@ -26,14 +26,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
   applicationName: 'Lemma Apartments',
   title: {
-    default: 'Lemma Apartments — Furnished Apartments at Barlaston Park, Lusaka',
+    default: 'Lemma Apartments — Apartments in Lusaka, Zambia',
     template: '%s · Lemma Apartments',
   },
   description:
-    'Furnished studio, one-bedroom and family apartments at Barlaston Park, Lusaka. Live availability, nightly rates in Zambian Kwacha, and secure online booking with Airtel Money, MTN Mobile Money, bank transfer or cash.',
+    'Browse apartment options in Lusaka, ask about your dates, and confirm rates and payment details with reception.',
   keywords: [
     'Lemma Apartments',
-    'Apartments Barlaston Park',
     'Furnished apartments Lusaka',
     'Accommodation Lusaka Zambia',
     'Apartment booking Zambia',
@@ -42,7 +41,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Lemma Apartments — Furnished Apartments in Lusaka',
     description:
-      'Furnished apartments at Barlaston Park, Lusaka, with live availability, night-by-night Kwacha pricing and online booking.',
+      'Explore apartment options in Lusaka and contact reception to confirm availability and rates.',
     type: 'website',
     locale: 'en_ZM',
     siteName: 'Lemma Apartments',

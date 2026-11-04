@@ -196,7 +196,7 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
           </div>
           <p className="mt-4 max-w-md text-[0.86rem] leading-relaxed text-navy-300">
             {property.tagline ||
-              'Furnished apartments at Barlaston Park, Lusaka. Booked night by night in Zambian Kwacha, with housekeeping, secure parking and someone on the phone when you need them.'}
+              `Explore apartments in ${property.city} and contact reception to confirm the right stay for your dates.`}
           </p>
         </div>
 

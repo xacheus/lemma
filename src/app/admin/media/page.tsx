@@ -53,6 +53,10 @@ export default function AdminMediaPage() {
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!files.length) return;
+    if (files.length > 24) {
+      toast({ tone: 'error', title: 'Too many files', body: 'Choose up to 24 at a time.' });
+      return;
+    }
     setUploading(true);
     try {
       const form = new FormData();
@@ -78,7 +82,7 @@ export default function AdminMediaPage() {
         toast({
           tone: 'success',
           title: 'Media uploaded',
-          body: `Uploaded ${json.data.created.length} file(s) and updated gallery records.`,
+          body: `${json.data.created.length} file(s) saved to the library.`,
         });
       }
     } catch {
@@ -138,7 +142,7 @@ export default function AdminMediaPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-lemma-dark">
-            Cloudinary &amp; Property Assets
+            Apartment photography
           </p>
           <h1 className="text-[1.45rem] font-bold text-navy-900">Media Library</h1>
           <p className="text-[0.83rem] text-navy-500">
@@ -149,13 +153,12 @@ export default function AdminMediaPage() {
         <div className="rounded-md border border-sand-200 bg-white px-3.5 py-2 text-[0.76rem] text-navy-700">
           <div className="flex items-center gap-1.5 font-semibold text-navy-900">
             <Cloud size={14} className="text-lemma-dark" />
-            Cloud: <code>{integrations.cloudinaryCloudName}</code> · Preset:{' '}
-            <code>{integrations.cloudinaryUploadPreset}</code>
+            {integrations.cloudinarySignedReady ? 'Photo storage connected' : 'Photo storage needs attention'}
           </div>
           <p className="mt-0.5 text-navy-500">
             {integrations.cloudinarySignedReady
-              ? 'Signed server-side Cloudinary upload & destroy active.'
-              : 'Server keys pending in env — using local workspace storage fallback.'}
+              ? 'New uploads will be available on the website.'
+              : 'Contact the site administrator before adding photos.'}
           </p>
         </div>
       </div>
@@ -394,7 +397,7 @@ export default function AdminMediaPage() {
                       type="button"
                       onClick={() => void handleDelete(item)}
                       className="btn btn-secondary ml-auto px-2 py-1 text-[0.72rem] text-st-cancelled"
-                      title="Delete from Cloudinary & database"
+                      title="Delete from media library"
                     >
                       <Trash2 size={12} />
                     </button>

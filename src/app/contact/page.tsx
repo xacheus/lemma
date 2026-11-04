@@ -3,7 +3,6 @@ import { Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
 import { getSession } from '@/lib/auth/session';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
-import { PhotoFrame } from '@/components/ui/photo';
 import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
@@ -138,21 +137,19 @@ export default async function ContactPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="card img-zoom overflow-hidden p-3">
-              <PhotoFrame
-                src="/images/property/reception.jpg"
-                alt="Lemma Apartments Reception"
-                ratio="16 / 10"
-                variant="detail"
-              />
+            <div className="card space-y-3 p-6 text-[0.86rem] text-navy-600">
+              <h3 className="text-[1rem] font-semibold text-navy-900">Visit or call reception</h3>
+              <p>{property.addressLine}, {property.city}, {property.country}</p>
+              <p>{property.receptionHours}</p>
+              <p>Contact us to confirm directions before travelling.</p>
             </div>
             <div className="card p-6 text-[0.86rem] text-navy-600 space-y-2">
               <h3 className="text-[1rem] font-semibold text-navy-900">
                 Airport &amp; Business District Access
               </h3>
               <p>
-                Approximately 20 minutes from Kenneth Kaunda International Airport along Great East
-                Road, and 10 minutes to East Park Mall, UNZA, and Arcades commercial precinct.
+                For directions or travel-time advice, contact reception with your arrival point.
+                Journey times depend on the route and traffic.
               </p>
             </div>
           </div>

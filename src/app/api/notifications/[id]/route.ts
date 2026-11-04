@@ -1,6 +1,6 @@
 import { apiRoute, HttpError, readBody } from '@/lib/api/http';
 import { notificationPatchSchema } from '@/lib/api/schemas';
-import { mutate } from '@/lib/db/store';
+import { runAtomicTransaction } from '@/lib/db/store';
 import { buildSnapshot } from '@/lib/api/snapshot';
 import { markNotification } from '@/lib/domain/operations';
 
@@ -13,7 +13,7 @@ export const PATCH = apiRoute({
     if (patch.delivered && !session.permissions.has('notifications.send')) {
       throw new HttpError('Only staff who can send messages can mark one as sent.', 403, 'forbidden');
     }
-    return mutate((db) => ({
+    return runAtomicTransaction((db) => ({
       notification: markNotification(db, params.id, { ...patch, actor: session.user.name }),
       snapshot: buildSnapshot(db, session),
     }));

@@ -4,6 +4,8 @@ import { ArrowLeft, Bath, BedDouble, CheckCircle2, Layers, Maximize2, Users } fr
 import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
 import { getSession } from '@/lib/auth/session';
 import { addISO } from '@/lib/domain/dates';
+import { isSampleListing } from '@/lib/domain/sample-listings';
+import { isRepresentativeImage } from '@/lib/cloudinary/urls';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoStrip } from '@/components/ui/photo';
@@ -26,7 +28,7 @@ export default async function ApartmentDetailPage({
   const sp = await searchParams;
 
   const apartment = db.apartments.find(
-    (a) => (a.slug === slug || a.id === slug) && a.active && a.publicationStatus !== 'draft',
+    (a) => (a.slug === slug || a.id === slug) && a.active && !a.outOfService && a.publicationStatus !== 'draft',
   );
   if (!apartment) notFound();
 
@@ -73,6 +75,12 @@ export default async function ApartmentDetailPage({
               ) : null}
             </div>
 
+            {isSampleListing(apartment) ? (
+              <p className="rounded-md border border-sand-300 bg-sand-100 px-4 py-3 text-[0.84rem] text-navy-700">
+                Example listing: please confirm the actual unit, features and rate with reception
+                before paying. Your request does not confirm a stay.
+              </p>
+            ) : null}
             <div className="card img-zoom overflow-hidden p-3">
               <PhotoStrip
                 photos={galleryPhotos}
@@ -80,6 +88,12 @@ export default async function ApartmentDetailPage({
                 ratio="16 / 10"
                 captions={galleryCaptions}
               />
+              {galleryPhotos.some(isRepresentativeImage) ? (
+                <p className="mt-3 text-[0.78rem] text-navy-600">
+                  Representative stock photography, not photos of this property. Ask reception
+                  for current pictures of the apartment.
+                </p>
+              ) : null}
             </div>
 
             <div className="card grid grid-cols-2 gap-4 p-5 sm:grid-cols-5">

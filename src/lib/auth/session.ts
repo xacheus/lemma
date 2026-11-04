@@ -1,16 +1,21 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import type { PermissionKey, StaffUser, UserRecord } from '../domain/types';
+import { userRecordToStaffView } from '../domain/staff-view';
 import { permissionsFor } from '../domain/permissions';
-import { ensureCloudFirestoreHydrated, getDb, mutate } from '../db/store';
+import { ensureCloudFirestoreHydrated, getDb, StoreUnavailableError } from '../db/store';
 import { getAdminAuth, getAdminFirestore } from '../firebase/admin';
-import { applyConsoleRoleChange } from '../domain/production-ops';
+import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
 export const SESSION_COOKIE = 'lemma_session';
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7-day persistent authenticated session
 
+const localSessionSecret = randomBytes(32).toString('hex');
+
 function secret(): string {
-  return process.env.LEMMA_SESSION_SECRET ?? 'lemma-heights-production-session-hmac-key';
+  if (process.env.LEMMA_SESSION_SECRET) return process.env.LEMMA_SESSION_SECRET;
+  if (process.env.VERCEL) throw new StoreUnavailableError();
+  return localSessionSecret;
 }
 
 function signPayload(payload: string): string {
@@ -59,43 +64,6 @@ export function verifyToken(
   }
 }
 
-export function userRecordToStaffView(u: UserRecord): StaffUser {
-  const active = u.accountStatus === 'active';
-  return {
-    id: u.uid,
-    uid: u.uid,
-    name: u.fullName,
-    fullName: u.fullName,
-    username: u.username || u.email.split('@')[0] || u.uid,
-    email: u.email,
-    phone: u.phoneNumber,
-    phoneNumber: u.phoneNumber,
-    profilePhoto: u.profilePhoto,
-    role: u.role,
-    accountStatus: u.accountStatus,
-    emailVerified: u.emailVerified,
-    jobTitle:
-      u.jobTitle ||
-      (u.role === 'super_admin'
-        ? 'Super Administrator'
-        : u.role === 'admin'
-          ? 'Administrator'
-          : u.role === 'receptionist'
-            ? 'Receptionist'
-            : u.role === 'cleaner'
-              ? 'Housekeeping Attendant'
-              : 'Registered Guest'),
-    active,
-    hiredOn: u.hiredOn || u.createdAt.slice(0, 10),
-    createdAt: u.createdAt,
-    updatedAt: u.updatedAt,
-    lastSeenAt: u.lastLoginAt,
-    lastLoginAt: u.lastLoginAt,
-    shift: u.shift ?? null,
-    permissions: u.permissions ?? null,
-  };
-}
-
 export interface Session {
   uid: string;
   user: StaffUser;
@@ -103,54 +71,34 @@ export interface Session {
   permissions: Set<PermissionKey>;
 }
 
-/**
- * Pulls the authoritative `role` / `accountStatus` from the Firestore user document.
- *
- * Staff roles are assigned and revoked in the Firebase Console, so the document wins
- * over this process's cached copy. Without this, a promotion made in the Console
- * would only appear after a redeploy — the cache is hydrated once per instance.
- *
- * Reads one document, ignores anything malformed, and writes only when the value
- * actually differs. When Firebase Admin is not configured (local development) there
- * is no Console to read, so the stored record stands.
- */
-/**
- * Give up on the role read after this long.
- *
- * This runs inside `getSession()`, so it is on the critical path of every authenticated
- * page. An unreachable Firestore made gRPC retry for tens of seconds per document, which
- * held page renders open until the platform killed them. A healthy single-document read
- * is milliseconds; past a couple of seconds the answer is "unknown", and the stored
- * record is a safe answer for this request.
- */
+/** A Console promotion or deactivation takes effect before the next response. */
 const ROLE_SYNC_TIMEOUT_MS = 3_000;
 
-async function syncRoleFromFirestore(uid: string): Promise<void> {
-  if (!process.env.FIREBASE_PROJECT_ID) return;
+async function syncRoleFromFirestore(uid: string): Promise<boolean> {
   const adminDb = getAdminFirestore();
-  if (!adminDb) return;
+  if (!adminDb) return true; // local development has no Console
   try {
-    const snap = await Promise.race([
-      adminDb.collection('users').doc(uid).get(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('firestore_timeout: role sync')), ROLE_SYNC_TIMEOUT_MS),
-      ),
-    ]);
-    if (!snap.exists) return;
+    const snap = await new Promise<DocumentSnapshot>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new StoreUnavailableError()), ROLE_SYNC_TIMEOUT_MS);
+      adminDb.collection('users').doc(uid).get().then(
+        (result) => { clearTimeout(timer); resolve(result); },
+        (error) => { clearTimeout(timer); reject(error); },
+      );
+    });
+    if (!snap.exists) return false; // deleted account cannot use a cached session
     const data = snap.data() as { role?: unknown; accountStatus?: unknown; username?: unknown };
     const current = (getDb().users ?? []).find((u) => u.uid === uid);
-    if (!current) return;
-    const same =
-      (typeof data.role !== 'string' || data.role === current.role) &&
-      (typeof data.accountStatus !== 'string' || data.accountStatus === current.accountStatus) &&
-      (typeof data.username !== 'string' || data.username === current.username);
-    if (same) return;
-    mutate((db) => {
-      const row = (db.users ?? []).find((u) => u.uid === uid);
-      if (row) applyConsoleRoleChange(db, row, data);
-    });
+    if (!current) return false;
+    if (data.role !== current.role || data.accountStatus !== current.accountStatus ||
+        (data.username && data.username !== current.username)) {
+      // Refresh the authoritative record; do not write a stale in-memory copy back
+      // over the role/status change made in the Firebase Console.
+      await ensureCloudFirestoreHydrated(true);
+    }
+    return true;
   } catch (err) {
-    console.warn('[session] Firestore role sync skipped:', err);
+    console.error('[session] Unable to verify account status:', err);
+    throw new StoreUnavailableError();
   }
 }
 
@@ -165,7 +113,6 @@ export async function getSession(): Promise<Session | null> {
   const rawCookie = store.get(SESSION_COOKIE)?.value;
   if (!rawCookie) return null;
 
-  const db = getDb();
   let resolvedUid: string | null = null;
   let tokenVersion: number | null = null;
 
@@ -194,7 +141,7 @@ export async function getSession(): Promise<Session | null> {
   if (!resolvedUid) return null;
 
   // A Console role change must be honoured on the very next request.
-  await syncRoleFromFirestore(resolvedUid);
+  if (!(await syncRoleFromFirestore(resolvedUid))) return null;
 
   const refreshedDb = getDb();
   const userRec = (refreshedDb.users ?? []).find((u) => u.uid === resolvedUid);
@@ -208,7 +155,6 @@ export async function getSession(): Promise<Session | null> {
       return null;
     }
     const staffView = userRecordToStaffView(userRec);
-    void db;
     return {
       uid: userRec.uid,
       user: staffView,

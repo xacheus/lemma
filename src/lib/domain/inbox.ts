@@ -11,7 +11,9 @@ import type { Session } from '@/lib/auth/session';
 export function unreadForSession(db: Database, session: Session | null): number {
   if (!session) return 0;
   const role = session.user.role;
-  const email = (session.user.email ?? '').toLowerCase();
+  const email = db.users?.some((u) => u.uid === session.uid && u.emailVerified)
+    ? (session.user.email ?? '').toLowerCase()
+    : '';
 
   if (role !== 'guest') {
     return db.notifications.filter(

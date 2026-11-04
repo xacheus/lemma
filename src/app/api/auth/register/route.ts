@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sessionToken } from '@/lib/auth/session';
-import { runAtomicTransaction } from '@/lib/db/store';
+import { runAtomicTransaction, StoreUnavailableError } from '@/lib/db/store';
 import { HttpError, readBody, sessionCookie } from '@/lib/api/http';
 import { registerSchema } from '@/lib/api/schemas';
 import { registerCustomerAccount, OperationError } from '@/lib/domain/operations';
@@ -48,10 +48,12 @@ export async function POST(req: Request) {
     let firebaseUid: string | undefined;
     if (body.firebaseIdToken) {
       const adminAuth = getAdminAuth();
-      if (adminAuth) {
-        const decoded = await adminAuth.verifyIdToken(body.firebaseIdToken);
-        firebaseUid = decoded.uid;
+      if (!adminAuth) throw new HttpError('Sign-up is temporarily unavailable.', 503, 'auth_unavailable');
+      const decoded = await adminAuth.verifyIdToken(body.firebaseIdToken, true);
+      if (!decoded.email_verified || decoded.email?.toLowerCase() !== body.email.trim().toLowerCase()) {
+        throw new HttpError('Verify the email on your account before signing up.', 403, 'email_unverified');
       }
+      firebaseUid = decoded.uid;
     }
 
     const { user, verificationToken, propertyName } = await runAtomicTransaction((db) => {
@@ -68,23 +70,28 @@ export async function POST(req: Request) {
       };
     });
 
-    // Attempt email verification dispatch if email provider is configured
-    const origin = new URL(req.url).origin;
-    const verifyUrl = `${origin}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
-    const emailResult = await sendEmailNotification({
-      to: user.email,
-      subject: `Verify your email — ${propertyName}`,
-      textBody: `Welcome to ${propertyName}, ${user.fullName}.\n\nVerify your email address by visiting:\n${verifyUrl}`,
-      htmlBody: buildBrandedEmailHtml({
-        propertyName,
-        heading: 'Verify your email address',
-        bodyLines: [
-          `Hello ${user.fullName},`,
-          `Thank you for registering an account with ${propertyName}. Confirm your email address using the link below:`,
-          verifyUrl,
-        ],
-      }),
-    });
+    // Firebase sign-up tokens have already proved the email. Local password
+    // accounts get a verification link if an email provider is connected.
+    let emailSent = false;
+    if (!user.emailVerified) {
+      const origin = new URL(req.url).origin;
+      const verifyUrl = `${origin}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
+      const emailResult = await sendEmailNotification({
+        to: user.email,
+        subject: `Verify your email — ${propertyName}`,
+        textBody: `Welcome to ${propertyName}, ${user.fullName}.\n\nVerify your email address by visiting:\n${verifyUrl}`,
+        htmlBody: buildBrandedEmailHtml({
+          propertyName,
+          heading: 'Verify your email address',
+          bodyLines: [
+            `Hello ${user.fullName},`,
+            `Thank you for registering an account with ${propertyName}. Confirm your email address using the link below:`,
+            verifyUrl,
+          ],
+        }),
+      });
+      emailSent = emailResult.ok;
+    }
 
     const response = NextResponse.json({
       ok: true,
@@ -94,13 +101,13 @@ export async function POST(req: Request) {
         name: user.fullName,
         email: user.email,
         role: user.role, // Guaranteed 'guest'
-        emailSent: emailResult.ok,
+        emailSent,
       },
     });
     response.cookies.set(sessionCookie(sessionToken(user.uid, user.sessionVersion ?? 1)));
     return response;
   } catch (error) {
-    if (error instanceof HttpError || error instanceof OperationError) {
+    if (error instanceof HttpError || error instanceof OperationError || error instanceof StoreUnavailableError) {
       return NextResponse.json(
         { ok: false, error: error.message, code: error.code, details: error.details },
         { status: error.status },

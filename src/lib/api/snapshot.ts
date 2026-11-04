@@ -109,7 +109,7 @@ export function getIntegrationStatus(): IntegrationStatusView {
     cloudinaryUploadPreset: CLOUDINARY_UPLOAD_PRESET,
     cloudinarySignedReady: isCloudinaryConfigured(),
     whatsappProviderConfigured: Boolean(
-      process.env.WHATSAPP_CLOUD_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID,
+      process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID,
     ),
     smsProviderConfigured: Boolean(process.env.SMS_WEBHOOK_URL),
     emailProviderConfigured: Boolean(process.env.RESEND_API_KEY),
@@ -164,7 +164,7 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
 
   // Guest Account Portal Projection — strictly own bookings & documents
   if (isGuest) {
-    const emailLower = user.email.toLowerCase();
+    const emailLower = userRec?.emailVerified ? user.email.toLowerCase() : '';
     const myGuests = db.guests.filter(
       (g) =>
         g.userId === user.id ||

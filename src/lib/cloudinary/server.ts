@@ -246,7 +246,11 @@ export async function uploadMediaAsset(input: {
     };
   }
 
-  // Local workspace storage when CLOUDINARY_API_SECRET is not set in local dev
+  if (process.env.VERCEL) {
+    throw new Error('Photograph storage is not connected.');
+  }
+
+  // Local workspace storage for development only
   const ext =
     input.mimeType === 'application/pdf'
       ? '.pdf'

@@ -83,7 +83,7 @@ export default function ApartmentsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Apartments"
-        description="The inventory the booking engine sells against. Rate, capacity and out-of-service flags apply to the next availability search."
+        description="Manage apartment details, nightly rates and availability."
         actions={
           can('apartments.manage') ? (
             <button type="button" className="btn-gold h-9 px-3.5 text-[0.82rem]" onClick={() => setCreating(true)}>

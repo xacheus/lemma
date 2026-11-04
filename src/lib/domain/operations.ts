@@ -1,3 +1,4 @@
+import { isSampleListing } from './sample-listings';
 import { randomUUID } from 'node:crypto';
 import type {
   Apartment,
@@ -324,14 +325,13 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
   const seq = db.sequences.reservation++;
   const reference = `LHA-${input.checkIn.slice(0, 4)}-${String(seq).padStart(4, '0')}`;
   const autoConfirm = db.settings.booking.autoConfirmPublicRequests;
-  const status: BookingStatus = input.asInquiry && !autoConfirm ? 'inquiry' : (input.status ?? 'reserved');
+  const status: BookingStatus = input.asInquiry && (!autoConfirm || isSampleListing(apartment))
+    ? 'inquiry'
+    : (input.status ?? 'reserved');
   const holdMins = db.settings.booking.holdDurationMinutes ?? 240;
-  const linkedUserId =
-    input.userId ??
-    guest.userId ??
-    (guest.email
-      ? (db.users ?? []).find((u) => u.email.toLowerCase() === guest.email.toLowerCase())?.uid ?? null
-      : null);
+  // An email supplied on a public booking is not proof of account ownership.
+  // Signed-in submissions pass their UID; confirmed guest profiles have userId.
+  const linkedUserId = input.userId ?? guest.userId ?? null;
 
   const reservation: Reservation = {
     id: nextId('rv'),

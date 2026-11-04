@@ -18,7 +18,8 @@ export interface ShowcaseSlide {
   photos: string[];
   available: boolean;
   availabilityNote: string;
-  illustrative: boolean;
+  representative: boolean;
+  sample: boolean;
 }
 
 const INTERVAL_MS = 6500;
@@ -169,10 +170,10 @@ export function ApartmentShowcase({
                 />
                 {active.availabilityNote}
               </span>
-              {active.illustrative ? (
+              {active.representative ? (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span className="text-white/50">Illustrative image</span>
+                  <span className="text-white/50">Representative photo</span>
                 </>
               ) : null}
             </div>
