@@ -19,9 +19,47 @@ import {
 } from 'lucide-react';
 import type { SnapshotView } from '@/lib/view-types';
 import { BOOKING_STATUS_META, PAYMENT_STATUS_META } from '@/lib/domain/status';
+import type { PaymentStage } from '@/lib/domain/types';
 import { formatKwacha } from '@/lib/domain/money';
 import { GuestNotifications } from './guest-notifications';
 import { GuestPaymentPanel } from './guest-payment-panel';
+
+/**
+ * The six payment words promised to the guest, with the tone each one deserves.
+ * "Proof submitted" is deliberately not green: nothing has been verified yet.
+ */
+const STAGE_META: Record<PaymentStage, { label: string; chip: string; note: string }> = {
+  awaiting_payment: {
+    label: 'Awaiting payment',
+    chip: 'bg-st-cancelledBg text-st-cancelled',
+    note: 'No payment has been verified for this stay yet.',
+  },
+  proof_submitted: {
+    label: 'Proof submitted',
+    chip: 'bg-sand-100 text-navy-700',
+    note: 'We have your receipt — reception has not opened it yet.',
+  },
+  under_verification: {
+    label: 'Under verification',
+    chip: 'bg-st-cleaningBg text-st-cleaning',
+    note: 'Reception is matching your payment against the statement.',
+  },
+  part_paid: {
+    label: 'Part paid',
+    chip: 'bg-st-reservedBg text-st-reserved',
+    note: 'Part of the stay is settled; the remaining balance is below.',
+  },
+  approved: {
+    label: 'Approved',
+    chip: 'bg-st-availableBg text-st-available',
+    note: 'Verified. Your receipt is available to view, print or download.',
+  },
+  rejected: {
+    label: 'Payment rejected',
+    chip: 'bg-st-cancelledBg text-st-cancelled',
+    note: 'The last proof could not be matched. Submit a corrected reference or call reception.',
+  },
+};
 
 export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: SnapshotView }) {
   const router = useRouter();
@@ -53,6 +91,7 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
   const quotations = snapshot.quotations ?? [];
   const invoices = snapshot.invoices ?? [];
   const receipts = snapshot.receipts ?? [];
+  const receiptsFor = (reservationId: string) => receipts.filter((rc) => rc.reservationId === reservationId);
   const waDigits = snapshot.settings.property.whatsapp.replace(/[^0-9]/g, '');
 
   async function handleLogout() {
@@ -250,6 +289,7 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
             </div>
           ) : (
             reservations.map((r) => {
+              const myReceipts = receiptsFor(r.id);
               const bMeta = BOOKING_STATUS_META[r.status];
               const pMeta = PAYMENT_STATUS_META[r.paymentStatus];
               const canRequestCancel = ['inquiry', 'pending_confirmation', 'reserved', 'fully_paid'].includes(
@@ -268,6 +308,9 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
                         </span>
                         <span className={`chip ${pMeta?.chip ?? ''}`}>
                           {pMeta?.label ?? r.paymentStatus}
+                        </span>
+                        <span className={`chip ${STAGE_META[r.paymentStage]?.chip ?? ''}`}>
+                          {STAGE_META[r.paymentStage]?.label ?? r.paymentStage}
                         </span>
                       </div>
                       <h2 className="mt-1.5 text-[1.1rem] font-semibold text-navy-900">
@@ -303,6 +346,31 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
                         </p>
                       ) : null}
                     </div>
+                  </div>
+
+                  <div className="rounded-md border border-sand-200 bg-sand-50/70 px-3 py-2 text-[0.79rem] leading-relaxed text-navy-700">
+                    <p>{STAGE_META[r.paymentStage]?.note ?? ''}</p>
+                    {r.latestClaim ? (
+                      <p className="mt-0.5 text-[0.75rem] text-navy-500">
+                        {r.latestClaim.status === 'rejected' ? 'Declined' : 'Submitted'}{' '}
+                        {formatKwacha(r.latestClaim.amount)} · ref{' '}
+                        <span className="font-mono">{r.latestClaim.reference}</span> ·{' '}
+                        {new Date(r.latestClaim.createdAt).toLocaleDateString('en-GB')}
+                      </p>
+                    ) : null}
+                    {myReceipts.length > 0 ? (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {myReceipts.map((rc) => (
+                          <a
+                            key={rc.id}
+                            href={`/api/documents/receipt/${rc.id}/pdf?download=1`}
+                            className="inline-flex items-center gap-1 rounded border border-sand-300 bg-white px-2 py-1 text-[0.72rem] font-medium text-navy-800 hover:border-navy-900"
+                          >
+                            <Receipt size={11} /> {rc.receiptNumber} · {formatKwacha(rc.amount)}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-200 pt-3.5">
@@ -445,12 +513,22 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
                       Verified K{rc.amount.toLocaleString('en-US')} ({rc.paidAt})
                     </p>
                   </div>
-                  <a
-                    href={`/api/documents/receipt/${rc.id}/pdf?download=1`}
-                    className="btn btn-secondary py-1 px-2.5 text-[0.75rem]"
-                  >
-                    <Download size={12} /> PDF
-                  </a>
+                  <div className="flex gap-1.5">
+                    <Link
+                      href={`/receipt/${rc.id}`}
+                      className="btn btn-secondary py-1 px-2.5 text-[0.75rem]"
+                      title="View, print or download this receipt"
+                    >
+                      <Receipt size={12} /> View
+                    </Link>
+                    <a
+                      href={`/api/documents/receipt/${rc.id}/pdf?download=1`}
+                      className="btn btn-ghost py-1 px-2.5 text-[0.75rem]"
+                      title="Download the PDF"
+                    >
+                      <Download size={12} /> PDF
+                    </a>
+                  </div>
                 </div>
               ))
             )}

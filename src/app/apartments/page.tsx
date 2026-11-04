@@ -5,6 +5,7 @@ import { searchAvailability } from '@/lib/domain/availability';
 import { calculateStayPricing } from '@/lib/domain/pricing';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { ApartmentsCatalogueClient } from './catalogue-client';
+import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export default async function ApartmentsPage({
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
-      <PublicHeader property={db.settings.property} session={session} activePath="/apartments" />
+      <PublicHeader property={db.settings.property} session={session} activePath="/apartments" unreadCount={unreadForSession(db, session)} />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
         <ApartmentsCatalogueClient
           units={units}

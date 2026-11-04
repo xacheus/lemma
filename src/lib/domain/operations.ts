@@ -23,6 +23,7 @@ import { financialsFor, recomputeReservation } from './selectors';
 import { addISO, dayDiff, formatMediumDate, businessToday, timeNow } from './dates';
 import { hashPassword } from '../auth/passwords';
 import { appendAuditLog, issueOfficialReceipt } from './production-ops';
+import { normaliseAmenities } from './amenities';
 
 /**
  * Business operations. Every write in the product — admin desk, cleaner portal,
@@ -830,7 +831,12 @@ export function submitPaymentClaim(
   db: Database,
   input: {
     reservationId: ID;
-    userId: ID;
+    /**
+     * The signed-in guest, or null when the person who booked as a visitor is
+     * uploading proof from the confirmation page before creating an account. A null
+     * actor is only accepted for a booking that belongs to no account at all.
+     */
+    userId: ID | null;
     amount: number;
     method: PaymentMethod;
     reference: string;
@@ -842,7 +848,16 @@ export function submitPaymentClaim(
   db.paymentClaims = db.paymentClaims ?? [];
   const r = db.reservations.find((x) => x.id === input.reservationId);
   if (!r) throw new OperationError('Booking not found.', 404, 'not_found');
-  if (r.userId !== input.userId) {
+  if (input.userId === null) {
+    // Only a booking that no account owns — the visitor booked without signing in.
+    if (r.userId || db.guests.find((g) => g.id === r.guestId)?.userId) {
+      throw new OperationError(
+        'This booking belongs to an account. Sign in to submit a payment for it.',
+        403,
+        'sign_in_required',
+      );
+    }
+  } else if (r.userId !== input.userId) {
     const guestRecord = db.guests.find((g) => g.id === r.guestId);
     if (guestRecord?.userId !== input.userId) {
       throw new OperationError('That booking does not belong to your account.', 403, 'forbidden');
@@ -932,8 +947,8 @@ export function submitPaymentClaim(
 
   appendAuditLog(db, {
     category: 'payment',
-    action: 'payment.claim_submitted',
-    actorUid: input.userId,
+    action: input.userId ? 'payment.claim_submitted' : 'payment.claim_submitted_by_visitor',
+    actorUid: input.userId ?? 'public',
     targetType: 'reservation',
     targetId: r.id,
     summary: `${guest?.fullName ?? 'Guest'} claimed K${amount.toLocaleString('en-US')} by ${method.label} on ${r.reference}.`,
@@ -990,6 +1005,8 @@ export function rejectPaymentClaim(
   }
   const reviewer = actorName(db, actorId);
   claim.status = 'rejected';
+  claim.reviewedAt = claim.reviewedAt ?? nowISO();
+  claim.reviewedBy = claim.reviewedBy ?? reviewer;
   claim.linkedAt = nowISO();
   claim.paymentId = null;
   claim.note = [claim.note, `Rejected by ${reviewer}: ${note}`].filter(Boolean).join(' · ');
@@ -1070,10 +1087,25 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
   const resolvedRole = actorUser?.role ?? actorStaff?.role;
   const resolvedName = actorUser?.fullName ?? actorStaff?.name ?? 'System';
   const canSelfVerify = resolvedRole === 'super_admin' || resolvedRole === 'admin';
+
+  /**
+   * A receipt only counts without a second signature in two situations:
+   *
+   *  - the property has switched verification off entirely, or
+   *  - it is cash counted at the desk by an administrator. Cash has no provider
+   *    statement to check against later, so leaving it pending forever would just
+   *    strand money that is already in the drawer.
+   *
+   * Everything else — including a guest's uploaded proof, whatever the method — waits
+   * for the verifier. That is the rule the product promises, so `requireVerification`
+   * is not allowed to wave a screenshot through.
+   */
   const autoVerify =
-    canSelfVerify && !db.settings.payments.requireVerification
-      ? true
-      : canSelfVerify && input.method === 'cash';
+    canSelfVerify &&
+    (!db.settings.payments.requireVerification ||
+      // Cash: the admin counting it is the verification.
+      (input.method === 'cash' && !input.claimId));
+  const receivedAt = autoVerify ? nowISO() : null;
 
   const payment: Payment = {
     id: nextId('pay'),
@@ -1090,7 +1122,7 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
     recordedByName: resolvedName,
     verificationStatus: autoVerify ? 'verified' : 'pending',
     verifiedBy: autoVerify ? resolvedName : null,
-    verifiedAt: autoVerify ? nowISO() : null,
+    verifiedAt: receivedAt,
     verificationNote: autoVerify
       ? input.method === 'cash'
         ? 'Cash counted at the desk and reconciled with the drawer.'
@@ -1136,6 +1168,8 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
     claim.status = 'linked';
     claim.paymentId = payment.id;
     claim.linkedAt = nowISO();
+    claim.reviewedAt = claim.reviewedAt ?? nowISO();
+    claim.reviewedBy = claim.reviewedBy ?? resolvedName;
   } else {
     payment.claimId = null;
   }
@@ -1555,6 +1589,10 @@ export function upsertApartment(db: Database, actorId: ID, input: Partial<Apartm
     const priorRate = apt.nightlyRate;
     const priorWeekend = apt.weekendRate;
     Object.assign(apt, input);
+    if (input.amenities) {
+      apt.amenities = normaliseAmenities(input.amenities);
+      apt.facilities = apt.amenities;
+    }
     if (input.publicationStatus) {
       apt.active = input.publicationStatus === 'published';
     } else if (input.active !== undefined && !input.publicationStatus) {

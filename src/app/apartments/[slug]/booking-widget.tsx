@@ -1,10 +1,45 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, FileText, MessageCircle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertCircle,
+  Banknote,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  ImagePlus,
+  Landmark,
+  Loader2,
+  MessageCircle,
+  ShieldCheck,
+  Smartphone,
+} from 'lucide-react';
 import type { Apartment, Settings } from '@/lib/domain/types';
+import type { PaymentMethod } from '@/lib/domain/types';
 import { calculateStayPricing } from '@/lib/domain/pricing';
+import { formatKwacha } from '@/lib/domain/money';
+
+interface MethodView {
+  id: PaymentMethod;
+  label: string;
+  instructions: string;
+  accountLabel: string;
+  accountNumber: string;
+}
+
+interface PaymentInstruction {
+  method: PaymentMethod;
+  label: string;
+  instructions: string;
+  accountLabel: string;
+  accountNumber: string;
+  totalAmount: number;
+  depositPercent: number;
+  suggestedAmount: number;
+  reference: string;
+  proofUploadEnabled: boolean;
+}
 
 interface BookingResult {
   id: string;
@@ -15,10 +50,20 @@ interface BookingResult {
   nights: number;
   totalAmount: number;
   depositDue: number;
+  depositPercent: number;
   apartmentName: string;
   apartmentNumber: number;
   contactWhatsapp: string;
+  payment: PaymentInstruction | null;
+  methods: { id: PaymentMethod; label: string }[];
 }
+
+const METHOD_ICONS: Record<PaymentMethod, typeof Smartphone> = {
+  airtel_money: Smartphone,
+  mtn_money: Smartphone,
+  bank_transfer: Landmark,
+  cash: Banknote,
+};
 
 export function ApartmentBookingWidget({
   apartment,
@@ -37,10 +82,29 @@ export function ApartmentBookingWidget({
   today: string;
   prefillUser: { fullName: string; email: string; phone: string } | null;
 }) {
+  const methods = useMemo<MethodView[]>(
+    () =>
+      settings.payments.methods
+        .filter((m) => m.enabled)
+        .map((m) => ({
+          id: m.id as PaymentMethod,
+          label: m.label,
+          instructions: m.instructions,
+          accountLabel: m.accountLabel,
+          accountNumber: m.accountNumber,
+        })),
+    [settings.payments.methods],
+  );
+
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [guestCount, setGuestCount] = useState(initialGuests);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [method, setMethod] = useState<PaymentMethod | null>(
+    settings.payments.lockMethodToAdmin
+      ? (settings.payments.defaultMethod ?? methods[0]?.id ?? null)
+      : (settings.payments.defaultMethod ?? methods[0]?.id ?? null),
+  );
 
   const [fullName, setFullName] = useState(prefillUser?.fullName || '');
   const [phone, setPhone] = useState(prefillUser?.phone || '+260 ');
@@ -81,8 +145,7 @@ export function ApartmentBookingWidget({
         if (cancelled) return;
         const hits = (json?.data?.hits ?? []) as { apartment: { id: string }; available: boolean }[];
         const hit = hits.find((h) => h.apartment.id === apartment.id);
-        const ok = Boolean(json?.ok && hit?.available);
-        setAvailState(ok ? 'available' : 'unavailable');
+        setAvailState(Boolean(json?.ok && hit?.available) ? 'available' : 'unavailable');
       })
       .catch(() => {
         if (!cancelled) setAvailState('unavailable');
@@ -117,6 +180,7 @@ export function ApartmentBookingWidget({
           selectedServiceIds,
           notes,
           agreedPolicy,
+          paymentMethod: method ?? undefined,
         }),
       });
       const json = await res.json();
@@ -133,74 +197,26 @@ export function ApartmentBookingWidget({
     }
   }
 
+  /* ------------------------------------------------------------- after booking */
   if (created) {
-    const waDigits = created.contactWhatsapp.replace(/[^0-9]/g, '');
     return (
-      <div className="card sticky top-24 space-y-4 p-6">
-        <div className="flex items-center gap-2 text-st-available">
-          <CheckCircle2 size={20} />
-          <h2 className="text-[1.15rem] font-bold text-navy-900">Booking Recorded</h2>
-        </div>
-        <div className="rounded-md border border-sand-200 bg-sand-50 p-4 text-[0.84rem] space-y-1.5">
-          <p>
-            <strong>Reference:</strong> {created.reference}
-          </p>
-          <p>
-            <strong>Apartment:</strong> Apt {created.apartmentNumber} · {created.apartmentName}
-          </p>
-          <p>
-            <strong>Dates:</strong> {created.checkIn} to {created.checkOut} ({created.nights}{' '}
-            {created.nights === 1 ? 'night' : 'nights'})
-          </p>
-          <p>
-            <strong>Total Stay Amount:</strong> K{created.totalAmount.toLocaleString('en-US')}
-          </p>
-          <p>
-            <strong>Deposit Due ({settings.booking.depositPercent}%):</strong> K
-            {created.depositDue.toLocaleString('en-US')}
-          </p>
-          <p>
-            <strong>Current Status:</strong>{' '}
-            <span className="uppercase">{created.status.replace(/_/g, ' ')}</span>
-          </p>
-        </div>
-
-        <p className="text-[0.82rem] leading-relaxed text-navy-600">
-          Our reception team has received your booking in the live property ledger. Settle your
-          deposit via Airtel Money, MTN Mobile Money, or Bank Transfer quoting{' '}
-          <strong>{created.reference}</strong>.
-        </p>
-
-        <div className="flex flex-col gap-2.5 pt-1">
-          {prefillUser ? (
-            <Link href="/account" className="btn btn-primary justify-center">
-              <FileText size={15} /> View in My Guest Account
-            </Link>
-          ) : (
-            <Link href="/register" className="btn btn-primary justify-center">
-              Create Account to Track &amp; Download Receipt
-            </Link>
-          )}
-          {waDigits ? (
-            <a
-              href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello Lemma Apartments Reception, I just submitted booking ${created.reference} for ${created.apartmentName} (${created.checkIn} to ${created.checkOut}).`)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-secondary justify-center"
-            >
-              <MessageCircle size={15} /> Message Reception on WhatsApp
-            </a>
-          ) : null}
-        </div>
-      </div>
+      <BookingConfirmation
+        booking={created}
+        prefillUser={prefillUser}
+        fallbackMethods={methods}
+        initialMethod={method}
+      />
     );
   }
 
+  const chosen = methods.find((m) => m.id === method) ?? null;
+  const locked = Boolean(settings.payments.lockMethodToAdmin);
+
   return (
-    <form onSubmit={submitBooking} className="card sticky top-24 space-y-4 p-6">
+    <form onSubmit={submitBooking} className="card sticky top-24 space-y-4 p-5 sm:p-6">
       <div className="flex items-baseline justify-between border-b border-sand-200 pb-4">
         <div>
-          <span className="text-[1.45rem] font-bold text-navy-900 tabular-nums">
+          <span className="text-[1.45rem] font-bold tabular-nums text-navy-900">
             K{pricing.effectiveAverageRate.toLocaleString('en-US')}
           </span>
           <span className="text-[0.82rem] text-navy-500"> / night</span>
@@ -215,10 +231,10 @@ export function ApartmentBookingWidget({
           }`}
         >
           {availState === 'available'
-            ? 'Dates Available'
+            ? 'Dates available'
             : availState === 'checking'
-              ? 'Checking...'
-              : 'Dates Unavailable'}
+              ? 'Checking…'
+              : 'Dates unavailable'}
         </span>
       </div>
 
@@ -255,7 +271,7 @@ export function ApartmentBookingWidget({
 
       <div>
         <label className="label mb-1 block" htmlFor="bw-guests">
-          Guests (Max {apartment.maxGuests})
+          Guests (max {apartment.maxGuests})
         </label>
         <select
           id="bw-guests"
@@ -265,16 +281,15 @@ export function ApartmentBookingWidget({
         >
           {Array.from({ length: apartment.maxGuests }, (_, idx) => idx + 1).map((n) => (
             <option key={n} value={n}>
-              {n} {n === 1 ? 'Guest' : 'Guests'}
+              {n} {n === 1 ? 'guest' : 'guests'}
             </option>
           ))}
         </select>
       </div>
 
-      {/* Optional Add-on Services */}
       {apartment.optionalServices && apartment.optionalServices.filter((s) => s.active).length > 0 ? (
         <div className="space-y-1.5 border-t border-sand-200 pt-3">
-          <p className="label">Optional Services</p>
+          <p className="label">Optional services</p>
           {apartment.optionalServices
             .filter((s) => s.active)
             .map((svc) => (
@@ -290,63 +305,124 @@ export function ApartmentBookingWidget({
                   />
                   {svc.name}
                 </span>
-                <span className="font-semibold text-navy-900 tabular-nums">
-                  K{svc.price.toLocaleString('en-US')}{' '}
-                  {svc.priceType === 'per_night' ? '/ night' : ''}
+                <span className="font-semibold tabular-nums text-navy-900">
+                  K{svc.price.toLocaleString('en-US')} {svc.priceType === 'per_night' ? '/ night' : ''}
                 </span>
               </label>
             ))}
         </div>
       ) : null}
 
-      {/* Live Price Breakdown */}
       {pricing.nights > 0 ? (
         <div className="space-y-1.5 rounded-md bg-sand-50 p-3.5 text-[0.82rem] tabular-nums">
           <div className="flex justify-between text-navy-600">
             <span>
               Accommodation ({pricing.nights} {pricing.nights === 1 ? 'night' : 'nights'})
             </span>
-            <span>K{pricing.roomSubtotal.toLocaleString('en-US')}</span>
+            <span>{formatKwacha(pricing.roomSubtotal)}</span>
           </div>
           {pricing.extraGuestTotal > 0 ? (
             <div className="flex justify-between text-navy-600">
               <span>Extra guest supplement</span>
-              <span>K{pricing.extraGuestTotal.toLocaleString('en-US')}</span>
+              <span>{formatKwacha(pricing.extraGuestTotal)}</span>
             </div>
           ) : null}
           {pricing.servicesTotal > 0 ? (
             <div className="flex justify-between text-navy-600">
               <span>Selected add-on services</span>
-              <span>K{pricing.servicesTotal.toLocaleString('en-US')}</span>
+              <span>{formatKwacha(pricing.servicesTotal)}</span>
             </div>
           ) : null}
           {pricing.totalDiscount > 0 ? (
             <div className="flex justify-between text-st-available">
               <span>Stay offer / discount</span>
-              <span>- K{pricing.totalDiscount.toLocaleString('en-US')}</span>
+              <span>− {formatKwacha(pricing.totalDiscount)}</span>
             </div>
           ) : null}
           {pricing.taxRatePercent > 0 ? (
             <div className="flex justify-between text-navy-600">
               <span>
-                {pricing.taxName} ({pricing.taxRatePercent}%{' '}
-                {pricing.taxInclusive ? 'incl.' : 'excl.'})
+                {pricing.taxName} ({pricing.taxRatePercent}% {pricing.taxInclusive ? 'incl.' : 'excl.'})
               </span>
-              <span>K{pricing.taxAmount.toLocaleString('en-US')}</span>
+              <span>{formatKwacha(pricing.taxAmount)}</span>
             </div>
           ) : null}
           <div className="flex justify-between border-t border-sand-200 pt-2 text-[0.92rem] font-bold text-navy-900">
             <span>Total ZMW</span>
-            <span>K{pricing.totalAmount.toLocaleString('en-US')}</span>
+            <span>{formatKwacha(pricing.totalAmount)}</span>
           </div>
           <div className="flex justify-between text-[0.76rem] text-navy-500">
             <span>Deposit to confirm ({pricing.depositPercent}%)</span>
-            <span>K{pricing.depositRequired.toLocaleString('en-US')}</span>
+            <span>{formatKwacha(pricing.depositRequired)}</span>
           </div>
         </div>
       ) : null}
 
-      {/* Guest Details */}
+      {/* ---- payment method: the instructions change as soon as one is chosen ---- */}
+      {methods.length > 0 ? (
+        <fieldset className="border-t border-sand-200 pt-3">
+          <legend className="label mb-1.5 block">
+            {locked ? 'Payment method' : 'How will you pay?'}
+          </legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {methods.map((m) => {
+              const Icon = METHOD_ICONS[m.id] ?? CreditCard;
+              const active = method === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={active}
+                  disabled={locked}
+                  onClick={() => setMethod(m.id)}
+                  className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-left text-[0.8rem] transition-colors ${
+                    active
+                      ? 'border-navy-900 bg-sand-50 font-semibold text-navy-900 ring-1 ring-navy-900'
+                      : 'border-sand-300 text-navy-700 hover:border-brand-400'
+                  } ${locked && !active ? 'opacity-50' : ''}`}
+                >
+                  <Icon size={14} className="shrink-0 text-lemma-dark" aria-hidden="true" />
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {chosen ? (
+            <div className="mt-2 rounded-md border border-sand-200 bg-white p-3 text-[0.79rem] leading-relaxed text-navy-700">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-navy-400">
+                {chosen.label} details
+              </p>
+              {chosen.accountNumber ? (
+                <p className="mt-1">
+                  <span className="text-navy-500">{chosen.accountLabel}:</span>{' '}
+                  <strong className="tabular-nums text-navy-900">{chosen.accountNumber}</strong>
+                </p>
+              ) : (
+                <p className="mt-1 text-navy-500">
+                  {chosen.accountLabel} — the desk confirms the number on your confirmation.
+                </p>
+              )}
+              {chosen.instructions ? (
+                <p className="mt-1.5 whitespace-pre-line text-[0.78rem] text-navy-600">
+                  {chosen.instructions}
+                </p>
+              ) : null}
+              <p className="mt-1.5 text-[0.74rem] text-navy-500">
+                Quote your booking number as the reference. Payment is confirmed by reception after
+                you submit proof — nothing is charged on this page.
+              </p>
+            </div>
+          ) : (
+            <p className="mt-2 text-[0.78rem] text-navy-500">Choose how you will pay to see the details.</p>
+          )}
+        </fieldset>
+      ) : (
+        <p className="rounded-md border border-st-cleaning/40 bg-st-cleaningBg/40 p-2.5 text-[0.78rem] text-navy-700">
+          Online booking is paused while payment details are being confirmed. Call or WhatsApp reception.
+        </p>
+      )}
+
       <div className="space-y-3 border-t border-sand-200 pt-3">
         <div>
           <label className="label mb-1 block" htmlFor="bw-name">
@@ -371,7 +447,7 @@ export function ApartmentBookingWidget({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="field"
-              placeholder="+260 97..."
+              placeholder="+260 97…"
               required
             />
           </div>
@@ -399,7 +475,7 @@ export function ApartmentBookingWidget({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="field"
-            placeholder="Estimated arrival time, airport transfer details, or corporate billing note..."
+            placeholder="Estimated arrival time, airport transfer, or corporate billing note…"
           />
         </div>
         <label className="flex items-start gap-2 text-[0.78rem] text-navy-600">
@@ -410,7 +486,7 @@ export function ApartmentBookingWidget({
             className="mt-0.5"
             required
           />
-          <span>I accept the check-in, deposit, and cancellation policies.</span>
+          <span>I accept the check-in, deposit and cancellation policies.</span>
         </label>
       </div>
 
@@ -422,11 +498,412 @@ export function ApartmentBookingWidget({
 
       <button
         type="submit"
-        disabled={busy || availState !== 'available'}
+        disabled={busy || availState !== 'available' || !method}
         className="btn btn-primary w-full justify-center py-2.5"
       >
-        {busy ? 'Submitting reservation...' : 'Request Reservation'}
+        {busy ? 'Submitting booking…' : `Book now${pricing.totalAmount > 0 ? ` · ${formatKwacha(pricing.totalAmount)}` : ''}`}
       </button>
+      <p className="text-center text-[0.72rem] leading-relaxed text-navy-400">
+        You will get the payment details and an upload box for your receipt straight away.
+      </p>
     </form>
+  );
+}
+
+/* --------------------------------------------------------------------------- */
+
+/**
+ * Steps 2–5 of the payment flow, immediately after the booking is accepted:
+ * the instructions for the chosen channel, the amount and reference to quote, and the
+ * proof upload. The upload creates a *claim* — reception still has to verify it, and
+ * the panel says so rather than pretending the booking is paid.
+ */
+function BookingConfirmation({
+  booking,
+  prefillUser,
+  fallbackMethods,
+  initialMethod,
+}: {
+  booking: BookingResult;
+  prefillUser: { fullName: string; email: string; phone: string } | null;
+  fallbackMethods: MethodView[];
+  initialMethod: PaymentMethod | null;
+}) {
+  const [method, setMethod] = useState<PaymentMethod>(
+    booking.payment?.method ?? initialMethod ?? fallbackMethods[0]?.id ?? 'airtel_money',
+  );
+  const [instructions, setInstructions] = useState<PaymentInstruction | null>(booking.payment);
+  const [loadingInstructions, setLoadingInstructions] = useState(false);
+  const [amount, setAmount] = useState(String(booking.payment?.suggestedAmount ?? booking.depositDue ?? ''));
+  const [txnRef, setTxnRef] = useState('');
+  const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [proof, setProof] = useState<{ fileName: string; mimeType: string; dataUrl: string; sizeBytes: number } | null>(null);
+  const [proofError, setProofError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<{ amount: number; reference: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const waDigits = booking.contactWhatsapp.replace(/[^0-9]/g, '');
+
+  // A guest without an account can still submit proof here; the claim is tied to the
+  // booking. Choosing a different channel asks the server for that channel's details.
+  useEffect(() => {
+    if (booking.payment?.method === method) {
+      setInstructions(booking.payment);
+      return;
+    }
+    let cancelled = false;
+    setLoadingInstructions(true);
+    fetch(`/api/payments/claims?reservationId=${encodeURIComponent(booking.id)}&method=${method}`, {
+      credentials: 'same-origin',
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const q = json?.data?.quote;
+        const m = (q?.methods ?? []).find((x: MethodView) => x.id === method);
+        if (m && q) {
+          setInstructions({
+            method: m.id,
+            label: m.label,
+            instructions: m.instructions,
+            accountLabel: m.accountLabel,
+            accountNumber: m.accountNumber,
+            totalAmount: q.totalAmount,
+            depositPercent: q.depositPercent,
+            suggestedAmount: q.suggestedAmount,
+            reference: q.reference,
+            proofUploadEnabled: q.proofUploadEnabled,
+          });
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setLoadingInstructions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [method, booking.id, booking.payment]);
+
+  async function pickProof(file: File | null) {
+    setProofError(null);
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setProofError('That file is over 5 MB. Take a smaller screenshot.');
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type)) {
+      setProofError('Use a JPEG, PNG, WebP image or a PDF.');
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve) =>
+      {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+      },
+    );
+    if (!dataUrl) {
+      setProofError('That file could not be read. Try another one.');
+      return;
+    }
+    setProof({ fileName: file.name, mimeType: file.type, dataUrl, sizeBytes: file.size });
+  }
+
+  async function submitProof(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const value = Number(amount);
+    if (!(value > 0)) {
+      setError('Enter the amount you paid.');
+      return;
+    }
+    if (txnRef.trim().length < 3) {
+      setError('Enter the transaction reference, SMS code or slip number.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/payments/claims', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          reservationId: booking.id,
+          amount: value,
+          method,
+          reference: txnRef.trim(),
+          paidAt,
+          proof: proof
+            ? { fileName: proof.fileName, mimeType: proof.mimeType, dataUrl: proof.dataUrl, sizeBytes: proof.sizeBytes }
+            : null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? 'That proof could not be submitted.');
+        setBusy(false);
+        return;
+      }
+      setSubmitted({ amount: value, reference: txnRef.trim() });
+    } catch {
+      setError('Network error — the proof was not submitted. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const shown = instructions ?? booking.payment;
+
+  return (
+    <div className="card sticky top-24 space-y-4 p-5 sm:p-6">
+      <div className="flex items-start gap-2">
+        <CheckCircle2 size={19} className="mt-0.5 shrink-0 text-st-available" />
+        <div>
+          <h2 className="text-[1.1rem] font-semibold text-navy-900">
+            {submitted ? 'Payment proof submitted' : 'Booking received'}
+          </h2>
+          <p className="mt-0.5 text-[0.82rem] text-navy-600">
+            Booking <strong className="font-mono">{booking.reference}</strong> · Apt{' '}
+            {booking.apartmentNumber} · {booking.nights} night{booking.nights === 1 ? '' : 's'}
+          </p>
+        </div>
+      </div>
+
+      {submitted ? (
+        <div className="space-y-3">
+          <div className="rounded-md border border-st-available/40 bg-st-availableBg/50 p-3.5 text-[0.84rem] leading-relaxed text-navy-800">
+            <p className="font-semibold">Payment proof submitted successfully.</p>
+            <p className="mt-1">
+              Your {formatKwacha(submitted.amount)} payment is awaiting verification by Lemma
+              Apartments. Reference <strong>{submitted.reference}</strong>.
+            </p>
+            <p className="mt-1.5 text-[0.78rem] text-navy-600">
+              Reception checks it against the mobile-money or bank record, then your receipt is
+              issued and the balance updates. You will see the change in your account.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            {prefillUser ? (
+              <Link href="/account" className="btn btn-primary justify-center">
+                View status in my account
+              </Link>
+            ) : (
+              <>
+                <Link href="/register" className="btn btn-primary justify-center">
+                  Create an account to track it
+                </Link>
+                <p className="text-center text-[0.74rem] text-navy-500">
+                  Register with <strong>{booking.reference}</strong> handy — we match your booking by
+                  the phone or email you booked with.
+                </p>
+              </>
+            )}
+            {waDigits ? (
+              <a
+                href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello Lemma Apartments, I have paid for booking ${booking.reference} and submitted the reference ${submitted.reference}.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary justify-center"
+              >
+                <MessageCircle size={15} /> Message reception
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Step 2 — total, deposit, destination, reference */}
+          <div className="space-y-2 rounded-md border border-sand-200 bg-sand-50 p-3.5 text-[0.83rem]">
+            <div className="flex justify-between">
+              <span className="text-navy-500">Total booking amount</span>
+              <span className="font-semibold tabular-nums text-navy-900">
+                {formatKwacha(shown?.totalAmount ?? booking.totalAmount)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-navy-500">Deposit required ({shown?.depositPercent ?? booking.depositPercent}%)</span>
+              <span className="font-semibold tabular-nums text-navy-900">
+                {formatKwacha(booking.depositDue)}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-sand-200 pt-2">
+              <span className="text-navy-500">Payment reference</span>
+              <span className="font-mono font-semibold text-navy-900">{booking.reference}</span>
+            </div>
+            {shown ? (
+              <div className="border-t border-sand-200 pt-2">
+                <p className="text-[0.72rem] uppercase tracking-[0.1em] text-navy-400">
+                  {shown.label} · pay to
+                </p>
+                <p className="mt-0.5 font-semibold text-navy-900">
+                  {shown.accountNumber
+                    ? `${shown.accountLabel}: ${shown.accountNumber}`
+                    : `${shown.accountLabel} — call reception to confirm the number`}
+                </p>
+                {shown.instructions ? (
+                  <p className="mt-1 whitespace-pre-line text-[0.78rem] leading-relaxed text-navy-600">
+                    {shown.instructions}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          {booking.methods.length > 1 ? (
+            <div>
+              <p className="label mb-1.5 block">Paying a different way?</p>
+              <div className="grid grid-flow-col auto-cols-max gap-2 overflow-x-auto pb-1">
+                {booking.methods.map((m) => {
+                  const Icon = METHOD_ICONS[m.id] ?? CreditCard;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMethod(m.id)}
+                      aria-pressed={m.id === method}
+                      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[0.78rem] transition-colors ${
+                        m.id === method
+                          ? 'border-navy-900 bg-sand-50 font-semibold text-navy-900'
+                          : 'border-sand-300 text-navy-700'
+                      }`}
+                    >
+                      <Icon size={13} /> {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {loadingInstructions ? (
+                <p className="mt-1 flex items-center gap-1.5 text-[0.74rem] text-navy-500">
+                  <Loader2 size={12} className="animate-spin" /> Updating the details…
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Steps 4 — proof */}
+          <form onSubmit={submitProof} className="space-y-3 border-t border-sand-200 pt-3">
+            <p className="text-[0.86rem] font-medium leading-relaxed text-navy-900">
+              Have you completed your payment? Upload your receipt or screenshot for verification.
+            </p>
+
+            {error ? (
+              <p className="flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] text-st-cancelled">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" /> {error}
+              </p>
+            ) : null}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label mb-1 block" htmlFor="bp-amount">
+                  Amount paid (ZMW)
+                </label>
+                <input
+                  id="bp-amount"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step="0.01"
+                  className="field tabular-nums"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label mb-1 block" htmlFor="bp-date">
+                  Date paid
+                </label>
+                <input
+                  id="bp-date"
+                  type="date"
+                  className="field"
+                  max={new Date().toISOString().slice(0, 10)}
+                  value={paidAt}
+                  onChange={(e) => setPaidAt(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label mb-1 block" htmlFor="bp-ref">
+                Transaction reference
+              </label>
+              <input
+                id="bp-ref"
+                className="field"
+                value={txnRef}
+                onChange={(e) => setTxnRef(e.target.value)}
+                placeholder={method === 'bank_transfer' ? 'Bank slip or transfer reference' : 'e.g. MP260718.1234.C56789'}
+                required
+              />
+            </div>
+
+            <div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="sr-only"
+                onChange={(e) => void pickProof(e.target.files?.[0] ?? null)}
+              />
+              {proof ? (
+                <div className="flex items-center justify-between gap-2 rounded-md border border-sand-200 bg-sand-50 px-3 py-2 text-[0.8rem]">
+                  <span className="truncate text-navy-700">{proof.fileName}</span>
+                  <button
+                    type="button"
+                    className="text-[0.76rem] font-medium text-navy-500 hover:underline"
+                    onClick={() => setProof(null)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-secondary w-full justify-center py-2 text-[0.8rem]"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <ImagePlus size={14} /> Upload receipt or screenshot
+                </button>
+              )}
+              {proofError ? <p className="mt-1 text-[0.76rem] text-st-cancelled">{proofError}</p> : null}
+            </div>
+
+            <p className="flex items-start gap-1.5 rounded-md bg-sand-50 p-2.5 text-[0.75rem] leading-relaxed text-navy-600">
+              <ShieldCheck size={13} className="mt-0.5 shrink-0 text-lemma-dark" />
+              Proof is checked by a person before it counts. Your booking stays unpaid until
+              reception verifies it, and only then is a receipt issued.
+            </p>
+
+            <button type="submit" disabled={busy} className="btn btn-primary w-full justify-center py-2.5">
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+              {busy ? 'Submitting…' : 'Submit proof for verification'}
+            </button>
+          </form>
+
+          <div className="border-t border-sand-200 pt-3 text-[0.78rem] leading-relaxed text-navy-500">
+            <p className="flex items-start gap-1.5">
+              <Clock size={13} className="mt-0.5 shrink-0" />
+              Paying at reception or on arrival? You can skip the upload — just keep{' '}
+              <strong className="font-mono">{booking.reference}</strong> to quote at the desk.
+            </p>
+            {waDigits ? (
+              <a
+                href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello Lemma Apartments, I have just booked ${booking.reference} for ${booking.checkIn} to ${booking.checkOut}.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 font-medium text-navy-800 hover:text-lemma-dark"
+              >
+                <MessageCircle size={13} /> Send the reference to reception on WhatsApp
+              </a>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
 import { Alert, EmptyState, Panel } from '@/components/ui';
+import { Modal } from '@/components/ui/overlays';
 import { formatKwacha } from '@/lib/domain/money';
 import { formatDateTime, formatMediumDate } from '@/lib/domain/dates';
 import { PAYMENT_METHOD_META } from '@/lib/domain/status';
@@ -43,6 +44,8 @@ export function GuestClaimQueue() {
   const [error, setError] = useState<string | null>(null);
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  /** The claim whose proof is open full-size; opening it also records the review. */
+  const [viewing, setViewing] = useState<GuestSubmittedPayment | null>(null);
 
   if (!snapshot) return null;
   const claims = snapshot.paymentClaims ?? [];
@@ -139,6 +142,21 @@ export function GuestClaimQueue() {
     }
   }
 
+  /**
+   * Opens the proof. The GET also stamps `reviewedAt`, which is what tells the guest
+   * their upload has actually been looked at rather than just sitting in a queue.
+   */
+  async function openProof(claim: GuestSubmittedPayment) {
+    setViewing(claim);
+    try {
+      const result = await request<{ claim: GuestSubmittedPayment }>(`/api/payments/claims/${claim.id}`);
+      if (result.claim) setViewing(result.claim);
+      await refresh();
+    } catch {
+      // Viewing must never be blocked by the bookkeeping call.
+    }
+  }
+
   return (
     <div className="space-y-3">
       {error ? <Alert tone="error" title="Nothing was changed">{error}</Alert> : null}
@@ -170,18 +188,28 @@ export function GuestClaimQueue() {
               return (
                 <li key={claim.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-start gap-3">
-                    {claim.proof?.dataUrl && claim.proof.mimeType.startsWith('image/') ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={claim.proof.dataUrl}
-                        alt={`Proof: ${claim.proof.fileName}`}
-                        className="h-16 w-16 shrink-0 rounded-lg border border-sand-300 object-cover"
-                      />
-                    ) : (
-                      <span className="grid h-16 w-16 shrink-0 place-items-center rounded-lg border border-dashed border-sand-300 text-navy-300">
-                        {claim.proof ? <FileText size={16} /> : <Paperclip size={16} />}
+                    <button
+                      type="button"
+                      onClick={() => void openProof(claim)}
+                      className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-sand-300"
+                      aria-label="Open the payment proof"
+                    >
+                      {claim.proof?.dataUrl && claim.proof.mimeType.startsWith('image/') ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={claim.proof.dataUrl}
+                          alt={`Proof: ${claim.proof.fileName}`}
+                          className="h-full w-full object-cover transition group-hover:scale-105"
+                        />
+                      ) : (
+                        <span className="grid h-full w-full place-items-center text-navy-300">
+                          {claim.proof ? <FileText size={16} /> : <Paperclip size={16} />}
+                        </span>
+                      )}
+                      <span className="absolute inset-x-0 bottom-0 bg-charcoal-950/70 py-0.5 text-center text-[0.58rem] font-medium uppercase tracking-wider text-white">
+                        {claim.proof ? 'View' : 'No proof'}
                       </span>
-                    )}
+                    </button>
 
                     <div className="min-w-0 flex-1 basis-48">
                       <p className="text-[0.9rem] font-semibold text-navy-900">
@@ -306,6 +334,99 @@ export function GuestClaimQueue() {
           </ul>
         </Panel>
       ) : null}
+
+      <Modal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={`Payment proof · ${viewing?.reference ?? ''}`}
+        subtitle="Compare this with the bank or mobile-money record before approving."
+        size="lg"
+      >
+        {viewing ? (
+          <div className="space-y-3">
+            <dl className="grid gap-x-4 gap-y-1.5 text-[0.82rem] sm:grid-cols-2">
+              {[
+                ['Guest', reservationFor(viewing)?.guest?.fullName ?? 'Unknown guest'],
+                ['Booking', reservationFor(viewing)?.reference ?? '—'],
+                [
+                  'Apartment',
+                  reservationFor(viewing)?.apartment
+                    ? `${reservationFor(viewing)?.apartment?.number} · ${reservationFor(viewing)?.apartment?.name}`
+                    : '—',
+                ],
+                ['Method', PAYMENT_METHOD_META[viewing.method]?.label ?? viewing.method],
+                ['Amount submitted', formatKwacha(viewing.amount)],
+                ['Transaction reference', viewing.reference],
+                ['Date submitted', formatDateTime(viewing.createdAt)],
+                ['Guest says paid on', formatMediumDate(viewing.paidAt)],
+              ].map(([label, value]) => (
+                <div key={label} className="flex justify-between gap-2 border-b border-sand-100 py-1">
+                  <dt className="text-navy-500">{label}</dt>
+                  <dd className="text-right font-medium text-navy-900">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {viewing.note ? (
+              <p className="rounded-md bg-sand-50 p-2.5 text-[0.8rem] italic text-navy-600">
+                “{viewing.note}”
+              </p>
+            ) : null}
+
+            {viewing.proof ? (
+              viewing.proof.mimeType.startsWith('image/') ? (
+                <div className="overflow-hidden rounded-md border border-sand-200 bg-sand-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={viewing.proof.dataUrl}
+                    alt={`Payment proof uploaded by the guest: ${viewing.proof.fileName}`}
+                    className="mx-auto max-h-[60vh] w-auto object-contain"
+                  />
+                </div>
+              ) : (
+                <a
+                  href={viewing.proof.dataUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary w-full justify-center"
+                >
+                  <FileText size={14} /> Open {viewing.proof.fileName}
+                </a>
+              )
+            ) : (
+              <p className="rounded-md border border-dashed border-sand-300 p-3 text-center text-[0.82rem] text-navy-500">
+                No screenshot was attached. Check the reference against the statement instead.
+              </p>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2 border-t border-sand-200 pt-3">
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => {
+                  setNoteFor(viewing.id);
+                  setNote('');
+                  setViewing(null);
+                }}
+              >
+                Reject…
+              </button>
+              <button
+                type="button"
+                className="btn-primary btn-sm"
+                disabled={busy !== null || !canRecord}
+                onClick={() => {
+                  const claim = viewing;
+                  setViewing(null);
+                  void bank(claim);
+                }}
+              >
+                <ShieldCheck size={12} /> {canVerify ? 'Approve payment' : 'Record for verification'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {!canRecord ? (
         <EmptyState

@@ -55,9 +55,10 @@ import { computeDashboardSummary } from './summary';
  * Unified Transactional Data Store (Cloud Firestore + Local Persistence)
  *
  * The store starts empty: there is no sample building, no sample guests and no
- * sample money anywhere in this codebase. The first Super Administrator is
- * created once through `/setup-admin` (guarded by FIRST_ADMIN_SETUP_TOKEN), and
- * every apartment, guest, booking and payment after that is entered by staff.
+ * sample money anywhere in this codebase. Staff roles are appointed by setting
+ * `role` on the account's `users/{uid}` document in the Firebase Console — the
+ * session resolver reads that document, so the change applies on the next request.
+ * Every apartment, guest, booking and payment is entered by a person.
  *
  * - In Cloud Production (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` set):
  *     Hydrates from and writes diffed document batches & atomic transactions directly to
