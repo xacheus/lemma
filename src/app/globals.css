@@ -230,10 +230,20 @@
 }
 
 /* Full-screen menu: iOS momentum scrolling inside the panel, no rubber-banding of
-   the page behind it. */
+   the page behind it, and a height that is measured against the viewport rather than
+   the overlay so the panel always fills the screen it covers. */
 .menu-panel {
+  max-height: 100vh;
+  max-height: 100dvh;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+}
+
+/* From `sm` up the panel is the full-height column on the right of the screen. */
+@media (min-width: 640px) {
+  .menu-panel {
+    max-height: none;
+  }
 }
 
 @layer components {

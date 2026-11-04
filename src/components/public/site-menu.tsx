@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowRight,
   Bell,
@@ -33,6 +34,12 @@ import { defaultDashboardForRole, NAV_SECTIONS, permissionsFor } from '@/lib/dom
  * behind it, traps focus between the first and last control, closes on Escape, on any
  * link, and on a tap outside the panel column. It animates in on a short
  * opacity/translate transition and respects `prefers-reduced-motion`.
+ *
+ * It is rendered through a portal into `document.body` on purpose. The trigger lives
+ * inside the public header, and that header is `position: sticky`, which makes it the
+ * containing block for any `position: fixed` descendant — left in place the overlay is
+ * clipped to the header's 68px strip, and everything below the title bar is unreachable.
+ * Portalling keeps the overlay anchored to the viewport.
  *
  * What it contains depends on the verified role read from the session on the server —
  * a guest never receives the staff entries in the HTML at all, so there is nothing to
@@ -77,6 +84,10 @@ export function SiteMenu({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  // `document` does not exist while the server renders this component, so the portal
+  // target is only read once we are on the client.
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => setPortalTarget(document.body), []);
 
   // Lock background scroll while open, and restore whatever was there before.
   useEffect(() => {
@@ -162,7 +173,7 @@ export function SiteMenu({
     });
   }
 
-  return (
+  const overlay = (
     <div
       role="dialog"
       aria-modal="true"
@@ -183,7 +194,11 @@ export function SiteMenu({
 
       <div
         ref={panelRef}
-        className={`menu-panel absolute inset-x-0 top-0 flex max-h-full flex-col overflow-y-auto bg-sand-50 shadow-pop transition-transform duration-300 ease-smooth sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[27rem] ${
+        // Full-screen on phones, a side column from `sm` up. The height cap is declared on
+        // `.menu-panel` in globals.css so it is measured against the viewport: `max-h-full`
+        // here resolves against the full-height overlay instead, which leaves the panel
+        // with no scroll container of its own.
+        className={`menu-panel absolute inset-x-0 top-0 flex flex-col overflow-y-auto bg-sand-50 shadow-pop transition-transform duration-300 ease-smooth sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[27rem] ${
           open ? 'translate-y-0 sm:translate-x-0' : '-translate-y-3 sm:translate-y-0 sm:translate-x-6'
         }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -357,4 +372,6 @@ export function SiteMenu({
       </div>
     </div>
   );
+
+  return portalTarget ? createPortal(overlay, portalTarget) : null;
 }

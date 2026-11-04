@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
   Bell,
@@ -74,6 +74,26 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
+
+  /**
+   * Links elsewhere on the site address account sections by hash (`/account#payments`
+   * from the site menu, `/account#notifications` from the header bell). The sections
+   * are tabs rather than anchor targets, so the hash decides which tab opens; a hash
+   * that maps to nothing simply leaves the default tab in place.
+   */
+  const selectTabFromHash = useCallback(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'payments') setTab('bookings');
+    else if (hash === 'notifications') setTab('notifications');
+    else if (hash === 'documents') setTab('documents');
+    else if (hash === 'profile') setTab('profile');
+  }, []);
+
+  useEffect(() => {
+    selectTabFromHash();
+    window.addEventListener('hashchange', selectTabFromHash);
+    return () => window.removeEventListener('hashchange', selectTabFromHash);
+  }, [selectTabFromHash]);
 
   // Payment submission modal
   const [payTarget, setPayTarget] = useState<{ id: string; reference: string } | null>(null);
@@ -230,7 +250,7 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
       ) : null}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-sand-200 pb-2">
+      <div id="account-sections" className="flex scroll-mt-24 flex-wrap gap-2 border-b border-sand-200 pb-2">
         {[
           { id: 'bookings', label: `My Bookings (${reservations.length})`, icon: CalendarDays },
           {
