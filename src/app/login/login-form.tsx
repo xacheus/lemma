@@ -259,8 +259,8 @@ export function LoginPage({
             <Link href="/" className="hover:text-navy-900">
               Return to public website
             </Link>
-            <Link href="/setup-admin" className="hover:text-navy-900">
-              Initial admin bootstrap
+            <Link href="/policies" className="hover:text-navy-900">
+              Booking terms
             </Link>
           </div>
         </div>
