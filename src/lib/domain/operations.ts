@@ -9,6 +9,7 @@ import type {
   HousekeepingTask,
   ID,
   NotificationChannel,
+  GuestSubmittedPayment,
   NotificationRecord,
   Payment,
   PaymentMethod,
@@ -18,7 +19,7 @@ import type {
 } from './types';
 import { checkAvailability, checkApartmentReadiness, nightsBetween, stayTotal } from './availability';
 import { calculateStayPricing } from './pricing';
-import { recomputeReservation } from './selectors';
+import { financialsFor, recomputeReservation } from './selectors';
 import { addISO, dayDiff, formatMediumDate, businessToday, timeNow } from './dates';
 import { hashPassword } from '../auth/passwords';
 import { appendAuditLog, issueOfficialReceipt } from './production-ops';
@@ -739,6 +740,296 @@ export interface PaymentInput {
   paidAt?: string;
   note?: string;
   proof?: { fileName: string; mimeType: string; dataUrl: string; sizeBytes: number } | null;
+  /** Set when the receipt is being banked from a guest's submitted claim. */
+  claimId?: ID | null;
+}
+
+/**
+ * What the guest is asked to pay, and which channels they may use.
+ *
+ * The business decides the channels (Settings → Payments): which exist, their
+ * details and the default. The guest chooses from those channels when they pay.
+ * `lockMethodToAdmin` flips that around so reception assigns the channel instead —
+ * both are supported, and the guest's screens read this object rather than
+ * hard-coding an assumption.
+ */
+export interface PaymentQuote {
+  reservationId: ID;
+  reference: string;
+  totalAmount: number;
+  verifiedPaid: number;
+  pendingAmount: number;
+  balanceDue: number;
+  depositPercent: number;
+  /** The amount we suggest next (deposit if nothing is paid, else the balance). */
+  suggestedAmount: number;
+  allowPartial: boolean;
+  guestChoosesMethod: boolean;
+  defaultMethod: PaymentMethod;
+  methods: {
+    id: PaymentMethod;
+    label: string;
+    instructions: string;
+    accountLabel: string;
+    accountNumber: string;
+  }[];
+  openClaim: GuestSubmittedPayment | null;
+  claims: GuestSubmittedPayment[];
+  proofUploadEnabled: boolean;
+}
+
+export function paymentQuote(db: Database, reservation: Reservation): PaymentQuote {
+  const folio = recomputeReservation(db, reservation.id) ?? reservation;
+  const own = (db.paymentClaims ?? []).filter((c) => c.reservationId === reservation.id);
+  const financials = financialsFor(db, folio);
+  const pendingAmount = financials.pendingVerification;
+  const verifiedPaid = financials.verifiedPaid;
+  const totalAmount = folio.totalAmount;
+  const balanceDue = Math.max(0, Math.round(financials.balanceDue * 100) / 100);
+  const depositPercent = db.settings.booking.depositPercent;
+  const depositAmount = Math.round((totalAmount * depositPercent) / 100);
+  const settings = db.settings.payments;
+
+  return {
+    reservationId: reservation.id,
+    reference: reservation.reference,
+    totalAmount,
+    verifiedPaid,
+    pendingAmount,
+    balanceDue,
+    depositPercent,
+    suggestedAmount:
+      balanceDue <= 0 ? 0 : verifiedPaid === 0 ? Math.min(depositAmount, balanceDue) : balanceDue,
+    allowPartial: settings.allowPartialPayments !== false,
+    guestChoosesMethod: !settings.lockMethodToAdmin,
+    defaultMethod:
+      settings.defaultMethod ??
+      (settings.methods.find((m) => m.enabled)?.id as PaymentMethod | undefined) ??
+      'airtel_money',
+    methods: settings.methods
+      .filter((m) => m.enabled)
+      .map((m) => ({
+        id: m.id as PaymentMethod,
+        label: m.label,
+        instructions: m.instructions,
+        accountLabel: m.accountLabel,
+        accountNumber: m.accountNumber,
+      })),
+    openClaim: own.find((c) => c.status === 'awaiting_verification') ?? null,
+    claims: [...own].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+    proofUploadEnabled: settings.proofUploadEnabled,
+  };
+}
+
+/**
+ * A guest records what they paid, in the channel they chose, with the reference the
+ * provider gave them. This is a claim: nothing is banked and no balance moves.
+ * Reception verifies it, which is the only path to `recordPayment`.
+ */
+export function submitPaymentClaim(
+  db: Database,
+  input: {
+    reservationId: ID;
+    userId: ID;
+    amount: number;
+    method: PaymentMethod;
+    reference: string;
+    paidAt?: string;
+    note?: string;
+    proof?: { fileName: string; mimeType: string; dataUrl: string; sizeBytes: number } | null;
+  },
+): GuestSubmittedPayment {
+  db.paymentClaims = db.paymentClaims ?? [];
+  const r = db.reservations.find((x) => x.id === input.reservationId);
+  if (!r) throw new OperationError('Booking not found.', 404, 'not_found');
+  if (r.userId !== input.userId) {
+    const guestRecord = db.guests.find((g) => g.id === r.guestId);
+    if (guestRecord?.userId !== input.userId) {
+      throw new OperationError('That booking does not belong to your account.', 403, 'forbidden');
+    }
+  }
+  if (r.status === 'cancelled') {
+    throw new OperationError('This booking is cancelled, so no payment is due.', 409, 'cancelled');
+  }
+  if (r.status === 'checked_out') {
+    throw new OperationError('This stay is closed. Contact reception if something is outstanding.', 409, 'closed_folio');
+  }
+
+  const settings = db.settings.payments;
+  const method = settings.methods.find((m) => m.id === input.method);
+  if (!method?.enabled) {
+    throw new OperationError('That payment method is not available. Choose one of the channels shown.', 422, 'method_disabled');
+  }
+  if (!settings.lockMethodToAdmin && settings.defaultMethod && !settings.methods.some((m) => m.id === input.method && m.enabled)) {
+    throw new OperationError('That payment method is not available.', 422, 'method_disabled');
+  }
+
+  const amount = Math.round(Number(input.amount) * 100) / 100;
+  if (!(amount > 0)) throw new OperationError('Enter the amount you paid.', 422, 'validation');
+
+  const quote = paymentQuote(db, r);
+  if (quote.balanceDue <= 0) {
+    throw new OperationError('This booking is already settled. Nothing further is due.', 409, 'already_paid');
+  }
+  if (quote.openClaim) {
+    throw new OperationError(
+      'A payment is already waiting for reception to check it. Contact us if you need to change it rather than submitting again.',
+      409,
+      'claim_pending',
+    );
+  }
+  if (!quote.allowPartial) {
+    const settledExpected = quote.suggestedAmount;
+    if (Math.abs(amount - settledExpected) > 0.01) {
+      throw new OperationError(
+        `This booking is set up for a single payment of K${settledExpected.toLocaleString('en-US')}.`,
+        422,
+        'partial_not_allowed',
+      );
+    }
+  }
+  if (amount > quote.balanceDue + 0.01) {
+    throw new OperationError(
+      `That is more than the K${quote.balanceDue.toLocaleString('en-US')} outstanding. Pay the balance or contact reception.`,
+      422,
+      'overpayment',
+    );
+  }
+  const reference = input.reference.trim();
+  if (reference.length < 3) {
+    throw new OperationError('Enter the transaction reference, SMS code or slip number.', 422, 'validation');
+  }
+  if (input.proof && !settings.proofUploadEnabled) {
+    throw new OperationError('Proof uploads are switched off — give reception the reference instead.', 422, 'validation');
+  }
+
+  const guest = db.guests.find((g) => g.id === r.guestId);
+  const claim: GuestSubmittedPayment = {
+    id: nextId('clm'),
+    reservationId: r.id,
+    userId: input.userId,
+    guestId: r.guestId,
+    amount,
+    method: input.method,
+    reference,
+    paidAt: input.paidAt || today(db),
+    note: (input.note ?? '').trim(),
+    proof: input.proof ? { ...input.proof, uploadedAt: nowISO(), uploadedBy: guest?.fullName ?? 'Guest' } : null,
+    status: 'awaiting_verification',
+    paymentId: null,
+    linkedAt: null,
+    createdAt: nowISO(),
+  };
+  db.paymentClaims.unshift(claim);
+
+  r.history.unshift({
+    at: nowISO(),
+    by: guest?.fullName ?? 'Guest',
+    label: 'Payment submitted by guest — awaiting verification',
+    detail: `K${amount.toLocaleString('en-US')} · ${method.label} · ref ${reference}. Balance is unchanged until staff verify it.`,
+  });
+  r.updatedAt = nowISO();
+
+  appendAuditLog(db, {
+    category: 'payment',
+    action: 'payment.claim_submitted',
+    actorUid: input.userId,
+    targetType: 'reservation',
+    targetId: r.id,
+    summary: `${guest?.fullName ?? 'Guest'} claimed K${amount.toLocaleString('en-US')} by ${method.label} on ${r.reference}.`,
+  });
+
+  // Tell reception there is something to check, and tell the guest where it stands.
+  const staffRecipients = (db.users ?? []).filter(
+    (u) => u.role === 'super_admin' || u.role === 'admin' || u.role === 'receptionist',
+  );
+  void staffRecipients;
+  draftNotification(db, {
+    event: 'payment_submitted',
+    channel: 'in_app',
+    title: `Payment to verify · ${r.reference}`,
+    body: `${guest?.fullName ?? 'A guest'} says they paid K${amount.toLocaleString('en-US')} by ${method.label}, reference ${reference}. Check it against the statement, then record and verify it on the booking.`,
+    recipientName: 'Reception',
+    recipientContact: db.settings.property.phone,
+    guestId: r.guestId,
+    reservationId: r.id,
+    apartmentId: r.apartmentId,
+    actor: guest?.fullName,
+  });
+  draftNotification(db, {
+    event: 'payment_submitted',
+    channel: 'in_app',
+    title: `Payment received for checking · ${r.reference}`,
+    body: `Thank you — we have your ${method.label} reference ${reference} for K${amount.toLocaleString('en-US')}. Reception checks these against the provider statement; your balance updates once it is confirmed.`,
+    recipientName: guest?.fullName ?? 'Guest',
+    recipientContact: guest?.phone ?? '',
+    guestId: r.guestId,
+    reservationId: r.id,
+    apartmentId: r.apartmentId,
+    actor: guest?.fullName,
+  });
+
+  return claim;
+}
+
+/**
+ * Rejects a guest's claim. The balance does not move, and the guest is told why —
+ * silently discarding a claim would leave them believing they had paid.
+ */
+export function rejectPaymentClaim(
+  db: Database,
+  actorId: ID,
+  claimId: ID,
+  note: string,
+): GuestSubmittedPayment {
+  db.paymentClaims = db.paymentClaims ?? [];
+  const claim = db.paymentClaims.find((c) => c.id === claimId);
+  if (!claim) throw new OperationError('Payment claim not found.', 404, 'not_found');
+  if (claim.status === 'linked') {
+    throw new OperationError('That claim has already been banked as a receipt.', 409, 'already_state');
+  }
+  const reviewer = actorName(db, actorId);
+  claim.status = 'rejected';
+  claim.linkedAt = nowISO();
+  claim.paymentId = null;
+  claim.note = [claim.note, `Rejected by ${reviewer}: ${note}`].filter(Boolean).join(' · ');
+
+  const r = db.reservations.find((x) => x.id === claim.reservationId);
+  if (r) {
+    r.history.unshift({
+      at: nowISO(),
+      by: reviewer,
+      label: 'Guest payment claim rejected',
+      detail: `K${claim.amount.toLocaleString('en-US')} · ${claim.method.replace(/_/g, ' ')} · ref ${claim.reference} — ${note}`,
+    });
+    r.updatedAt = nowISO();
+    const guest = db.guests.find((g) => g.id === r.guestId);
+    if (guest) {
+      draftNotification(db, {
+        event: 'payment_rejected',
+        channel: 'in_app',
+        title: `We could not match your payment · ${r.reference}`,
+        body: `We looked for your ${claim.method.replace(/_/g, ' ')} payment of K${claim.amount.toLocaleString('en-US')} (reference ${claim.reference}) and could not find it. ${note} Please reply to reception with a screenshot or the correct reference — your booking is unchanged.`,
+        recipientName: guest.fullName,
+        recipientContact: guest.phone,
+        guestId: guest.id,
+        reservationId: r.id,
+        apartmentId: r.apartmentId,
+        actor: reviewer,
+      });
+    }
+  }
+
+  appendAuditLog(db, {
+    category: 'payment',
+    action: 'payment.claim_rejected',
+    actorUid: actorId,
+    targetType: 'reservation',
+    targetId: claim.reservationId,
+    summary: `Rejected guest claim ${claim.id} (K${claim.amount.toLocaleString('en-US')}, ref ${claim.reference}) — ${note}`,
+  });
+
+  return claim;
 }
 
 export function recordPayment(db: Database, actorId: ID, input: PaymentInput): Payment {
@@ -821,6 +1112,34 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
     createdAt: nowISO(),
   };
   if (!payment.reference) payment.reference = `REC-${String(db.sequences.receipt++).padStart(5, '0')}`;
+
+  // A receipt banked from a guest's claim carries the claim reference and settles it,
+  // so the guest's submission and the ledger entry can never drift apart.
+  if (input.claimId) {
+    db.paymentClaims = db.paymentClaims ?? [];
+    const claim = db.paymentClaims.find((c) => c.id === input.claimId);
+    if (!claim) throw new OperationError('That payment claim no longer exists.', 404, 'not_found');
+    if (claim.status === 'linked') {
+      throw new OperationError('That payment claim has already been banked against a receipt.', 409, 'already_state');
+    }
+    if (claim.status === 'rejected') {
+      throw new OperationError(
+        'That claim was rejected. Ask the guest to submit the correct reference, then record it as a desk payment.',
+        409,
+        'already_state',
+      );
+    }
+    if (claim.reservationId !== r.id) {
+      throw new OperationError('That claim belongs to a different booking.', 422, 'validation');
+    }
+    payment.claimId = claim.id;
+    claim.status = 'linked';
+    claim.paymentId = payment.id;
+    claim.linkedAt = nowISO();
+  } else {
+    payment.claimId = null;
+  }
+
   db.payments.unshift(payment);
 
   r.history.unshift({
@@ -1481,7 +1800,59 @@ export function markNotification(db: Database, id: ID, patch: { read?: boolean; 
  * Runs the reminder sweep the scheduler would run: check-in reminders, check-out
  * reminders and balance chasers, skipping anything already drafted for that stay.
  */
-export function runReminderSweep(db: Database): { created: number; skipped: number } {
+/**
+ * Second half of the sweep: guest payment claims that nobody has checked yet.
+ *
+ * Two notifications come out of here — a nudge to reception once a claim has sat
+ * past the review window in Settings, and a holding note to the guest. Neither
+ * changes a balance; only a verifier does that.
+ */
+export function sweepPaymentClaims(
+  db: Database,
+  day = db.__today || businessToday(),
+): { created: number; skipped: number } {
+  let created = 0;
+  let skipped = 0;
+  const windowHours = db.settings.payments.claimReviewHours ?? 24;
+
+  for (const claim of db.paymentClaims ?? []) {
+    if (claim.status !== 'awaiting_verification') continue;
+    const r = db.reservations.find((x) => x.id === claim.reservationId);
+    if (!r || r.status === 'cancelled') continue;
+    const guest = db.guests.find((g) => g.id === r.guestId);
+
+    const ageHours = (Date.now() - new Date(claim.createdAt).getTime()) / 36e5;
+    if (ageHours < windowHours) continue;
+
+    const nudged = db.notifications.some(
+      (n) =>
+        n.reservationId === r.id &&
+        n.createdAt.slice(0, 10) === day &&
+        n.title.startsWith('Payment still unchecked'),
+    );
+    if (nudged) {
+      skipped += 1;
+      continue;
+    }
+
+    draftNotification(db, {
+      event: 'payment_recorded',
+      channel: 'in_app',
+      title: `Payment still unchecked · ${r.reference}`,
+      body: `${guest?.fullName ?? 'A guest'} submitted K${claim.amount.toLocaleString('en-US')} by ${claim.method.replace(/_/g, ' ')} (ref ${claim.reference}) ${Math.round(ageHours)} hours ago. Match it against the statement and confirm or reject it.`,
+      recipientName: 'Reception',
+      recipientContact: db.settings.property.phone,
+      guestId: r.guestId,
+      reservationId: r.id,
+      apartmentId: r.apartmentId,
+    });
+    created += 1;
+  }
+
+  return { created, skipped };
+}
+
+export function runReminderSweep(db: Database): { created: number; skipped: number; claims: number } {
   const t = today(db);
   let created = 0;
   let skipped = 0;
@@ -1565,7 +1936,9 @@ export function runReminderSweep(db: Database): { created: number; skipped: numb
       }
     }
   }
-  return { created, skipped };
+
+  const claims = sweepPaymentClaims(db, t);
+  return { created: created + claims.created, skipped: skipped + claims.skipped, claims: claims.created };
 }
 
 /* -------------------------------------------------------------------------- settings */

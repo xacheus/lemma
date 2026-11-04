@@ -452,6 +452,28 @@ export interface PaymentAuditEntry {
   note?: string;
 }
 
+/** A payment claimed by the guest from their own account, before staff confirm it. */
+export interface GuestSubmittedPayment {
+  id: ID;
+  reservationId: ID;
+  userId: ID | null;
+  guestId: ID | null;
+  amount: number;
+  /** Method chosen by the guest from the channels the business has enabled. */
+  method: PaymentMethod;
+  /** Transaction ID, SMS reference or bank slip number the guest was given. */
+  reference: string;
+  /** Date the guest says the money left their side. */
+  paidAt: string;
+  note: string;
+  proof: PaymentProof | null;
+  status: 'awaiting_verification' | 'linked' | 'rejected';
+  /** Set when staff verify it, so the claim and the ledger entry stay connected. */
+  paymentId: ID | null;
+  linkedAt: string | null;
+  createdAt: string;
+}
+
 export interface Payment {
   id: ID;
   reservationId: ID;
@@ -473,6 +495,8 @@ export interface Payment {
   verificationNote: string;
   proof: PaymentProof | null;
   note: string;
+  /** Guest-submitted claim this receipt was created from, when there was one. */
+  claimId?: ID | null;
   auditTrail?: PaymentAuditEntry[];
   createdAt: string;
 }
@@ -691,6 +715,7 @@ export type NotificationEventType =
   | 'payment_recorded'
   | 'payment_received'
   | 'payment_verified'
+  | 'payment_submitted'
   | 'payment_rejected'
   | 'upcoming_checkin'
   | 'checkin_reminder'
@@ -855,6 +880,14 @@ export interface Settings {
   };
   payments: {
     methods: PaymentMethodSetting[];
+    /** When true the business picks the channel; when false the guest chooses. */
+    lockMethodToAdmin?: boolean;
+    /** Channel guests default to when they are allowed to choose. */
+    defaultMethod?: PaymentMethod;
+    /** Let the guest choose a part payment instead of the suggested deposit. */
+    allowPartialPayments?: boolean;
+    /** Hours a submitted claim may stay unverified before reception is nudged. */
+    claimReviewHours?: number;
     proofUploadEnabled: boolean;
     requireVerification: boolean;
     receiptPrefix: string;
@@ -913,6 +946,8 @@ export interface Database {
   media?: MediaRecord[];
   auditLogs?: AuditLogRecord[];
   notifications: NotificationRecord[];
+  /** Claims guests have submitted from their account, awaiting staff verification. */
+  paymentClaims?: GuestSubmittedPayment[];
   settings: Settings;
   dashboardSummary?: DashboardSummaryDoc;
   /**

@@ -210,6 +210,164 @@ const run = async () => {
   const myNotifs = guestSnap2.json?.data?.notifications ?? [];
   check('guest receives in-app notifications', myNotifs.length > 0, `${myNotifs.length} notifications`);
 
+  console.log('\n7b. Guest-chosen payment claims');
+  // Settings decide whether the guest picks the channel. Either way the claim is a
+  // request for a human to check — never money in the ledger.
+  const quote = await call(`/api/payments/claims?reservationId=${reservationId}`, { session: 'guest' });
+  check('guest can read the payment quote for their own booking', quote.json?.ok === true, JSON.stringify(quote.json).slice(0, 200));
+  const q = quote.json?.data?.quote;
+  check('quote shows what is still owed', typeof q?.balanceDue === 'number' && q.balanceDue > 0, JSON.stringify(q?.balanceDue));
+  check('quote lists only enabled channels', Array.isArray(q?.methods) && q.methods.length > 0, JSON.stringify(q?.methods?.map((m) => m.id)));
+  const chosen = q?.methods?.[0]?.id;
+  const guestPayAttempt = await call('/api/payments', {
+    method: 'POST',
+    session: 'guest',
+    body: { reservationId, amount: 10, method: chosen, kind: 'part_payment', reference: 'GUEST-SELF' },
+  });
+  check('a guest cannot record money into the ledger directly', guestPayAttempt.json?.ok === false, JSON.stringify(guestPayAttempt.json).slice(0, 160));
+
+  const claimAmount = q?.allowPartial ? Math.max(50, Math.round((q?.suggestedAmount ?? 50) / 2)) : q?.suggestedAmount;
+  const claimRef = `E2E-CLAIM-${Date.now()}`;
+  const claim = await call('/api/payments/claims', {
+    method: 'POST',
+    session: 'guest',
+    body: {
+      reservationId,
+      amount: claimAmount,
+      method: chosen,
+      reference: claimRef,
+      paidAt: new Date().toISOString().slice(0, 10),
+      note: 'Paid from my phone this morning.',
+    },
+  });
+  check('guest can submit a payment claim', claim.json?.ok === true, JSON.stringify(claim.json).slice(0, 240));
+  const claimId = claim.json?.data?.claim?.id;
+  check('claim starts awaiting verification', claim.json?.data?.claim?.status === 'awaiting_verification', claim.json?.data?.claim?.status);
+  const afterClaim = (await call('/api/session')).json?.data?.reservations?.find((r) => r.id === reservationId);
+  check(
+    'a submitted claim does not move the balance',
+    afterClaim?.balanceDue === undefined || afterClaim.balanceDue === q?.balanceDue,
+    JSON.stringify({ due: afterClaim?.balanceDue, before: q?.balanceDue }),
+  );
+
+  if (claimId) {
+    const dupe = await call('/api/payments/claims', {
+      method: 'POST',
+      session: 'guest',
+      body: { reservationId, amount: claimAmount, method: chosen, reference: `${claimRef}-2` },
+    });
+    check('only one open claim per booking', dupe.json?.ok === false, JSON.stringify(dupe.json).slice(0, 140));
+
+    const reject = await call(`/api/payments/claims/${claimId}`, {
+      method: 'PATCH',
+      body: { status: 'rejected', note: 'No matching credit on the statement.' },
+    });
+    check('administrator can reject a claim with a reason', reject.json?.ok === true, JSON.stringify(reject.json).slice(0, 200));
+    check('rejected claim is marked rejected', reject.json?.data?.claim?.status === 'rejected', reject.json?.data?.claim?.status);
+    const afterReject = (await call('/api/session')).json?.data?.reservations?.find((r) => r.id === reservationId);
+    check('rejecting a claim leaves the balance alone', afterReject?.balanceDue === q?.balanceDue, String(afterReject?.balanceDue));
+
+    const guestNotices = (await call('/api/session', { session: 'guest' })).json?.data?.notifications ?? [];
+    check(
+      'guest is told why the claim was rejected',
+      guestNotices.some((n) => /could not match/i.test(n.title)),
+      guestNotices.slice(0, 3).map((n) => n.title).join(' | '),
+    );
+
+    // Re-submit correctly, then let staff bank it against the claim.
+    const again = await call('/api/payments/claims', {
+      method: 'POST',
+      session: 'guest',
+      body: { reservationId, amount: claimAmount, method: chosen, reference: claimRef },
+    });
+    check('guest can resubmit after a rejection', again.json?.ok === true, JSON.stringify(again.json).slice(0, 200));
+    const goodClaimId = again.json?.data?.claim?.id;
+    const banked = await call('/api/payments', {
+      method: 'POST',
+      body: {
+        reservationId,
+        amount: claimAmount,
+        method: chosen,
+        kind: 'part_payment',
+        reference: claimRef,
+        claimId: goodClaimId,
+      },
+    });
+    check('staff can bank a claim into a receipt', banked.json?.ok === true, JSON.stringify(banked.json).slice(0, 220));
+    const twice = await call('/api/payments', {
+      method: 'POST',
+      body: { reservationId, amount: claimAmount, method: chosen, kind: 'part_payment', reference: `${claimRef}-B`, claimId: goodClaimId },
+    });
+    check('the same claim cannot be banked twice', twice.json?.ok === false, JSON.stringify(twice.json).slice(0, 160));
+    const bankedPayment = banked.json?.data?.payment;
+    if (bankedPayment?.id && bankedPayment.verificationStatus !== 'verified') {
+      await call(`/api/payments/${bankedPayment.id}`, { method: 'PATCH', body: { status: 'verified' } });
+    }
+  }
+
+  console.log('\n7c. Statement import');
+  const statementCsv = [
+    'date,amount,reference,description',
+    `${new Date().toISOString().slice(0, 10)},${claimAmount},${claimRef},mobile money credit`,
+    `${new Date().toISOString().slice(0, 10)},1,NO-SUCH-REF,unrelated`,
+  ].join('\n');
+  const analyse = await call('/api/payments/import', {
+    method: 'POST',
+    body: { csv: statementCsv, fallbackMethod: 'mtn_money' },
+  });
+  check('administrator can analyse a statement without banking it', analyse.json?.ok === true, JSON.stringify(analyse.json).slice(0, 200));
+  check('import proposes matches but writes nothing', Array.isArray(analyse.json?.data?.rows), String(analyse.json?.data?.rows?.length));
+  check(
+    'a duplicate reference is flagged rather than re-imported',
+    analyse.json?.data?.rows?.[0]?.alreadyBanked === true,
+    JSON.stringify(analyse.json?.data?.rows?.[0]?.alreadyBanked),
+  );
+  const badHeader = await call('/api/payments/import', { method: 'POST', body: { csv: 'foo,bar\n1,2' } });
+  check('a file without date and amount columns is refused', badHeader.json?.ok === false, JSON.stringify(badHeader.json).slice(0, 160));
+  const guestImport = await call('/api/payments/import', {
+    method: 'POST',
+    session: 'guest',
+    body: { csv: statementCsv },
+  });
+  check('a guest cannot run a statement import', guestImport.json?.ok === false, String(guestImport.status));
+
+  console.log('\n7d. Staff list import');
+  const staffCsv = [
+    'name,username,role,phone',
+    `E2E Receptionist,e2e${Date.now() % 100000},receptionist,+260977000333`,
+    `E2E Cleaner,e2eclean${Date.now() % 100000},cleaner,`,
+    'Broken Row,,cleaner,',
+  ].join('\n');
+  const staffImport = await call('/api/staff/import', { method: 'POST', body: { csv: staffCsv } });
+  check('administrator can import a staff list', staffImport.json?.ok === true, JSON.stringify(staffImport.json).slice(0, 220));
+  check('imported accounts get a generated password', (staffImport.json?.data?.created ?? []).length === 2 && staffImport.json.data.created.every((c) => c.password?.length >= 6));
+  check('a row without a username is skipped with a reason', (staffImport.json?.data?.skipped ?? []).length === 1);
+  check('a password sheet is returned for handover', (staffImport.json?.data?.passwordSheet ?? '').includes('Temporary password'));
+  const importedUser = staffImport.json?.data?.created?.[0];
+  if (importedUser) {
+    const asReception = await call('/api/auth/login', { method: 'POST', session: 'guest', body: { username: importedUser.username, password: importedUser.password } });
+    check('an imported account can sign in', asReception.json?.ok === true, JSON.stringify(asReception.json).slice(0, 160));
+    const escalate = await call('/api/staff/import', { method: 'POST', session: 'guest', body: { csv: 'name,username,role\nSneaky,sneaky,admin' } });
+    check('reception cannot import staff or grant roles', escalate.json?.ok === false, String(escalate.status));
+    const settingsAttempt = await call('/api/settings', { method: 'PATCH', session: 'guest', body: { property: { name: 'Hijack' } } });
+    check('reception cannot change property settings', settingsAttempt.json?.ok === false, String(settingsAttempt.status));
+  }
+  check('imported passwords are not echoed back in the staff list', !((await call('/api/session')).json?.data?.staff ?? []).some((s) => s.password || s.passwordHash));
+
+  console.log('\n7e. Scheduled reminders');
+  const cronClosed = await fetch(`${BASE}/api/cron/reminders`, { headers: { 'x-cron-secret': 'definitely-wrong' } });
+  check('the reminder endpoint refuses a wrong secret', cronClosed.status === 401, String(cronClosed.status));
+  const cronNoSecret = await fetch(`${BASE}/api/cron/reminders`);
+  check('the reminder endpoint does not run unauthenticated', cronNoSecret.status === 401, String(cronNoSecret.status));
+  if (process.env.CRON_SECRET) {
+    const run1 = await fetch(`${BASE}/api/cron/reminders`, { headers: { 'x-cron-secret': process.env.CRON_SECRET } }).then((r) => r.json());
+    check('the reminder sweep runs with the configured secret', run1?.ok === true, JSON.stringify(run1).slice(0, 160));
+    const run2 = await fetch(`${BASE}/api/cron/reminders`, { headers: { 'x-cron-secret': process.env.CRON_SECRET } }).then((r) => r.json());
+    check('running the sweep twice does not duplicate reminders', (run2?.data?.created ?? 1) === 0, JSON.stringify(run2?.data));
+  } else {
+    console.log('  skip reminder sweep body — CRON_SECRET not set for this run');
+  }
+
   console.log('\n8. Apartment management (admin only)');
   const created = await call('/api/apartments', {
     method: 'POST',

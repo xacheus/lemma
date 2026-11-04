@@ -66,6 +66,24 @@ Reads go through one snapshot object built per request, so a screen cannot show 
 1. **A confirmed booking holds the night; nothing else does.** `reserved`, `fully_paid`, `checked_in` and `checked_out` occupy inventory per apartment. `inquiry` and `cancelled` do not — an enquiry can be quoted and re-quoted without freezing stock, and a cancelled stay frees its dates for resale immediately.
 2. **Money is only money when a person signs for it.** Recording a receipt with proof attached leaves the guest's balance untouched and files it in the verification queue. Only `payments.verify` staff can move a folio, and the confirmation carries their name and timestamp.
 
+## Automatic reminders
+
+Check-in, check-out and outstanding-balance reminders are drafted by a sweep. Someone has to call it on a schedule; nothing runs itself:
+
+```bash
+CRON_SECRET=<long random string>          # required; without it the route refuses every call
+curl -H "x-cron-secret: $CRON_SECRET" https://<your-host>/api/cron/reminders
+```
+
+Put that line in Vercel Cron, a systemd timer or the host's crontab, hourly or nightly. The sweep is idempotent — a reminder is drafted at most once a day per booking — and it also nudges reception about guest payment claims that have sat past the review window in **Settings → Payments**. With no WhatsApp/SMS provider connected, reminders land in the in-app notification list marked `not_connected`; they are never reported as delivered.
+
+## Banking a statement
+
+Two imports exist for the paperwork the property already has:
+
+- **Admin → Payments → Statement import** — drop in a bank or mobile-money CSV (a `date` and `amount` column, plus a `reference` column for reliable matching). The server proposes matches against open balances and guest claims; nothing is written until someone ticks the lines and confirms. Imported receipts go through the same verification rule as any other payment, so an importer without `payments.verify` cannot bank money by uploading a file.
+- **Admin → Staff & Users → Import list** — create several receptionist or cleaner accounts from a CSV. Each gets its own generated password, shown once in a download sheet; passwords are hashed before storage, no mail is sent, and existing usernames are reported rather than overwritten.
+
 ## Storage
 
 Records are written to Cloud Firestore when `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` are set; otherwise to `.data/lemma-db.json` (or `LEMMA_DATA_DIR`). Both paths use the same `getDb()` / `mutate()` API, so moving to Postgres later is one module, not a refactor. There is no reset command: deleting the file is deleting the property's records, so treat it like a database.

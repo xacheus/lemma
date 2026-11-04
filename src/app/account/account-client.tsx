@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarDays,
   CheckCircle2,
+  CreditCard,
   Download,
   FileText,
   LogOut,
@@ -18,7 +19,9 @@ import {
 } from 'lucide-react';
 import type { SnapshotView } from '@/lib/view-types';
 import { BOOKING_STATUS_META, PAYMENT_STATUS_META } from '@/lib/domain/status';
+import { formatKwacha } from '@/lib/domain/money';
 import { GuestNotifications } from './guest-notifications';
+import { GuestPaymentPanel } from './guest-payment-panel';
 
 export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: SnapshotView }) {
   const router = useRouter();
@@ -34,6 +37,9 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
 
+  // Payment submission modal
+  const [payTarget, setPayTarget] = useState<{ id: string; reference: string } | null>(null);
+
   // Cancellation request modal state
   const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -41,6 +47,9 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
   const [cancelErr, setCancelErr] = useState<string | null>(null);
 
   const reservations = snapshot.reservations ?? [];
+  const owed = reservations
+    .filter((r) => r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status))
+    .reduce((sum, r) => sum + r.balanceDue, 0);
   const quotations = snapshot.quotations ?? [];
   const invoices = snapshot.invoices ?? [];
   const receipts = snapshot.receipts ?? [];
@@ -154,6 +163,32 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
           </button>
         </div>
       </div>
+
+      {owed > 0 ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-sand-300 bg-sand-50 px-4 py-3">
+          <div>
+            <p className="text-[0.86rem] font-semibold text-navy-900">
+              {formatKwacha(owed)} outstanding on your stay
+            </p>
+            <p className="mt-0.5 text-[0.8rem] text-navy-600">
+              Pay by Airtel Money, MTN Mobile Money, bank transfer or cash, then record it here so
+              reception can check it. Your balance updates once it is confirmed.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary py-2 text-[0.82rem]"
+            onClick={() => {
+              const target = reservations.find(
+                (r) => r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status),
+              );
+              if (target) setPayTarget({ id: target.id, reference: target.reference });
+            }}
+          >
+            <CreditCard size={14} /> Pay now
+          </button>
+        </div>
+      ) : null}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-sand-200 pb-2">
@@ -272,6 +307,17 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-200 pt-3.5">
                     <div className="flex flex-wrap gap-2">
+                      {r.balanceDue > 0 && !['cancelled', 'checked_out'].includes(r.status) ? (
+                        <button
+                          type="button"
+                          onClick={() => setPayTarget({ id: r.id, reference: r.reference })}
+                          className="btn btn-primary py-1.5 text-[0.78rem]"
+                        >
+                          <CreditCard size={13} />
+                          {r.verifiedPaid > 0 ? 'Pay the balance' : 'Pay deposit'}
+                          <span className="tabular-nums">· {formatKwacha(r.balanceDue)}</span>
+                        </button>
+                      ) : null}
                       <a
                         href={`/api/documents/confirmation/${r.id}/pdf?download=1`}
                         className="btn btn-secondary py-1.5 text-[0.78rem]"
@@ -492,6 +538,15 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
       ) : null}
 
       {/* Cancellation Request Modal */}
+      {payTarget ? (
+        <GuestPaymentPanel
+          reservationId={payTarget.id}
+          reference={payTarget.reference}
+          onClose={() => setPayTarget(null)}
+          onSubmitted={() => router.refresh()}
+        />
+      ) : null}
+
       {cancelTargetId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 p-4">
           <form onSubmit={submitCancelRequest} className="card w-full max-w-md space-y-4 p-6">

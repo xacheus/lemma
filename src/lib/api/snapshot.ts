@@ -5,6 +5,7 @@ import type {
   DashboardSummaryDoc,
   Database,
   Guest,
+  GuestSubmittedPayment,
   HousekeepingTask,
   Invoice,
   MaintenanceRecord,
@@ -76,6 +77,8 @@ export interface Snapshot {
   auditLogs: AuditLogRecord[];
   dashboardSummary: DashboardSummaryDoc | null;
   notifications: NotificationRecord[] | null;
+  /** Guest-submitted payments: own claims for a guest, the review queue for staff. */
+  paymentClaims: GuestSubmittedPayment[] | null;
   metrics: ReturnType<typeof dashboard> | null;
   guestTotals: Record<string, { stays: number; totalSpent: number; outstanding: number; nights: number }> | null;
   integrations: IntegrationStatusView;
@@ -222,6 +225,9 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
       auditLogs: [],
       dashboardSummary: null,
       notifications: myNotifications,
+      paymentClaims: (db.paymentClaims ?? []).filter(
+        (c) => c.userId === user.id || (c.guestId && myGuestIds.has(c.guestId)),
+      ),
       metrics: null,
       guestTotals: null,
       integrations,
@@ -452,6 +458,14 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
     auditLogs: permissions.has('audit.view') ? (db.auditLogs ?? []).slice(0, 200) : [],
     dashboardSummary: isCleaner ? null : (db.dashboardSummary ?? null),
     notifications,
+    /**
+     * Guests see their own claims. Staff who can record payments see the queue;
+     * cleaners never see financial records at all.
+     */
+    paymentClaims:
+      can(user, 'payments.record') || can(user, 'payments.view') || can(user, 'payments.verify')
+        ? (db.paymentClaims ?? [])
+        : null,
     metrics: isCleaner ? null : dashboard(db),
     guestTotals,
     integrations,

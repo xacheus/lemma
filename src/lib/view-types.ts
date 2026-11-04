@@ -4,6 +4,7 @@ import type {
   CleaningStatus,
   DashboardSummaryDoc,
   Guest,
+  GuestSubmittedPayment,
   HousekeepingTask,
   Invoice,
   MaintenanceRecord,
@@ -90,6 +91,8 @@ export interface SnapshotView {
   auditLogs: AuditLogRecord[];
   dashboardSummary: DashboardSummaryDoc | null;
   notifications: NotificationRecord[] | null;
+  /** Guest claims awaiting verification, or the guest's own submissions. */
+  paymentClaims?: GuestSubmittedPayment[] | null;
   metrics: DashboardMetrics | null;
   guestTotals: Record<string, GuestTotals> | null;
   integrations: IntegrationStatusView;

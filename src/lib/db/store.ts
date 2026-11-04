@@ -125,6 +125,7 @@ export function createEmptyDatabase(today: string): Database {
     media: [],
     auditLogs: [],
     notifications: [],
+    paymentClaims: [],
     settings: cloneDefaults(),
     sequences: {
       reservation: 1000,
@@ -172,6 +173,7 @@ function ensureSchemaCollections(db: Database): Database {
   db.media = db.media ?? [];
   db.auditLogs = db.auditLogs ?? [];
   db.notifications = db.notifications ?? [];
+  db.paymentClaims = db.paymentClaims ?? [];
   db.settings = {
     ...fresh.settings,
     ...db.settings,
@@ -247,6 +249,7 @@ export async function ensureCloudFirestoreHydrated(): Promise<void> {
       maintSnap,
       mediaSnap,
       notifSnap,
+      claimSnap,
       auditSnap,
       businessDoc,
       gbpDoc,
@@ -265,6 +268,7 @@ export async function ensureCloudFirestoreHydrated(): Promise<void> {
       adminDb.collection('maintenance').limit(100).get(),
       adminDb.collection('media').limit(200).get(),
       adminDb.collection('notifications').orderBy('createdAt', 'desc').limit(100).get(),
+      adminDb.collection('payment_claims').orderBy('createdAt', 'desc').limit(200).get(),
       adminDb.collection('audit_logs').orderBy('createdAt', 'desc').limit(100).get(),
       adminDb.collection('settings').doc('business').get(),
       adminDb.collection('settings').doc('google_business').get(),
@@ -289,6 +293,7 @@ export async function ensureCloudFirestoreHydrated(): Promise<void> {
     if (!maintSnap.empty) localDb.maintenance = maintSnap.docs.map((d) => d.data() as NonNullable<Database['maintenance']>[number]);
     if (!mediaSnap.empty) localDb.media = mediaSnap.docs.map((d) => d.data() as NonNullable<Database['media']>[number]);
     if (!notifSnap.empty) localDb.notifications = notifSnap.docs.map((d) => d.data() as Database['notifications'][number]);
+    if (!claimSnap.empty) localDb.paymentClaims = claimSnap.docs.map((d) => d.data() as NonNullable<Database['paymentClaims']>[number]);
     if (!auditSnap.empty) localDb.auditLogs = auditSnap.docs.map((d) => d.data() as NonNullable<Database['auditLogs']>[number]);
     if (businessDoc.exists) {
       localDb.settings = { ...localDb.settings, ...(businessDoc.data() as Partial<Database['settings']>) };
@@ -344,6 +349,7 @@ async function persistSnapshotToCloudFirestore(db: Database): Promise<void> {
   pushAll('maintenance', db.maintenance, 'id');
   pushAll('media', db.media, 'id');
   pushAll('notifications', db.notifications.slice(0, 60), 'id');
+  pushAll('payment_claims', (db.paymentClaims ?? []).slice(0, 200), 'id');
   pushAll('audit_logs', (db.auditLogs ?? []).slice(0, 80), 'id');
 
   entries.push({ col: 'settings', id: 'business', data: db.settings });
@@ -376,6 +382,19 @@ async function persistSnapshotToCloudFirestore(db: Database): Promise<void> {
     }
     await batch.commit();
   }
+}
+
+/**
+ * Runs the reminder sweep inside the store's transaction so reminders cannot
+ * duplicate under two concurrent scheduler calls. Used by /api/cron/reminders.
+ */
+export async function runReminderSweepOnStore(): Promise<{
+  created: number;
+  skipped: number;
+  claims: number;
+}> {
+  const { runReminderSweep } = await import('../domain/operations');
+  return runAtomicTransaction((db) => runReminderSweep(db));
 }
 
 export function getDb(): Database {
