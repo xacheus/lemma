@@ -46,6 +46,12 @@ export const metadata: Metadata = {
     locale: 'en_ZM',
     siteName: 'Lemma Apartments',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Lemma Apartments — Furnished Apartments in Lusaka',
+    description:
+      'Self-catering apartments at Barlaston Park, Lusaka, priced per night in Zambian Kwacha.',
+  },
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },

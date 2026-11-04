@@ -5,7 +5,6 @@ import { ArrowLeft, Bath, BedDouble, CheckCircle2, Layers, Maximize2, Users } fr
 import { readPublicSiteData } from '@/lib/public/read-site-data';
 import { addISO } from '@/lib/domain/dates';
 import { formatKwacha } from '@/lib/domain/money';
-import { isSampleListing } from '@/lib/domain/sample-listings';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoStrip } from '@/components/ui/photo';
@@ -47,10 +46,47 @@ export default async function ApartmentDetailPage({
     apartment.photos;
   const galleryCaptions =
     apartment.gallery?.filter((g) => g.mediaType !== 'document').map((g) => g.title) ?? [];
-  const sample = isSampleListing(apartment);
+
+  const { property } = db.settings;
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Apartment',
+    name: `${apartment.name} — ${property.name}`,
+    description: apartment.tagline || apartment.description,
+    numberOfRooms: apartment.bedrooms === 0 ? 1 : apartment.bedrooms,
+    occupancy: {
+      '@type': 'QuantitativeValue',
+      maxValue: apartment.maxGuests,
+    },
+    ...(apartment.sizeSqm
+      ? {
+          floorSize: {
+            '@type': 'QuantitativeValue',
+            value: apartment.sizeSqm,
+            unitCode: 'MTK',
+          },
+        }
+      : {}),
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: property.addressLine,
+      addressLocality: property.city || 'Lusaka',
+      addressCountry: 'ZM',
+    },
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'ZMW',
+      price: apartment.nightlyRate,
+    },
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <PublicHeader
         property={db.settings.property}
         session={session}
@@ -72,7 +108,6 @@ export default async function ApartmentDetailPage({
             <div>
               <p className="text-[0.8rem] font-medium text-lemma-dark">
                 {APARTMENT_TIER_LABELS[apartment.tier] || apartment.tier} · Unit {apartment.code}
-                {sample ? ' · Example listing' : ''}
               </p>
               <h1 className="mt-1 font-display text-[2rem] font-medium tracking-[-0.015em] text-navy-900 sm:text-[2.25rem]">
                 {apartment.name}
@@ -83,14 +118,6 @@ export default async function ApartmentDetailPage({
                 </p>
               ) : null}
             </div>
-
-            {sample ? (
-              <div className="rounded-lg border border-sand-300 bg-white px-4 py-3 text-[0.83rem] leading-relaxed text-sand-700">
-                <strong className="font-semibold text-navy-900">Example listing:</strong> Unit
-                layout, features and ZMW rate are confirmed with reception before any payment is
-                made. Submitting the form sends an enquiry—no deposit is requested yet.
-              </div>
-            ) : null}
 
             <div className="card overflow-hidden p-3 sm:p-4">
               <PhotoStrip
@@ -146,7 +173,6 @@ export default async function ApartmentDetailPage({
                 {apartment.bedConfiguration}
               </div>
 
-              {/* Strictly render only amenities ticked for this apartment */}
               {apartment.amenities.length > 0 ? (
                 <div className="pt-2">
                   <h3 className="text-[0.95rem] font-semibold text-navy-900">
@@ -166,8 +192,7 @@ export default async function ApartmentDetailPage({
                 </div>
               ) : (
                 <p className="pt-2 text-[0.83rem] leading-relaxed text-sand-600">
-                  The exact inventory list for this unit is being updated—ask reception if you need a
-                  specific appliance or setup.
+                  Ask reception if you need a specific appliance or workspace setup for your stay.
                 </p>
               )}
             </div>

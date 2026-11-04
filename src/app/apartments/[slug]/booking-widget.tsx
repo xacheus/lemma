@@ -10,20 +10,20 @@ import {
   Clock,
   CreditCard,
   ImagePlus,
+  KeyRound,
   Landmark,
   Loader2,
   MessageCircle,
   ShieldCheck,
   Smartphone,
 } from 'lucide-react';
-import type { Apartment, PaymentMethodSetting } from '@/lib/domain/types';
+import type { Apartment, PaymentMethod, PaymentMethodSetting } from '@/lib/domain/types';
 import { PaymentDetails, CopyDetail } from '@/components/payments/payment-details';
 import { publicPaymentMethod, type PublicPaymentMethod } from '@/lib/domain/payment-details';
-import type { PaymentMethod } from '@/lib/domain/types';
 import { calculateStayPricing, type PricingSettings } from '@/lib/domain/pricing';
 import { formatKwacha } from '@/lib/domain/money';
-import { addISO, formatMediumDate } from '@/lib/domain/dates';
-import { isSampleListing } from '@/lib/domain/sample-listings';
+import { addISO } from '@/lib/domain/dates';
+import { preparePaymentProofFile, type PreparedProofFile } from '@/lib/browser/compress-image';
 
 type MethodView = PublicPaymentMethod;
 interface PaymentInstruction extends Omit<PublicPaymentMethod, 'id'> {
@@ -44,7 +44,6 @@ interface BookingResult {
   nights: number;
   totalAmount: number;
   depositDue: number;
-  sample: boolean;
   depositPercent: number;
   apartmentName: string;
   apartmentNumber: number;
@@ -88,7 +87,6 @@ export function ApartmentBookingWidget({
     [settings.payments.methods],
   );
 
-  const sample = isSampleListing(apartment);
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [guestCount, setGuestCount] = useState(initialGuests);
@@ -219,6 +217,7 @@ export function ApartmentBookingWidget({
       <BookingConfirmation
         booking={created}
         prefillUser={prefillUser}
+        guestContact={{ fullName: fullName.trim(), email: email.trim(), phone: phone.trim() }}
         fallbackMethods={methods}
         initialMethod={method}
       />
@@ -373,20 +372,14 @@ export function ApartmentBookingWidget({
             <span>Stay total (ZMW)</span>
             <span>{formatKwacha(pricing.totalAmount)}</span>
           </div>
-          {!sample ? (
-            <div className="flex justify-between text-[0.77rem] text-sand-600">
-              <span>Deposit to hold dates ({pricing.depositPercent}%)</span>
-              <span className="font-medium text-navy-800">{formatKwacha(pricing.depositRequired)}</span>
-            </div>
-          ) : (
-            <p className="pt-0.5 text-[0.76rem] leading-relaxed text-sand-600">
-              Indicative rate. Reception confirms the actual unit and final ZMW total before payment.
-            </p>
-          )}
+          <div className="flex justify-between text-[0.77rem] text-sand-600">
+            <span>Deposit to hold dates ({pricing.depositPercent}%)</span>
+            <span className="font-medium text-navy-800">{formatKwacha(pricing.depositRequired)}</span>
+          </div>
         </div>
       ) : null}
 
-      {/* Guest Contact Fields — clean and non-invasive */}
+      {/* Guest Contact Fields */}
       <div className="space-y-3 border-t border-sand-200 pt-3.5">
         <p className="text-[0.84rem] font-semibold text-navy-900">Your contact details</p>
         <div>
@@ -450,7 +443,7 @@ export function ApartmentBookingWidget({
           />
         </div>
 
-        {/* Optional fast-track arrival details — kept out of the guest's way until wanted */}
+        {/* Optional fast-track arrival details */}
         <details className="group rounded-lg border border-sand-200 bg-sand-50/60 px-3.5 py-2.5">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[0.8rem] font-medium text-navy-800">
             <span>Add arrival time or check-in ID now (optional)</span>
@@ -573,49 +566,47 @@ export function ApartmentBookingWidget({
         </details>
       </div>
 
-      {/* Payment Channel Selection (for verified apartments) */}
-      {!sample ? (
-        methods.length > 0 ? (
-          <fieldset className="border-t border-sand-200 pt-3.5">
-            <legend className="label mb-1.5 block">
-              {locked ? 'Payment channel' : 'Preferred deposit channel'}
-            </legend>
-            <div className="grid grid-cols-2 gap-2">
-              {methods.map((m) => {
-                const Icon = METHOD_ICONS[m.id] ?? CreditCard;
-                const active = method === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    aria-pressed={active}
-                    disabled={locked}
-                    onClick={() => setMethod(m.id)}
-                    className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-left text-[0.8rem] transition-colors ${
-                      active
-                        ? 'border-navy-900 bg-sand-100 font-semibold text-navy-900 ring-1 ring-navy-900'
-                        : 'border-sand-300 bg-white text-navy-700 hover:border-brand-400'
-                    } ${locked && !active ? 'opacity-50' : ''}`}
-                  >
-                    <Icon size={14} className="shrink-0 text-lemma-dark" aria-hidden="true" />
-                    <span className="truncate">{m.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+      {/* Payment Channel Selection */}
+      {methods.length > 0 ? (
+        <fieldset className="border-t border-sand-200 pt-3.5">
+          <legend className="label mb-1.5 block">
+            {locked ? 'Payment channel' : 'Preferred deposit channel'}
+          </legend>
+          <div className="grid grid-cols-2 gap-2">
+            {methods.map((m) => {
+              const Icon = METHOD_ICONS[m.id] ?? CreditCard;
+              const active = method === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={active}
+                  disabled={locked}
+                  onClick={() => setMethod(m.id)}
+                  className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-left text-[0.8rem] transition-colors ${
+                    active
+                      ? 'border-navy-900 bg-sand-100 font-semibold text-navy-900 ring-1 ring-navy-900'
+                      : 'border-sand-300 bg-white text-navy-700 hover:border-brand-400'
+                  } ${locked && !active ? 'opacity-50' : ''}`}
+                >
+                  <Icon size={14} className="shrink-0 text-lemma-dark" aria-hidden="true" />
+                  <span className="truncate">{m.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-            {chosen ? (
-              <div className="mt-2.5 rounded-lg border border-sand-200 bg-sand-50/70 p-3 text-[0.79rem] leading-relaxed text-navy-800">
-                <PaymentDetails method={chosen} />
-              </div>
-            ) : null}
-          </fieldset>
-        ) : (
-          <p className="rounded-lg border border-st-cleaning/40 bg-st-cleaningBg/40 p-3 text-[0.79rem] text-navy-800">
-            Online deposit instructions are being updated. Call or WhatsApp reception to book directly.
-          </p>
-        )
-      ) : null}
+          {chosen ? (
+            <div className="mt-2.5 rounded-lg border border-sand-200 bg-sand-50/70 p-3 text-[0.79rem] leading-relaxed text-navy-800">
+              <PaymentDetails method={chosen} />
+            </div>
+          ) : null}
+        </fieldset>
+      ) : (
+        <p className="rounded-lg border border-st-cleaning/40 bg-st-cleaningBg/40 p-3 text-[0.79rem] text-navy-800">
+          Online deposit instructions are being updated. Call or WhatsApp reception to book directly.
+        </p>
+      )}
 
       <label className="flex items-start gap-2 border-t border-sand-200 pt-3 text-[0.78rem] leading-relaxed text-sand-700">
         <input
@@ -642,20 +633,17 @@ export function ApartmentBookingWidget({
 
       <button
         type="submit"
-        disabled={busy || availState !== 'available' || (!sample && !method)}
+        disabled={busy || availState !== 'available' || !method}
         className="btn btn-primary w-full justify-center py-2.5 text-[0.88rem]"
       >
         {busy
           ? 'Sending request…'
-          : sample
-            ? 'Send enquiry to reception'
-            : `Request to book${pricing.totalAmount > 0 ? ` · ${formatKwacha(pricing.totalAmount)}` : ''}`}
+          : `Request to book${pricing.totalAmount > 0 ? ` · ${formatKwacha(pricing.totalAmount)}` : ''}`}
       </button>
 
       <p className="text-center text-[0.73rem] leading-relaxed text-sand-600">
-        {sample
-          ? 'No payment is asked for now. Reception confirms the apartment and ZMW quote first.'
-          : 'No money is charged on this form. Next, you get your reference and deposit upload box.'}
+        No money is charged on this form. Next, you receive your booking reference and deposit
+        upload instructions.
       </p>
     </form>
   );
@@ -666,11 +654,13 @@ export function ApartmentBookingWidget({
 function BookingConfirmation({
   booking,
   prefillUser,
+  guestContact,
   fallbackMethods,
   initialMethod,
 }: {
   booking: BookingResult;
   prefillUser: { fullName: string; email: string; phone: string } | null;
+  guestContact: { fullName: string; email: string; phone: string };
   fallbackMethods: MethodView[];
   initialMethod: PaymentMethod | null;
 }) {
@@ -684,22 +674,18 @@ function BookingConfirmation({
   );
   const [txnRef, setTxnRef] = useState('');
   const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
-  const [proof, setProof] = useState<{
-    fileName: string;
-    mimeType: string;
-    dataUrl: string;
-    sizeBytes: number;
-  } | null>(null);
+  const [proof, setProof] = useState<PreparedProofFile | null>(null);
+  const [preparingProof, setPreparingProof] = useState(false);
   const [proofError, setProofError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<{ amount: number; reference: string } | null>(null);
+  const [accountSaved, setAccountSaved] = useState(Boolean(prefillUser));
   const fileRef = useRef<HTMLInputElement>(null);
 
   const waDigits = booking.contactWhatsapp.replace(/[^0-9]/g, '');
 
   useEffect(() => {
-    if (booking.sample && booking.status === 'inquiry') return;
     if (booking.payment?.method === method) {
       setInstructions(booking.payment);
       return;
@@ -736,32 +722,23 @@ function BookingConfirmation({
     return () => {
       cancelled = true;
     };
-  }, [method, booking.id, booking.payment, booking.sample, booking.status]);
+  }, [method, booking.id, booking.payment]);
 
   async function pickProof(file: File | null) {
     setProofError(null);
     if (!file) return;
-    if (file.size > 500 * 1024) {
-      setProofError(
-        'That file is over 500 KB. Choose a smaller screenshot, or submit the transaction reference without an attachment.',
-      );
-      return;
+    setPreparingProof(true);
+    try {
+      const prepared = await preparePaymentProofFile(file);
+      if (!prepared.ok) {
+        setProofError(prepared.error);
+        return;
+      }
+      setProof(prepared.file);
+    } finally {
+      setPreparingProof(false);
+      if (fileRef.current) fileRef.current.value = '';
     }
-    if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type)) {
-      setProofError('Use a JPEG, PNG, WebP image or a PDF.');
-      return;
-    }
-    const dataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-    if (!dataUrl) {
-      setProofError('That file could not be read. Try another one.');
-      return;
-    }
-    setProof({ fileName: file.name, mimeType: file.type, dataUrl, sizeBytes: file.size });
   }
 
   async function submitProof(e: React.FormEvent) {
@@ -806,7 +783,7 @@ function BookingConfirmation({
       setSubmitted({ amount: value, reference: txnRef.trim() });
     } catch {
       setError(
-        'Network error — we could not confirm whether the proof was submitted. Check your booking or contact reception before trying again.',
+        'Connection interrupted — please check your booking status or contact reception before submitting again.',
       );
     } finally {
       setBusy(false);
@@ -814,53 +791,6 @@ function BookingConfirmation({
   }
 
   const shown = instructions ?? booking.payment;
-
-  if (booking.sample && booking.status === 'inquiry') {
-    return (
-      <div className="card sticky top-24 space-y-4 p-5 sm:p-6">
-        <div className="flex items-start gap-2.5">
-          <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-st-available" />
-          <div>
-            <h2 className="font-display text-[1.25rem] font-medium text-navy-900">
-              Enquiry received
-            </h2>
-            <p className="mt-0.5 text-[0.82rem] text-sand-700">
-              Reference <strong className="font-mono text-navy-900">{booking.reference}</strong> ·{' '}
-              {formatMediumDate(booking.checkIn)} to {formatMediumDate(booking.checkOut)}
-            </p>
-          </div>
-        </div>
-        <div className="rounded-lg border border-sand-200 bg-sand-50 p-3.5 text-[0.84rem] leading-relaxed text-navy-800">
-          Because this listing is an example unit, reception will confirm the actual apartment,
-          dates and final ZMW rate first. <strong>Please do not send a deposit yet.</strong>
-        </div>
-        <div className="flex flex-col gap-2">
-          {prefillUser ? (
-            <Link href="/account" className="btn btn-primary justify-center">
-              View in my account
-            </Link>
-          ) : (
-            <Link
-              href={`/booking/${encodeURIComponent(booking.id)}`}
-              className="btn btn-primary justify-center"
-            >
-              View enquiry status
-            </Link>
-          )}
-          {waDigits ? (
-            <a
-              href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello, please confirm my enquiry ${booking.reference} (${booking.checkIn} to ${booking.checkOut}).`)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-secondary justify-center"
-            >
-              <MessageCircle size={15} /> Message reception on WhatsApp
-            </a>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="card sticky top-24 space-y-4 p-5 sm:p-6">
@@ -877,7 +807,7 @@ function BookingConfirmation({
         </div>
       </div>
 
-      {/* Clear 3-step visual progress so the guest knows where they stand */}
+      {/* Clear 3-step visual progress */}
       <ol className="grid grid-cols-3 gap-1.5 rounded-lg border border-sand-200 bg-sand-50 p-2 text-center text-[0.7rem]">
         <li className="rounded bg-white px-1.5 py-1.5 font-semibold text-st-available ring-1 ring-sand-200">
           1. Requested ✓
@@ -900,7 +830,7 @@ function BookingConfirmation({
         </li>
       </ol>
 
-      {!prefillUser ? (
+      {!accountSaved ? (
         <p className="text-[0.8rem] text-sand-700">
           <Link className="link font-medium" href={`/booking/${encodeURIComponent(booking.id)}`}>
             Open booking page
@@ -924,24 +854,14 @@ function BookingConfirmation({
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            {prefillUser ? (
+            {accountSaved ? (
               <Link href="/account" className="btn btn-primary justify-center">
                 Track status in my account
               </Link>
-            ) : (
-              <>
-                <Link href="/register" className="btn btn-primary justify-center">
-                  Create a guest account to track receipts
-                </Link>
-                <p className="text-center text-[0.74rem] text-sand-600">
-                  Save reference <strong className="font-mono">{booking.reference}</strong>. Verify
-                  your email after registering to link this stay to your account.
-                </p>
-              </>
-            )}
+            ) : null}
             {waDigits ? (
               <a
-                href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello Lemma Apartments, I have paid for booking ${booking.reference} (ref: ${submitted.reference}).`)}`}
+                href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello, I have paid for booking ${booking.reference} (ref: ${submitted.reference}).`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn-secondary justify-center"
@@ -1096,10 +1016,16 @@ function BookingConfirmation({
               ) : (
                 <button
                   type="button"
+                  disabled={preparingProof}
                   className="btn btn-secondary w-full justify-center py-2 text-[0.8rem]"
                   onClick={() => fileRef.current?.click()}
                 >
-                  <ImagePlus size={14} /> Attach screenshot or slip (optional, max 500 KB)
+                  {preparingProof ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <ImagePlus size={14} />
+                  )}
+                  {preparingProof ? 'Preparing image…' : 'Attach screenshot or slip (optional)'}
                 </button>
               )}
               {proofError ? (
@@ -1130,7 +1056,7 @@ function BookingConfirmation({
             </p>
             {waDigits ? (
               <a
-                href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello Lemma Apartments, I have submitted booking request ${booking.reference} for ${booking.checkIn} to ${booking.checkOut}.`)}`}
+                href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello, I have submitted booking request ${booking.reference} for ${booking.checkIn} to ${booking.checkOut}.`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 inline-flex items-center gap-1.5 font-medium text-navy-900 hover:text-lemma-dark"
@@ -1141,6 +1067,132 @@ function BookingConfirmation({
           </div>
         </>
       )}
+
+      {/* Inline 1-click post-booking account setup for guests not yet signed in */}
+      {!prefillUser ? (
+        <PostBookingAccountCard
+          guestContact={guestContact}
+          saved={accountSaved}
+          onSaved={() => setAccountSaved(true)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function PostBookingAccountCard({
+  guestContact,
+  saved,
+  onSaved,
+}: {
+  guestContact: { fullName: string; email: string; phone: string };
+  saved: boolean;
+  onSaved: () => void;
+}) {
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+
+  async function saveAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (password.length < 6) {
+      setError('Choose a password of at least 6 characters.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          fullName: guestContact.fullName,
+          email: guestContact.email,
+          phoneNumber: guestContact.phone,
+          password,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(
+          json.error ??
+            'Could not create the account right now. If you already have an account, sign in instead.',
+        );
+        setBusy(false);
+        return;
+      }
+      setEmailSent(Boolean(json?.data?.emailSent));
+      onSaved();
+    } catch {
+      setError('Connection interrupted. Please try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (saved) {
+    return (
+      <div className="rounded-lg border border-st-available/30 bg-st-availableBg/50 p-3.5 text-[0.8rem] leading-relaxed text-navy-900">
+        <p className="font-semibold">Guest account saved ({guestContact.email}).</p>
+        <p className="mt-1 text-[0.76rem] text-sand-700">
+          {emailSent
+            ? 'Check your inbox to confirm your email address so all bookings under this email appear in your account.'
+            : 'Your guest account is ready. Open your account to manage your profile and bookings.'}
+        </p>
+        <Link href="/account" className="btn btn-secondary mt-2.5 w-full justify-center py-1.5 text-[0.78rem]">
+          Open my account
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={saveAccount}
+      className="space-y-2.5 rounded-lg border border-sand-200 bg-sand-50/70 p-3.5 text-[0.8rem]"
+    >
+      <div className="flex items-start gap-2">
+        <KeyRound size={15} className="mt-0.5 shrink-0 text-lemma-dark" />
+        <div>
+          <p className="font-semibold text-navy-900">Save this booking to a guest account</p>
+          <p className="mt-0.5 text-[0.75rem] leading-relaxed text-sand-700">
+            Set a password for <strong className="text-navy-800">{guestContact.email}</strong> to
+            track verification and download official PDF receipts anytime.
+          </p>
+        </div>
+      </div>
+
+      {error ? (
+        <p className="rounded border border-st-cancelled/30 bg-st-cancelledBg px-2.5 py-1.5 text-[0.75rem] text-st-cancelled">
+          {error}{' '}
+          <Link href="/login" className="font-semibold underline">
+            Sign in
+          </Link>
+        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          type="password"
+          autoComplete="new-password"
+          minLength={6}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Choose a password (6+ characters)"
+          aria-label="Choose a password for your guest account"
+          className="field flex-1 text-[0.8rem]"
+          required
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="btn btn-secondary shrink-0 justify-center px-3.5 py-2 text-[0.78rem]"
+        >
+          {busy ? <Loader2 size={13} className="animate-spin" /> : null}
+          {busy ? 'Saving…' : 'Save account'}
+        </button>
+      </div>
+    </form>
   );
 }

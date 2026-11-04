@@ -2,7 +2,7 @@
 
 import { Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { optimizeImageUrl, representativePhotoUrl, type ImageVariant } from '@/lib/cloudinary/urls';
+import { optimizeImageUrl, type ImageVariant } from '@/lib/cloudinary/urls';
 
 export function PhotoFrame({
   src,
@@ -22,19 +22,15 @@ export function PhotoFrame({
   variant?: ImageVariant;
 }) {
   const imgRef = useRef<HTMLImageElement>(null);
-  const localSrc = optimizeImageUrl(src, variant);
-  const remoteSrc = representativePhotoUrl(src, variant);
-  const [remoteFailed, setRemoteFailed] = useState(false);
+  const imageSrc = optimizeImageUrl(src, variant);
   const [state, setState] = useState<'unknown' | 'loaded' | 'missing'>('unknown');
 
   useEffect(() => {
     setState('unknown');
-    setRemoteFailed(false);
     const el = imgRef.current;
     if (el && el.complete && el.naturalWidth > 0) setState('loaded');
-  }, [localSrc]);
+  }, [imageSrc]);
 
-  const imageSrc = !remoteFailed && remoteSrc ? remoteSrc : localSrc;
   const ready = state === 'loaded';
 
   return (
@@ -49,23 +45,18 @@ export function PhotoFrame({
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
           onLoad={() => setState('loaded')}
-          onError={() => {
-            if (remoteSrc && !remoteFailed) {
-              setRemoteFailed(true);
-              setState('unknown');
-            } else setState('missing');
-          }}
+          onError={() => setState('missing')}
           className={`transition-opacity duration-200 ${ready ? 'opacity-100' : 'opacity-0'}`}
         />
       ) : null}
       {!ready ? (
         <div className="photo-grid-lines absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
-          <span className="grid h-9 w-9 place-items-center rounded-md bg-white/80 text-lemma ring-1 ring-sand-300">
+          <span className="grid h-9 w-9 place-items-center rounded-md bg-white/85 text-lemma ring-1 ring-sand-300">
             <ImageIcon size={16} />
           </span>
-          <p className="max-w-[24ch] text-[0.84rem] font-medium leading-snug text-navy-700">{alt}</p>
+          <p className="max-w-[24ch] text-[0.84rem] font-medium leading-snug text-navy-800">{alt}</p>
           {caption ? (
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-navy-400">
+            <p className="text-[0.68rem] font-medium text-sand-600">
               {caption}
             </p>
           ) : null}
@@ -90,17 +81,16 @@ export function PhotoStrip({
   const [active, setActive] = useState(0);
   const idx = Math.min(active, list.length - 1);
   const current = list[idx];
-  const representative = Boolean(representativePhotoUrl(current, 'thumbnail'));
 
   return (
     <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-md">
+      <div className="relative overflow-hidden rounded-lg">
         <PhotoFrame
           src={current || undefined}
-          alt={representative ? `Representative photo for ${alt}` : alt}
+          alt={alt}
           ratio={ratio}
           variant="detail"
-          caption={captions?.[idx]}
+          caption={captions?.[idx] || (current ? undefined : 'Photographs coming soon')}
         />
         {list.length > 1 ? (
           <div className="absolute inset-x-3 top-1/2 flex -translate-y-1/2 justify-between">
@@ -110,7 +100,7 @@ export function PhotoStrip({
                 key={direction}
                 aria-label={direction === -1 ? 'Previous photograph' : 'Next photograph'}
                 onClick={() => setActive((i) => (i + direction + list.length) % list.length)}
-                className="grid h-9 w-9 place-items-center rounded-full bg-charcoal-950/70 text-white transition-colors hover:bg-charcoal-950"
+                className="grid h-9 w-9 place-items-center rounded-full bg-charcoal-950/75 text-white transition-colors hover:bg-charcoal-950"
               >
                 {direction === -1 ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
               </button>
@@ -119,7 +109,7 @@ export function PhotoStrip({
         ) : null}
       </div>
       {list.length > 1 ? (
-        <div className="flex items-center justify-between gap-2 text-[0.75rem] text-navy-500">
+        <div className="flex items-center justify-between gap-2 text-[0.75rem] text-sand-600">
           <span>{captions?.[idx] || `${alt} · photograph ${idx + 1}`}</span>
           <span className="shrink-0 tabular-nums">{idx + 1} / {list.length}</span>
         </div>
@@ -141,11 +131,6 @@ export function PhotoStrip({
             </button>
           ))}
         </div>
-      ) : null}
-      {photos.some((p) => Boolean(representativePhotoUrl(p, 'thumbnail'))) ? (
-        <p className="text-[0.76rem] text-navy-500">
-          Photos are representative, not taken at this property. Ask reception for current apartment photographs.
-        </p>
       ) : null}
     </div>
   );

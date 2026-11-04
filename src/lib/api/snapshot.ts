@@ -29,12 +29,6 @@ import { dashboard, decorateAll, guestSummary, nightsBetweenSummary, recomputeRe
 import { addISO } from '../domain/dates';
 import type { Session } from '../auth/session';
 import type { IntegrationStatusView, PublicUserView } from '../view-types';
-import { isFirebaseAdminConfigured } from '../firebase/admin';
-import {
-  CLOUDINARY_CLOUD_NAME,
-  CLOUDINARY_UPLOAD_PRESET,
-  isCloudinaryConfigured,
-} from '../cloudinary/server';
 
 export interface ApartmentSummary extends Apartment {
   tonightStatus: 'occupied' | 'available' | 'cleaning' | 'maintenance' | 'out_of_service';
@@ -105,13 +99,6 @@ export function stripUser(user: UserRecord): PublicUserView {
 
 export function getIntegrationStatus(): IntegrationStatusView {
   return {
-    firebaseClientConfigured: Boolean(
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    ),
-    firebaseAdminConfigured: isFirebaseAdminConfigured(),
-    cloudinaryCloudName: CLOUDINARY_CLOUD_NAME,
-    cloudinaryUploadPreset: CLOUDINARY_UPLOAD_PRESET,
-    cloudinarySignedReady: isCloudinaryConfigured(),
     whatsappProviderConfigured: Boolean(
       process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID,
     ),
@@ -255,7 +242,11 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
       ),
       metrics: null,
       guestTotals: null,
-      integrations,
+      integrations: {
+        whatsappProviderConfigured: false,
+        smsProviderConfigured: false,
+        emailProviderConfigured: false,
+      },
     };
   }
 
@@ -441,9 +432,12 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
       ...(isCleaner ? { payments: { ...db.settings.payments, methods: [] } } : {}),
       notifications: {
         ...db.settings.notifications,
-        email: { ...db.settings.notifications.email, connected: integrations.emailProviderConfigured,
-          provider: integrations.emailProviderConfigured ? 'Brevo Transactional Email' : null,
-          note: 'Configure BREVO_API_KEY and a verified EMAIL_FROM for transactional email; configuration does not prove delivery.' },
+        email: {
+          ...db.settings.notifications.email,
+          connected: integrations.emailProviderConfigured,
+          provider: null,
+          note: DEFAULT_SETTINGS.notifications.email.note,
+        },
       },
     },
     apartments,

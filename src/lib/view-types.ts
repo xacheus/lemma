@@ -59,11 +59,6 @@ export type PublicUserView = Omit<
 >;
 
 export interface IntegrationStatusView {
-  firebaseClientConfigured: boolean;
-  firebaseAdminConfigured: boolean;
-  cloudinaryCloudName: string;
-  cloudinaryUploadPreset: string;
-  cloudinarySignedReady: boolean;
   whatsappProviderConfigured: boolean;
   smsProviderConfigured: boolean;
   emailProviderConfigured: boolean;

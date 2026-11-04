@@ -1,9 +1,21 @@
 import Link from 'next/link';
-import { ArrowRight, Building2, CheckCircle2, ShieldCheck, UtensilsCrossed, Wifi, Zap } from 'lucide-react';
+import {
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  UtensilsCrossed,
+  Wifi,
+  Zap,
+} from 'lucide-react';
 import { readPublicSiteData } from '@/lib/public/read-site-data';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
 import { Reveal } from '@/components/ui/motion';
+import { BrandMark } from '@/components/public/brand-mark';
 import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
@@ -11,9 +23,17 @@ export const dynamic = 'force-dynamic';
 export default async function AboutPage() {
   const { db, session } = await readPublicSiteData();
   const { property, booking } = db.settings;
-  const publishedCount = db.apartments.filter(
+  const published = db.apartments.filter(
     (a) => a.active && a.publicationStatus !== 'draft',
-  ).length;
+  );
+  const publishedCount = published.length;
+  const realPhotos = Array.from(
+    new Set(
+      published
+        .flatMap((a) => [a.coverPhoto, ...(a.gallery?.map((g) => g.url) ?? a.photos)])
+        .filter((p): p is string => Boolean(p)),
+    ),
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
@@ -60,36 +80,62 @@ export default async function AboutPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3.5">
-            <div className="col-span-2 overflow-hidden rounded-xl ring-1 ring-sand-200">
-              <PhotoFrame
-                src="/images/apartments/apt-02/01.jpg"
-                alt="Representative apartment living room"
-                ratio="16 / 9"
-                variant="detail"
-                caption="Representative photography"
-              />
+          {realPhotos.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3.5">
+              {realPhotos.slice(0, 3).map((src, index) => (
+                <div
+                  key={`${src}-${index}`}
+                  className={`${
+                    index === 0 || realPhotos.length === 1 ? 'col-span-2' : ''
+                  } overflow-hidden rounded-xl ring-1 ring-sand-200`}
+                >
+                  <PhotoFrame
+                    src={src}
+                    alt={`${property.name} apartment interior`}
+                    ratio={index === 0 || realPhotos.length === 1 ? '16 / 9' : '4 / 3'}
+                    variant={index === 0 ? 'detail' : 'card'}
+                  />
+                </div>
+              ))}
             </div>
-            <div className="overflow-hidden rounded-xl ring-1 ring-sand-200">
-              <PhotoFrame
-                src="/images/apartments/apt-02/02.jpg"
-                alt="Representative apartment bedroom"
-                ratio="4 / 3"
-                variant="card"
-              />
+          ) : (
+            <div className="card space-y-5 p-6 sm:p-8">
+              <div className="flex items-center gap-3">
+                <BrandMark tone="light" size="lg" />
+                <div>
+                  <p className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-lemma-dark">
+                    Property overview
+                  </p>
+                  <h2 className="font-display text-[1.3rem] font-medium text-navy-900">
+                    {property.name}
+                  </h2>
+                </div>
+              </div>
+              <p className="text-[0.88rem] leading-relaxed text-sand-700">
+                Managed directly on site at {property.addressLine}. Guests deal with our Lusaka
+                reception team from initial availability enquiry through check-in and official ZMW
+                receipting.
+              </p>
+              <ul className="space-y-2.5 border-t border-sand-200 pt-4 text-[0.85rem] text-navy-800">
+                <li className="flex items-center gap-2.5">
+                  <MapPin size={15} className="shrink-0 text-lemma-dark" />
+                  <span>
+                    {property.addressLine}, {property.city}, {property.country}
+                  </span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Clock size={15} className="shrink-0 text-lemma-dark" />
+                  <span>{property.receptionHours}</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Phone size={15} className="shrink-0 text-lemma-dark" />
+                  <a href={`tel:${property.phone.replace(/\s/g, '')}`} className="font-medium hover:underline">
+                    {property.phone}
+                  </a>
+                </li>
+              </ul>
             </div>
-            <div className="overflow-hidden rounded-xl ring-1 ring-sand-200">
-              <PhotoFrame
-                src="/images/apartments/apt-03/01.jpg"
-                alt="Representative living and dining area"
-                ratio="4 / 3"
-                variant="card"
-              />
-            </div>
-            <p className="col-span-2 text-right text-[0.73rem] text-sand-600">
-              Representative interior photography · Ask reception for current apartment photos
-            </p>
-          </div>
+          )}
         </div>
 
         <div className="stagger grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

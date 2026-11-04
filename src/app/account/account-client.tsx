@@ -23,7 +23,6 @@ import { ROLE_META } from '@/lib/domain/status';
 import type { PaymentStage } from '@/lib/domain/types';
 import { formatKwacha } from '@/lib/domain/money';
 import { formatMediumDate } from '@/lib/domain/dates';
-import { isSampleListing } from '@/lib/domain/sample-listings';
 import { GuestNotifications } from './guest-notifications';
 import { GuestPaymentPanel } from './guest-payment-panel';
 
@@ -41,7 +40,7 @@ const STAGE_NOTE: Record<PaymentStage, string> = {
 
 type GuestReservationRow = NonNullable<SnapshotView['reservations']>[number];
 
-function unifiedBookingStatus(r: GuestReservationRow, pendingExample: boolean): {
+function unifiedBookingStatus(r: GuestReservationRow): {
   label: string;
   chip: string;
   step: 0 | 1 | 2 | 3 | 4;
@@ -62,9 +61,9 @@ function unifiedBookingStatus(r: GuestReservationRow, pendingExample: boolean): 
   if (r.status === 'checked_in') {
     return { label: 'Checked in', chip: 'bg-st-occupiedBg text-st-occupied ring-1 ring-st-occupied/25', step: 4 };
   }
-  if (pendingExample) {
+  if (r.status === 'inquiry') {
     return {
-      label: 'Enquiry sent · awaiting unit confirmation',
+      label: 'Enquiry sent · awaiting confirmation',
       chip: 'bg-sand-100 text-navy-800 ring-1 ring-sand-300',
       step: 1,
     };
@@ -167,8 +166,7 @@ export function GuestAccountClient({
   const actionablePayable = reservations.filter(
     (r) =>
       r.balanceDue > 0 &&
-      !['cancelled', 'checked_out'].includes(r.status) &&
-      !(r.status === 'inquiry' && isSampleListing({ id: r.apartmentId })) &&
+      !['cancelled', 'checked_out', 'inquiry'].includes(r.status) &&
       r.paymentStage !== 'proof_submitted' &&
       r.paymentStage !== 'under_verification',
   );
@@ -403,15 +401,13 @@ export function GuestAccountClient({
           ) : (
             reservations.map((r) => {
               const myReceipts = receiptsFor(r.id);
-              const pendingExample =
-                r.status === 'inquiry' && isSampleListing({ id: r.apartmentId });
-              const statusBadge = unifiedBookingStatus(r, pendingExample);
+              const isPendingInquiry = r.status === 'inquiry';
+              const statusBadge = unifiedBookingStatus(r);
               const claimUnderReview =
                 r.paymentStage === 'proof_submitted' || r.paymentStage === 'under_verification';
               const canSubmitPayment =
                 r.balanceDue > 0 &&
-                !['cancelled', 'checked_out'].includes(r.status) &&
-                !pendingExample &&
+                !['cancelled', 'checked_out', 'inquiry'].includes(r.status) &&
                 !claimUnderReview;
               const canRequestCancel = [
                 'inquiry',
@@ -443,9 +439,7 @@ export function GuestAccountClient({
                     </div>
 
                     <div className="text-left tabular-nums sm:text-right">
-                      <p className="text-[0.73rem] text-sand-600">
-                        {pendingExample ? 'Indicative total' : 'Stay total'}
-                      </p>
+                      <p className="text-[0.73rem] text-sand-600">Stay total</p>
                       <p className="text-[1.18rem] font-bold text-navy-900">
                         {formatKwacha(r.totalAmount)}
                       </p>
@@ -459,7 +453,7 @@ export function GuestAccountClient({
                           Under review: {formatKwacha(r.pendingVerification)}
                         </p>
                       ) : null}
-                      {r.balanceDue > 0 && !pendingExample ? (
+                      {r.balanceDue > 0 && !isPendingInquiry ? (
                         <p className="text-[0.8rem] font-semibold text-navy-800">
                           Balance remaining: {formatKwacha(r.balanceDue)}
                         </p>
@@ -502,8 +496,8 @@ export function GuestAccountClient({
 
                   <div className="rounded-lg border border-sand-200 bg-sand-50/70 px-3.5 py-2.5 text-[0.81rem] leading-relaxed text-sand-700">
                     <p>
-                      {pendingExample
-                        ? 'Example listing enquiry — reception will confirm the actual unit and final ZMW rate before opening payment instructions.'
+                      {isPendingInquiry
+                        ? 'Enquiry received — reception will confirm dates and open deposit instructions shortly.'
                         : STAGE_NOTE[r.paymentStage] ?? ''}
                     </p>
                     {r.latestClaim ? (
@@ -549,7 +543,7 @@ export function GuestAccountClient({
                           <Clock size={13} /> Verification in progress
                         </span>
                       ) : null}
-                      {!pendingExample ? (
+                      {!isPendingInquiry ? (
                         <a
                           href={`/api/documents/confirmation/${r.id}/pdf?download=1`}
                           className="btn btn-secondary py-1.5 text-[0.78rem]"

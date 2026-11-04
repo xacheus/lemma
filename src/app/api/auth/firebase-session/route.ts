@@ -31,8 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error:
-            'Firebase sign-in is not enabled on this server. Sign in with the email and password on your account instead.',
+          error: 'Sign in with the email address and password on your account.',
           code: 'firebase_not_configured',
         },
         { status: 501 },
@@ -43,7 +42,7 @@ export async function POST(req: Request) {
     const adminAuth = getAdminAuth();
     if (!adminAuth) {
       return NextResponse.json(
-        { ok: false, error: 'Firebase Admin is unavailable.', code: 'firebase_not_configured' },
+        { ok: false, error: 'Sign in with the email address and password on your account.', code: 'firebase_not_configured' },
         { status: 501 },
       );
     }

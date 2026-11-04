@@ -8,6 +8,7 @@ import {
   Clock,
   FileText,
   Loader2,
+  MessageCircle,
   Paperclip,
   ShieldCheck,
   Smartphone,
@@ -20,6 +21,7 @@ import { Modal } from '@/components/ui/overlays';
 import { formatKwacha } from '@/lib/domain/money';
 import { formatDateTime, formatMediumDate } from '@/lib/domain/dates';
 import { PAYMENT_METHOD_META } from '@/lib/domain/status';
+import { buildGuestWhatsAppUrl } from '@/lib/domain/whatsapp';
 import type { GuestSubmittedPayment, PaymentMethod } from '@/lib/domain/types';
 
 const METHOD_ICONS: Record<string, typeof Smartphone> = {
@@ -248,6 +250,22 @@ export function GuestClaimQueue() {
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      {reservation?.guest?.phone ? (
+                        <a
+                          href={
+                            buildGuestWhatsAppUrl(
+                              reservation.guest.phone,
+                              `Hello ${reservation.guest.fullName.split(' ')[0]}, this is reception at ${snapshot.settings.property.name} checking your ${formatKwacha(claim.amount)} payment reference (${claim.reference}) for booking ${reservation.reference}.`,
+                            ) ?? '#'
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-ghost btn-sm"
+                          title="Follow up with guest on WhatsApp"
+                        >
+                          <MessageCircle size={12} /> WhatsApp
+                        </a>
+                      ) : null}
                       {reservation ? (
                         <Link href={`/admin/reservations/${reservation.id}`} className="btn-ghost btn-sm">
                           Folio

@@ -1,5 +1,4 @@
 import { publicPaymentMethod, type PublicPaymentMethod } from './payment-details';
-import { isSampleListing } from './sample-listings';
 import { randomUUID } from 'node:crypto';
 import type {
   Apartment,
@@ -360,7 +359,7 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
   const seq = db.sequences.reservation++;
   const reference = `LHA-${input.checkIn.slice(0, 4)}-${String(seq).padStart(4, '0')}`;
   const autoConfirm = db.settings.booking.autoConfirmPublicRequests;
-  const status: BookingStatus = input.asInquiry && (!autoConfirm || isSampleListing(apartment))
+  const status: BookingStatus = input.asInquiry && !autoConfirm
     ? 'inquiry'
     : (input.status ?? 'reserved');
   const holdMins = db.settings.booking.holdDurationMinutes ?? 240;

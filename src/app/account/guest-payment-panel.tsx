@@ -16,6 +16,7 @@ import { formatKwacha } from '@/lib/domain/money';
 import { PaymentDetails, CopyDetail } from '@/components/payments/payment-details';
 import type { PublicPaymentMethod } from '@/lib/domain/payment-details';
 import type { GuestSubmittedPayment, PaymentMethod } from '@/lib/domain/types';
+import { preparePaymentProofFile, type PreparedProofFile } from '@/lib/browser/compress-image';
 
 type QuoteMethod = PublicPaymentMethod;
 
@@ -70,7 +71,8 @@ export function GuestPaymentPanel({
   const [txnRef, setTxnRef] = useState('');
   const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
-  const [proof, setProof] = useState<{ fileName: string; dataUrl: string; mimeType: string; sizeBytes: number } | null>(null);
+  const [proof, setProof] = useState<PreparedProofFile | null>(null);
+  const [preparingProof, setPreparingProof] = useState(false);
   const [proofError, setProofError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export function GuestPaymentPanel({
           setError(json?.data?.detail ?? 'Could not load what is outstanding on this booking.');
         }
       } catch {
-        if (!cancelled) setError('Could not reach the server. Check your connection and try again.');
+        if (!cancelled) setError('Connection interrupted. Please check your internet connection and try again.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -111,25 +113,18 @@ export function GuestPaymentPanel({
   async function pickProof(file: File | null) {
     setProofError(null);
     if (!file) return;
-    if (file.size > 500 * 1024) {
-      setProofError('That image is over 500 KB. Use a smaller screenshot, or submit the transaction reference without an attachment.');
-      return;
+    setPreparingProof(true);
+    try {
+      const prepared = await preparePaymentProofFile(file);
+      if (!prepared.ok) {
+        setProofError(prepared.error);
+        return;
+      }
+      setProof(prepared.file);
+    } finally {
+      setPreparingProof(false);
+      if (fileRef.current) fileRef.current.value = '';
     }
-    if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type)) {
-      setProofError('Use a JPEG, PNG, WebP image or a PDF.');
-      return;
-    }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('read failed'));
-      reader.readAsDataURL(file);
-    }).catch(() => '');
-    if (!dataUrl) {
-      setProofError('That file could not be read. Try another one.');
-      return;
-    }
-    setProof({ fileName: file.name, dataUrl, mimeType: file.type, sizeBytes: file.size });
   }
 
   async function submit(e: React.FormEvent) {
@@ -424,10 +419,16 @@ export function GuestPaymentPanel({
                 ) : (
                   <button
                     type="button"
+                    disabled={preparingProof}
                     className="btn btn-secondary w-full justify-center py-2 text-[0.8rem]"
                     onClick={() => fileRef.current?.click()}
                   >
-                    <ImagePlus size={14} /> Attach a screenshot or slip
+                    {preparingProof ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <ImagePlus size={14} />
+                    )}
+                    {preparingProof ? 'Preparing image…' : 'Attach a screenshot or slip'}
                   </button>
                 )}
                 {proofError ? <p className="mt-1 text-[0.76rem] text-st-cancelled">{proofError}</p> : null}

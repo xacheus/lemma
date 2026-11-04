@@ -238,7 +238,7 @@ export function authenticateAccount(
    */
   if (user && user.firebaseLinked && !user.passwordHash) {
     throw new OperationError(
-      'This account signs in through Firebase. Use the same email and password you signed up with.',
+      'Please sign in with the email address and password you used when registering.',
       409,
       'firebase_account',
     );
@@ -791,11 +791,11 @@ export function ensureProfileForFirebaseUser(
 
   appendAuditLog(db, {
     category: 'staff',
-    action: 'user.profile_created_from_firebase',
+    action: 'user.profile_created',
     actorUid: firebase.uid,
     targetType: 'user',
     targetId: firebase.uid,
-    summary: `Created the guest profile for ${email || firebase.uid} from a verified Firebase sign-in.`,
+    summary: `Created guest account profile for ${email || 'verified guest'} upon sign-in.`,
   });
 
   return user;
@@ -851,11 +851,11 @@ export function applyConsoleRoleChange(
   syncStaffMirrorFromUser(db, user);
   appendAuditLog(db, {
     category: 'role',
-    action: 'user.role_synced_from_firestore',
+    action: 'user.role_updated',
     actorUid: user.uid,
     targetType: 'user',
     targetId: user.uid,
-    summary: `Applied a Firestore Console change to ${user.fullName} (${user.email}): ${previousRole} -> ${user.role}.`,
+    summary: `Updated account role for ${user.fullName} (${user.email}): ${previousRole} -> ${user.role}.`,
     before: { role: previousRole },
     after: { role: user.role, accountStatus: user.accountStatus },
   });

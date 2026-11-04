@@ -21,15 +21,15 @@ try {
     return route.fulfill({ json: { ok: true, data: { today: '2026-11-04', counts: { apartments: 3, guests: 0, staff: 1, reservations: 0, payments: 0, housekeeping: 0, notifications: 0 } } } });
   });
   await page.goto(`${base}/admin/settings`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Retry storage figures' }).waitFor();
+  await page.getByRole('button', { name: 'Reload record counts' }).waitFor();
   const initialAttempts = attempts;
   assert.ok(initialAttempts >= 1 && initialAttempts <= 2, `expected one request (two in Strict Mode), got ${initialAttempts}`);
   await page.getByLabel('Trading name').fill('Testing');
   await page.waitForTimeout(1500);
-  assert.equal(attempts, initialAttempts, 'editing and request state changes must not re-fetch storage figures');
+  assert.equal(attempts, initialAttempts, 'editing and request state changes must not re-fetch record counts');
   assert.equal(await page.getByText('Action not completed').count(), 0, 'background statistics failures should be shown inline');
   online = true;
-  await page.getByRole('button', { name: 'Retry storage figures' }).click();
+  await page.getByRole('button', { name: 'Reload record counts' }).click();
   await page.getByText('Last updated for 2026-11-04.', { exact: false }).waitFor();
   assert.equal(attempts, initialAttempts + 1, 'retry should issue exactly one new request');
 

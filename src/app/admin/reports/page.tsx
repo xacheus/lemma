@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BarChart3, CalendarRange, Download, FileJson, RefreshCw } from 'lucide-react';
+import { AlertTriangle, BarChart3, CalendarRange, Download, RefreshCw } from 'lucide-react';
 import { useApp } from '@/components/providers/app';
 import { PageHeader } from '@/components/admin/shell';
 import { Alert, DataTable, EmptyState, Panel, Skeleton, StatusChip } from '@/components/ui';
@@ -10,7 +10,7 @@ import { AreaChart, BarChart, DonutChart, LegendSwatches } from '@/components/ui
 import { formatKwacha, formatKwachaCompact, percent } from '@/lib/domain/money';
 import { formatMediumDate, monthRange } from '@/lib/domain/dates';
 import { BOOKING_STATUS_META, PAYMENT_METHOD_META } from '@/lib/domain/status';
-import { downloadCsv, downloadJson } from '@/lib/browser/csv';
+import { downloadCsv } from '@/lib/browser/csv';
 import type { ReportData } from '@/lib/domain/selectors';
 
 type Period = 'day' | 'week' | 'month' | 'year' | 'custom';
@@ -108,9 +108,6 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="btn-secondary h-9 px-3 text-[0.82rem]" onClick={() => setNonce((n) => n + 1)} disabled={state === 'loading'}>
               {state === 'loading' ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />} Recalculate
-            </button>
-            <button type="button" className="btn-secondary h-9 px-3 text-[0.82rem]" onClick={() => report && downloadJson(`lemma-report-${report.from}-to-${report.to}`, report)} disabled={!report}>
-              <FileJson size={14} /> JSON
             </button>
             <button type="button" className="btn-gold h-9 px-3.5 text-[0.82rem]" onClick={exportRows} disabled={!report}>
               <Download size={14} /> CSV report

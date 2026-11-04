@@ -106,7 +106,7 @@ export default function DashboardPage() {
               {
                 href: '/admin/apartments',
                 label: 'Add the apartments',
-                body: 'Each unit carries the rate, capacity and photos the booking engine sells against.',
+                body: 'Each apartment carries its nightly ZMW rate, guest capacity and photographs.',
               },
               {
                 href: '/admin/staff',

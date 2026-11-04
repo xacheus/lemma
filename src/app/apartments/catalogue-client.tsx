@@ -17,10 +17,8 @@ import {
 import type { Apartment } from '@/lib/domain/types';
 import { addISO, formatMediumDate } from '@/lib/domain/dates';
 import { formatKwacha } from '@/lib/domain/money';
-import { isSampleListing } from '@/lib/domain/sample-listings';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { PhotoFrame } from '@/components/ui/photo';
-import { isRepresentativeImage } from '@/lib/cloudinary/urls';
 
 interface CatalogueUnit {
   apartment: Apartment;
@@ -76,7 +74,6 @@ export function ApartmentsCatalogueClient({
   });
 
   const availableCount = filtered.filter((u) => u.isAvailable).length;
-  const hasSamples = units.some((u) => isSampleListing(u.apartment));
 
   return (
     <div className="space-y-7">
@@ -95,8 +92,8 @@ export function ApartmentsCatalogueClient({
           </p>
         ) : (
           <p className="mt-1.5 text-[0.92rem] text-sand-700">
-            Online apartment listings are being finalised. Call reception to check availability and
-            get a direct ZMW quote for your dates.
+            Online apartment listings are currently being updated. Call reception to check
+            availability and receive a written ZMW quotation for your dates.
           </p>
         )}
       </div>
@@ -191,26 +188,18 @@ export function ApartmentsCatalogueClient({
         </div>
       </form>
 
-      {hasSamples ? (
-        <div className="rounded-lg border border-sand-300/80 bg-white px-4 py-3 text-[0.81rem] leading-relaxed text-sand-700">
-          <strong className="font-semibold text-navy-900">Sample catalogue notice:</strong>{' '}
-          Units labelled <em>Example</em> use representative stock interiors. Reception confirms the
-          specific apartment and final ZMW rate before you send any deposit.
-        </div>
-      ) : null}
-
       {/* Apartment Cards */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-sand-300 bg-white px-6 py-14 text-center">
+        <div className="rounded-xl border border-sand-200 bg-white px-6 py-14 text-center shadow-card">
           <Building2 size={24} className="mx-auto text-lemma-dark" />
           <h2 className="mt-3 font-display text-[1.25rem] font-medium text-navy-900">
             {publishedTotal === 0
-              ? 'No apartments are listed for online booking yet'
+              ? 'Online apartment listings are being updated'
               : 'No apartment matches your selected dates or filters'}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-[0.88rem] leading-relaxed text-sand-700">
             {publishedTotal === 0
-              ? 'Call reception and we will confirm availability for your dates and send a quotation directly.'
+              ? 'Call reception directly and our front desk will confirm availability for your dates and send a quotation.'
               : 'Try adjusting your arrival dates or party size, or call reception to check upcoming departures.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
@@ -235,7 +224,6 @@ export function ApartmentsCatalogueClient({
         <div className="stagger grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
             const { apartment: apt } = item;
-            const sample = isSampleListing(apt);
             const cover = apt.coverPhoto || apt.photos[0];
             const detailHref = `/apartments/${apt.slug}?checkIn=${encodeURIComponent(initialCheckIn)}&checkOut=${encodeURIComponent(initialCheckOut)}&guests=${initialGuests}`;
             return (
@@ -250,11 +238,6 @@ export function ApartmentsCatalogueClient({
                     ratio="16 / 10"
                     variant="card"
                   />
-                  {isRepresentativeImage(cover) ? (
-                    <span className="absolute bottom-2.5 right-2.5 rounded bg-charcoal-950/70 px-2 py-0.5 text-[0.64rem] font-medium text-white/85 backdrop-blur-sm">
-                      Representative photo
-                    </span>
-                  ) : null}
                   <span
                     className={`absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-semibold ${
                       item.isAvailable
@@ -285,7 +268,6 @@ export function ApartmentsCatalogueClient({
                     </span>
                     <span className="text-sand-600">
                       {apt.floor === 0 ? 'Ground floor' : `Floor ${apt.floor}`}
-                      {sample ? ' · Example' : ''}
                     </span>
                   </div>
 
@@ -309,9 +291,11 @@ export function ApartmentsCatalogueClient({
                     <span className="inline-flex items-center gap-1">
                       <Bath size={13} className="text-lemma-dark" /> {apt.bathrooms} bath
                     </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Maximize2 size={13} className="text-lemma-dark" /> {apt.sizeSqm} m²
-                    </span>
+                    {apt.sizeSqm ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Maximize2 size={13} className="text-lemma-dark" /> {apt.sizeSqm} m²
+                      </span>
+                    ) : null}
                   </div>
 
                   <div className="mt-auto pt-4">
@@ -333,11 +317,7 @@ export function ApartmentsCatalogueClient({
                           item.isAvailable ? 'btn-primary' : 'btn-secondary'
                         }`}
                       >
-                        {item.isAvailable
-                          ? sample
-                            ? 'Send an enquiry'
-                            : 'Request dates'
-                          : 'View details'}
+                        {item.isAvailable ? 'Request dates' : 'View details'}
                       </Link>
                     </div>
                   </div>

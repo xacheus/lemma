@@ -1,16 +1,6 @@
 import { getBrevoEmailConfig } from './email-config';
 import type { DeliveryStatus, NotificationChannel } from '../domain/types';
 
-/**
- * External Messaging Provider Integration Points (Section 13)
- *
- * HONEST DELIVERY RULE:
- * Messages are ONLY marked `sent` when a configured external provider returns
- * HTTP 2xx with a confirmed message identifier. When no external provider is
- * connected, notifications are stored in-app (`in_app_only` / `not_connected`)
- * and surfaced with manual WhatsApp/Email links — never falsely reported as sent.
- */
-
 export interface DispatchAttemptResult {
   status: DeliveryStatus;
   providerMessageId: string | null;
@@ -28,11 +18,10 @@ export async function dispatchExternalNotification(input: {
     return {
       status: 'in_app_only',
       providerMessageId: null,
-      detail: 'Delivered to in-app notification centre.',
+      detail: 'Delivered to guest updates.',
     };
   }
 
-  // 1. WhatsApp Cloud API Integration Point
   if (input.channel === 'whatsapp') {
     const token = process.env.WHATSAPP_ACCESS_TOKEN;
     const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -40,8 +29,7 @@ export async function dispatchExternalNotification(input: {
       return {
         status: 'not_connected',
         providerMessageId: null,
-        detail:
-          'WhatsApp Business Cloud API is not configured. Notification saved in-app; use WhatsApp link for manual handset dispatch.',
+        detail: 'Saved to message log; open in WhatsApp to send directly.',
       };
     }
     try {
@@ -67,24 +55,23 @@ export async function dispatchExternalNotification(input: {
         return {
           status: 'sent',
           providerMessageId: data.messages[0].id,
-          detail: `WhatsApp Cloud API confirmed delivery (${data.messages[0].id}).`,
+          detail: 'WhatsApp message sent.',
         };
       }
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: data.error?.message || `WhatsApp API returned HTTP ${res.status}.`,
+        detail: 'WhatsApp message could not be sent automatically.',
       };
-    } catch (err) {
+    } catch {
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: err instanceof Error ? err.message : 'WhatsApp dispatch network error.',
+        detail: 'WhatsApp message could not be sent automatically.',
       };
     }
   }
 
-  // 2. SMS Webhook / Aggregator Integration Point
   if (input.channel === 'sms') {
     const url = process.env.SMS_WEBHOOK_URL;
     const apiKey = process.env.SMS_API_KEY;
@@ -92,7 +79,7 @@ export async function dispatchExternalNotification(input: {
       return {
         status: 'not_connected',
         providerMessageId: null,
-        detail: 'SMS provider is not configured. Notification recorded in-app.',
+        detail: 'Saved to message log for reception follow-up.',
       };
     }
     try {
@@ -107,37 +94,36 @@ export async function dispatchExternalNotification(input: {
           message: `${input.title}: ${input.body}`,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { id?: string; messageId?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { id?: string; messageId?: string };
       const msgId = data.id || data.messageId;
       if (res.ok && msgId) {
         return {
           status: 'sent',
           providerMessageId: msgId,
-          detail: `SMS gateway confirmed message (${msgId}).`,
+          detail: 'Text message sent.',
         };
       }
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: data.error || `SMS gateway returned HTTP ${res.status}.`,
+        detail: 'Text message could not be sent automatically.',
       };
-    } catch (err) {
+    } catch {
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: err instanceof Error ? err.message : 'SMS gateway network error.',
+        detail: 'Text message could not be sent automatically.',
       };
     }
   }
 
-  // 3. Brevo transactional email. Provider acceptance is not inbox delivery.
   if (input.channel === 'email') {
     const config = getBrevoEmailConfig();
     if (!config) {
       return {
         status: 'not_connected',
         providerMessageId: null,
-        detail: 'Brevo requires BREVO_API_KEY and a valid, verified EMAIL_FROM sender.',
+        detail: 'Saved to message log; automatic email dispatch is off.',
       };
     }
     try {
@@ -162,19 +148,21 @@ export async function dispatchExternalNotification(input: {
         return {
           status: 'sent',
           providerMessageId: data.messageId,
-          detail: 'Brevo accepted the message for dispatch; delivery is not confirmed.',
+          detail: 'Email accepted for dispatch; inbox delivery is not confirmed.',
         };
       }
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: res.ok ? 'Brevo returned no message ID.' : `Brevo rejected the request (HTTP ${res.status}).`,
+        detail: res.ok
+          ? 'Email service returned no message reference.'
+          : `Email dispatch declined (HTTP ${res.status}).`,
       };
     } catch {
       return {
         status: 'failed',
         providerMessageId: null,
-        detail: 'Brevo request failed or timed out; dispatch could not be confirmed.',
+        detail: 'Email dispatch timed out; delivery could not be confirmed.',
       };
     }
   }
@@ -182,7 +170,7 @@ export async function dispatchExternalNotification(input: {
   return {
     status: 'in_app_only',
     providerMessageId: null,
-    detail: 'Recorded in-app.',
+    detail: 'Recorded in guest updates.',
   };
 }
 
@@ -221,44 +209,44 @@ export function buildBrandedEmailHtml(opts: {
   const businessName = opts.businessName || opts.propertyName || 'Lemma Apartments';
   const subjectText = opts.subject || opts.heading || businessName;
   const bodyContent = opts.body || (opts.bodyLines ?? []).join('\n');
-  const address = opts.address || 'Plot 2144B, Chainama Lands, Great East Road, Lusaka, Zambia';
-  const phone = opts.phone || '+260 211 470 662';
+  const address = opts.address || 'Barlaston Park, Lusaka, Zambia';
+  const phone = opts.phone || '+260 574 556 207';
   const paragraphs = bodyContent
     .split('\n')
     .filter((l) => l.trim().length > 0)
     .map(
       (line) =>
-        `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#212832;">${escapeHtml(line)}</p>`,
+        `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.65;color:#1E2530;">${escapeHtml(line)}</p>`,
     )
     .join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8" /><title>${escapeHtml(subjectText)}</title></head>
-<body style="margin:0;padding:24px;background-color:#F7F8FA;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#FFFFFF;border:1px solid #E3E7ED;border-radius:6px;overflow:hidden;">
+<body style="margin:0;padding:24px;background-color:#FAF8F5;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#FFFFFF;border:1px solid #E6E0D6;border-radius:10px;overflow:hidden;">
     <tr>
-      <td style="background:#1E2530;padding:20px 28px;border-bottom:3px solid #707E91;">
-        <div style="font-size:16px;font-weight:700;letter-spacing:0.12em;color:#FFFFFF;text-transform:uppercase;">${escapeHtml(businessName)}</div>
-        <div style="font-size:11px;letter-spacing:0.14em;color:#CFD6E0;text-transform:uppercase;margin-top:4px;">Lusaka, Zambia</div>
+      <td style="background:#171B22;padding:22px 28px;border-bottom:3px solid #B88746;">
+        <div style="font-size:18px;font-weight:600;color:#FAF8F5;font-family:Georgia,serif;">${escapeHtml(businessName)}</div>
+        <div style="font-size:12px;color:#D6CEC0;margin-top:3px;">Barlaston Park · Lusaka, Zambia</div>
       </td>
     </tr>
     <tr>
       <td style="padding:28px;">
-        <h1 style="margin:0 0 18px 0;font-size:18px;font-weight:600;color:#161B22;">${escapeHtml(subjectText)}</h1>
+        <h1 style="margin:0 0 18px 0;font-size:19px;font-weight:600;color:#171B22;">${escapeHtml(subjectText)}</h1>
         ${paragraphs}
         ${
           opts.ctaLabel && opts.ctaUrl
-            ? `<div style="margin:24px 0 8px 0;"><a href="${escapeHtml(opts.ctaUrl)}" style="display:inline-block;background:#566476;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;padding:10px 18px;border-radius:6px;">${escapeHtml(opts.ctaLabel)}</a></div>`
+            ? `<div style="margin:24px 0 8px 0;"><a href="${escapeHtml(opts.ctaUrl)}" style="display:inline-block;background:#4A586B;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:8px;">${escapeHtml(opts.ctaLabel)}</a></div>`
             : ''
         }
       </td>
     </tr>
     <tr>
-      <td style="padding:18px 28px;background:#F7F8FA;border-top:1px solid #E3E7ED;font-size:12px;color:#68717D;line-height:1.5;">
+      <td style="padding:18px 28px;background:#FAF8F5;border-top:1px solid #E6E0D6;font-size:12px;color:#6E6659;line-height:1.55;">
         <strong>${escapeHtml(businessName)}</strong><br/>
         ${escapeHtml(address)}<br/>
-        Tel: ${escapeHtml(phone)}
+        Tel / WhatsApp: ${escapeHtml(phone)}
       </td>
     </tr>
   </table>

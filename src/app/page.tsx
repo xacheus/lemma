@@ -23,13 +23,11 @@ import { addISO, businessToday } from '@/lib/domain/dates';
 import { searchAvailability } from '@/lib/domain/availability';
 import { APARTMENT_TIER_LABELS } from '@/lib/domain/status';
 import { formatKwacha } from '@/lib/domain/money';
-import { isSampleListing } from '@/lib/domain/sample-listings';
-import { isRepresentativeImage } from '@/lib/cloudinary/urls';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
 import { Reveal } from '@/components/ui/motion';
-import type { ShowcaseSlide } from '@/components/public/apartment-showcase';
-import { HomeHeroCarousel } from '@/components/public/home-hero-carousel';
+import { HomeHeroCarousel, type HeroSlide } from '@/components/public/home-hero-carousel';
+import { BrandMark } from '@/components/public/brand-mark';
 import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
@@ -52,7 +50,10 @@ export default async function HomePage({
   const sp = await searchParams;
   const today = db.__today || businessToday();
 
-  const checkIn = sp.checkIn && /^\d{4}-\d{2}-\d{2}$/.test(sp.checkIn) && sp.checkIn >= today ? sp.checkIn : today;
+  const checkIn =
+    sp.checkIn && /^\d{4}-\d{2}-\d{2}$/.test(sp.checkIn) && sp.checkIn >= today
+      ? sp.checkIn
+      : today;
   const checkOut =
     sp.checkOut && /^\d{4}-\d{2}-\d{2}$/.test(sp.checkOut) && sp.checkOut > checkIn
       ? sp.checkOut
@@ -66,14 +67,43 @@ export default async function HomePage({
   const availability = searchAvailability(db, { checkIn, checkOut, guests, today });
   const hitById = new Map(availability.hits.map((h) => [h.apartment.id, h]));
 
-  const slides: ShowcaseSlide[] = published.map((apt) => {
+  const heroSlides: HeroSlide[] = published.flatMap((apt) => {
     const hit = hitById.get(apt.id);
     const fits = apt.maxGuests >= guests;
-    const photos = [apt.coverPhoto, ...(apt.gallery?.map((g) => g.url) ?? apt.photos)].filter(
-      (p): p is string => Boolean(p),
+    const available = Boolean(hit?.available) && fits;
+    const availabilityNote = !fits
+      ? `Sleeps up to ${apt.maxGuests}`
+      : hit?.available
+        ? 'Available for these dates'
+        : 'Booked for these dates';
+    const photos = Array.from(
+      new Set(
+        [apt.coverPhoto, ...(apt.gallery?.map((g) => g.url) ?? apt.photos)].filter(
+          (p): p is string => Boolean(p),
+        ),
+      ),
     );
-    return {
-      id: apt.id,
+
+    if (photos.length === 0) {
+      return [
+        {
+          id: `${apt.id}-0`,
+          slug: apt.slug,
+          name: apt.name,
+          code: apt.code,
+          tagline: apt.tagline || apt.description.slice(0, 130),
+          nightlyRate: apt.nightlyRate,
+          maxGuests: apt.maxGuests,
+          bedrooms: apt.bedrooms,
+          bathrooms: apt.bathrooms,
+          available,
+          availabilityNote,
+        },
+      ];
+    }
+
+    return photos.slice(0, 2).map((photo, photoIndex) => ({
+      id: `${apt.id}-${photoIndex}`,
       slug: apt.slug,
       name: apt.name,
       code: apt.code,
@@ -82,47 +112,65 @@ export default async function HomePage({
       maxGuests: apt.maxGuests,
       bedrooms: apt.bedrooms,
       bathrooms: apt.bathrooms,
-      photos: Array.from(new Set(photos)),
-      available: Boolean(hit?.available) && fits,
-      availabilityNote: !fits
-        ? `Sleeps up to ${apt.maxGuests}`
-        : hit?.available
-          ? 'Available for these dates'
-          : 'Booked for these dates',
-      representative: isRepresentativeImage(photos[0]),
-      sample: isSampleListing(apt),
-    };
-  });
-
-  const heroSlides = slides.flatMap((s) =>
-    s.photos.slice(0, 2).map((photo, photoIndex) => ({
-      id: `${s.id}-${photoIndex}`,
-      slug: s.slug,
-      name: s.name,
-      code: s.code,
-      tagline: s.tagline,
-      nightlyRate: s.nightlyRate,
-      maxGuests: s.maxGuests,
-      bedrooms: s.bedrooms,
-      bathrooms: s.bathrooms,
       photo,
-      representative: isRepresentativeImage(photo),
-      sample: s.sample,
-      available: s.available,
-      availabilityNote: s.availabilityNote,
-    })),
-  );
+      available,
+      availabilityNote,
+    }));
+  });
 
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
   const stayQuery = `checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`;
   const nights = availability.nights;
-  const hasSamples = published.some(isSampleListing);
-  const featuredPhotos = published
-    .flatMap((apt) => apt.gallery?.map((g) => g.url) ?? apt.photos)
-    .filter((p): p is string => Boolean(p));
+  const featuredPhotos = Array.from(
+    new Set(
+      published
+        .flatMap((apt) => [apt.coverPhoto, ...(apt.gallery?.map((g) => g.url) ?? apt.photos)])
+        .filter((p): p is string => Boolean(p)),
+    ),
+  );
+
+  const rates = published.map((a) => a.nightlyRate).filter((r) => r > 0);
+  const minRate = rates.length > 0 ? Math.min(...rates) : null;
+  const maxRate = rates.length > 0 ? Math.max(...rates) : null;
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LodgingBusiness',
+    name: property.name,
+    description: property.tagline,
+    telephone: property.phone,
+    email: property.email,
+    currenciesAccepted: 'ZMW',
+    paymentAccepted: payments.methods
+      .filter((m) => m.enabled)
+      .map((m) => m.label)
+      .join(', '),
+    checkinTime: booking.checkInTime,
+    checkoutTime: booking.checkOutTime,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: property.addressLine,
+      addressLocality: property.city || 'Lusaka',
+      addressCountry: 'ZM',
+    },
+    ...(minRate
+      ? {
+          priceRange:
+            minRate === maxRate
+              ? `ZMW ${minRate}`
+              : `ZMW ${minRate} – ZMW ${maxRate}`,
+        }
+      : {}),
+    ...(published.length > 0 ? { numberOfRooms: published.length } : {}),
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <PublicHeader
         property={property}
         session={session}
@@ -142,34 +190,41 @@ export default async function HomePage({
             city={property.city}
           />
         ) : (
-          <section className="fallback-hero relative isolate overflow-hidden bg-charcoal-950 text-white">
-            <div className="absolute inset-0" aria-hidden="true">
-              {['/images/apartments/apt-01/01.jpg', '/images/apartments/apt-02/01.jpg', '/images/apartments/apt-03/01.jpg'].map((src, index) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={src} src={src} alt="" className={`fallback-hero-image fallback-hero-image-${index} absolute inset-0 h-full w-full object-cover`} />
-              ))}
-              <div className="absolute inset-0 bg-gradient-to-r from-charcoal-950/90 via-charcoal-950/65 to-charcoal-950/30" />
-              <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950/85 to-transparent" />
-            </div>
-            <div className="relative mx-auto flex min-h-[28rem] max-w-7xl flex-col justify-end px-4 py-14 sm:px-6 lg:min-h-[34rem] lg:px-8 lg:pb-16">
-              <p className="text-[0.8rem] font-medium text-white/80">
-                {property.addressLine} · {property.city}, {property.country}
-              </p>
-              <h1 className="mt-3 max-w-2xl font-display text-[2.2rem] font-medium leading-[1.08] tracking-[-0.02em] sm:text-[2.9rem]">
+          <section className="relative isolate overflow-hidden bg-[radial-gradient(circle_at_78%_22%,rgba(196,154,69,0.20),transparent_46%),linear-gradient(135deg,#0f151d_0%,#18222f_55%,#0d1117_100%)] text-white">
+            <div className="mx-auto flex min-h-[28rem] max-w-7xl flex-col justify-end px-4 py-14 sm:px-6 lg:min-h-[33rem] lg:px-8 lg:pb-16">
+              <div className="flex items-center gap-3 text-[0.8rem] font-medium text-white/80">
+                <BrandMark tone="dark" size="sm" />
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin size={13} className="text-gold-300" aria-hidden="true" />
+                  {property.addressLine} · {property.city}, {property.country}
+                </span>
+              </div>
+              <h1 className="mt-4 max-w-2xl font-display text-[2.2rem] font-medium leading-[1.08] tracking-[-0.02em] sm:text-[2.95rem]">
                 Furnished apartments in Lusaka,{' '}
-                <span className="text-white/75">booked directly with reception.</span>
+                <span className="text-white/75">booked directly with our front desk.</span>
               </h1>
               <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-white/75">
-                Self-catering stays with backup power, Wi-Fi and gated compound parking. Check
-                your dates and speak directly with our front desk.
+                Self-catering stays at {property.addressLine} with backup power, work-ready Wi-Fi
+                and gated compound parking—quoted transparently in Zambian Kwacha.
               </p>
-              <Link
-                href={`/apartments?${stayQuery}#availability`}
-                className="btn mt-6 w-fit bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-950 hover:bg-sand-100"
-              >
-                Check availability <ArrowRight size={15} aria-hidden="true" />
-              </Link>
-              <p className="mt-5 text-[0.72rem] text-white/65">Representative stock photos · confirm unit with reception</p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/apartments?${stayQuery}#availability`}
+                  className="btn bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-950 hover:bg-sand-100"
+                >
+                  Check availability <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+                {waDigits ? (
+                  <a
+                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${property.name}, I would like to check apartment availability for ${checkIn} to ${checkOut}.`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn border border-white/30 bg-white/5 px-4 py-2.5 text-[0.86rem] text-white backdrop-blur-sm transition-colors hover:border-white/65 hover:bg-white/10"
+                  >
+                    <MessageCircle size={15} /> WhatsApp reception
+                  </a>
+                ) : null}
+              </div>
             </div>
           </section>
         )}
@@ -256,28 +311,21 @@ export default async function HomePage({
                 href={`/apartments?${stayQuery}`}
                 className="inline-flex items-center gap-1.5 text-[0.86rem] font-semibold text-navy-900 hover:text-lemma-dark"
               >
-                Compare all {published.length} apartments <ArrowRight size={15} />
+                Compare all {published.length}{' '}
+                {published.length === 1 ? 'apartment' : 'apartments'} <ArrowRight size={15} />
               </Link>
             ) : null}
           </div>
 
-          {hasSamples ? (
-            <div className="mt-5 rounded-lg border border-sand-300/80 bg-white px-4 py-3 text-[0.81rem] leading-relaxed text-sand-700">
-              <strong className="font-semibold text-navy-900">Sample catalogue notice:</strong>{' '}
-              Listings marked <em>Example</em> use representative stock photography while current
-              property photos are being finalised. Submitting a request sends an enquiry to
-              reception—you will confirm the exact unit and ZMW rate before paying any deposit.
-            </div>
-          ) : null}
-
           {published.length === 0 ? (
-            <div className="mt-8 rounded-xl border border-dashed border-sand-300 bg-white px-6 py-12 text-center">
-              <h3 className="font-display text-[1.2rem] font-medium text-navy-900">
-                Online apartment listings are being updated
+            <div className="mt-8 rounded-xl border border-sand-200 bg-white px-6 py-12 text-center shadow-card">
+              <h3 className="font-display text-[1.25rem] font-medium text-navy-900">
+                Online apartment listings are currently being updated
               </h3>
               <p className="mx-auto mt-2 max-w-xl text-[0.88rem] leading-relaxed text-sand-700">
-                Call or WhatsApp reception directly with your dates and party size—we will confirm
-                what is open and send a written ZMW quotation.
+                Call or WhatsApp reception directly with your arrival dates and party size—our front
+                desk at {property.addressLine} will confirm availability and send a written ZMW
+                quotation.
               </p>
               <div className="mt-5 flex flex-wrap justify-center gap-2.5">
                 <a href={`tel:${property.phone.replace(/\s/g, '')}`} className="btn btn-primary">
@@ -285,7 +333,7 @@ export default async function HomePage({
                 </a>
                 {waDigits ? (
                   <a
-                    href={`https://wa.me/${waDigits}`}
+                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${property.name}, please share availability and rates for ${checkIn} to ${checkOut} (${guests} ${guests === 1 ? 'guest' : 'guests'}).`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-secondary"
@@ -302,7 +350,6 @@ export default async function HomePage({
                 const fits = apt.maxGuests >= guests;
                 const available = Boolean(hit?.available) && fits;
                 const cover = apt.coverPhoto || apt.photos[0];
-                const sample = isSampleListing(apt);
                 const amenityIcons = apt.amenities
                   .map((a) => AMENITY_ICONS[a])
                   .filter((icon): icon is typeof Wifi => Boolean(icon))
@@ -334,11 +381,6 @@ export default async function HomePage({
                               : `Max ${apt.maxGuests} guests`}
                           </span>
                         </div>
-                        {isRepresentativeImage(cover) ? (
-                          <span className="absolute bottom-2.5 right-2.5 rounded bg-charcoal-950/70 px-2 py-0.5 text-[0.64rem] font-medium text-white/85 backdrop-blur-sm">
-                            Representative photo
-                          </span>
-                        ) : null}
                       </div>
                     </Link>
 
@@ -347,11 +389,6 @@ export default async function HomePage({
                         <span className="font-medium text-lemma-dark">
                           {APARTMENT_TIER_LABELS[apt.tier] ?? apt.tier} · {apt.code}
                         </span>
-                        {sample ? (
-                          <span className="rounded bg-sand-100 px-2 py-0.5 text-[0.68rem] font-medium text-sand-700">
-                            Example
-                          </span>
-                        ) : null}
                       </div>
 
                       <Link href={`/apartments/${apt.slug}?${stayQuery}`}>
@@ -384,7 +421,9 @@ export default async function HomePage({
                       {apt.amenities.length > 0 ? (
                         <div className="mt-2.5 flex items-center gap-2 text-[0.75rem] text-sand-600">
                           {amenityIcons.length > 0
-                            ? amenityIcons.map((Icon, i) => <Icon key={`${apt.id}-icon-${i}`} size={13} className="shrink-0" />)
+                            ? amenityIcons.map((Icon, i) => (
+                                <Icon key={`${apt.id}-icon-${i}`} size={13} className="shrink-0" />
+                              ))
                             : null}
                           <span className="line-clamp-1">
                             {apt.amenities.slice(0, 3).join(' · ')}
@@ -418,7 +457,7 @@ export default async function HomePage({
                             href={`/apartments/${apt.slug}?${stayQuery}#book`}
                             className="btn btn-primary justify-center py-2 text-[0.8rem]"
                           >
-                            {sample ? 'Send an enquiry' : 'Request dates'}
+                            Request dates
                           </Link>
                         </div>
                       </div>
@@ -430,7 +469,7 @@ export default async function HomePage({
           )}
         </Reveal>
 
-        {/* How Booking & Payment Work — eliminates guest confusion */}
+        {/* How Booking & Payment Work */}
         <Reveal as="section" className="border-y border-sand-200 bg-white">
           <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
             <div className="max-w-2xl">
@@ -532,32 +571,70 @@ export default async function HomePage({
                     </span>
                     <div>
                       <dt className="text-[0.88rem] font-semibold text-navy-900">{item.title}</dt>
-                      <dd className="mt-0.5 text-[0.81rem] leading-relaxed text-sand-700">{item.body}</dd>
+                      <dd className="mt-0.5 text-[0.81rem] leading-relaxed text-sand-700">
+                        {item.body}
+                      </dd>
                     </div>
                   </div>
                 ))}
               </dl>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {featuredPhotos.slice(0, 3).map((photo, i) => (
-                <div key={`${photo}-${i}`} className={i === 0 ? 'col-span-2' : ''}>
-                  <div className="relative overflow-hidden rounded-xl ring-1 ring-sand-200">
-                    <PhotoFrame
-                      src={photo}
-                      alt="Furnished apartment interior"
-                      ratio={i === 0 ? '16 / 9' : '4 / 3'}
-                      variant="card"
-                    />
-                    {isRepresentativeImage(photo) ? (
-                      <span className="absolute bottom-2 right-2 rounded bg-charcoal-950/70 px-2 py-0.5 text-[0.62rem] font-medium text-white/85">
-                        Representative
-                      </span>
-                    ) : null}
+            {featuredPhotos.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {featuredPhotos.slice(0, 3).map((photo, i) => (
+                  <div
+                    key={`${photo}-${i}`}
+                    className={
+                      i === 0 || featuredPhotos.length === 1 ? 'col-span-2' : ''
+                    }
+                  >
+                    <div className="relative overflow-hidden rounded-xl ring-1 ring-sand-200">
+                      <PhotoFrame
+                        src={photo}
+                        alt="Furnished apartment interior"
+                        ratio={i === 0 || featuredPhotos.length === 1 ? '16 / 9' : '4 / 3'}
+                        variant="card"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-sand-200 bg-white p-6 shadow-card sm:p-8">
+                <p className="text-[0.76rem] font-semibold uppercase tracking-[0.1em] text-lemma-dark">
+                  Stay summary · {property.city}
+                </p>
+                <h3 className="mt-2 font-display text-[1.35rem] font-medium text-navy-900">
+                  Direct front-desk management at {property.addressLine}
+                </h3>
+                <p className="mt-2 text-[0.86rem] leading-relaxed text-sand-700">
+                  Every stay is coordinated by on-site staff rather than third-party agents—from
+                  arrival directions and compound access to housekeeping schedules and ZMW tax
+                  invoices for corporate travellers.
+                </p>
+                <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-sand-200 pt-4 text-[0.82rem]">
+                  <div>
+                    <dt className="text-sand-600">Check-in window</dt>
+                    <dd className="mt-0.5 font-semibold text-navy-900">From {booking.checkInTime}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sand-600">Check-out time</dt>
+                    <dd className="mt-0.5 font-semibold text-navy-900">By {booking.checkOutTime}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sand-600">Reservation deposit</dt>
+                    <dd className="mt-0.5 font-semibold text-navy-900">
+                      {booking.depositPercent}% of stay total
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sand-600">Billing currency</dt>
+                    <dd className="mt-0.5 font-semibold text-navy-900">Zambian Kwacha (ZMW)</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
           </div>
         </Reveal>
 
@@ -604,7 +681,7 @@ export default async function HomePage({
               <div className="mt-6 flex flex-wrap gap-2.5">
                 {waDigits ? (
                   <a
-                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments, I would like to ask about apartment availability.')}`}
+                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${property.name}, I would like to ask about apartment availability.`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-primary"

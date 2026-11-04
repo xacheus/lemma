@@ -1,6 +1,4 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { PDFDocument, StandardFonts, rgb, type PDFImage, type PDFPage, type PDFFont } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from 'pdf-lib';
 import type {
   Apartment,
   Guest,
@@ -37,22 +35,55 @@ function safeAscii(input: string | null | undefined): string {
     .replace(/[^\x20-\x7E\n]/g, '');
 }
 
-async function embedBrandLogo(pdfDoc: PDFDocument): Promise<PDFImage | null> {
-  const candidates = [
-    path.join(process.cwd(), 'logo.jpg'),
-    path.join(process.cwd(), 'public', 'brand', 'logo.jpg'),
-  ];
-  for (const p of candidates) {
-    try {
-      if (fs.existsSync(p)) {
-        const bytes = fs.readFileSync(p);
-        return await pdfDoc.embedJpg(bytes);
-      }
-    } catch {
-      // Fallback to text wordmark if image cannot be embedded
-    }
+const VECTOR_BRAND_PATHS = [
+  'M18 82A48 48 0 0 1 52 36.5L48 44A40 40 0 0 0 22 82H18Z',
+  'M110 82A48 48 0 0 0 76 36.5L80 44A40 40 0 0 1 106 82H110Z',
+  'M48 68V42L64 20V60L48 68Z',
+  'M66 23H70V59H66Z',
+  'M72 28H76V61H72Z',
+  'M78 34H82V64H78Z',
+  'M31 76V55L35 52V73L31 76Z',
+  'M37 72V51L41 48V70L37 72Z',
+  'M85 65V51L101 60V74L85 65Z',
+  'M20 88L51 69L81 88H70L51 76L31 88H20Z',
+  'M56 71L72 61L112 88H100L72 69L63 75L56 71Z',
+  'M47 80H50.5V83.5H47Z',
+  'M52 80H55.5V83.5H52Z',
+  'M47 85H50.5V88.5H47Z',
+  'M52 85H55.5V88.5H52Z',
+  'M69 74H72.5V77.5H69Z',
+  'M74 74H77.5V77.5H74Z',
+  'M69 79H72.5V82.5H69Z',
+  'M74 79H77.5V82.5H74Z',
+];
+
+function drawVectorBrandMark(page: PDFPage, x: number, bottomY: number, boxSize = 44): number {
+  page.drawRectangle({
+    x,
+    y: bottomY,
+    width: boxSize,
+    height: boxSize,
+    color: BRAND_SURFACE,
+    borderColor: BRAND_BORDER,
+    borderWidth: 1,
+  });
+
+  // SVG viewBox is 0..128 wide by 12..96 tall (center = 64, 54).
+  const scale = (boxSize * 0.78) / 128;
+  const originX = x + boxSize / 2 - 64 * scale;
+  const originY = bottomY + boxSize / 2 + 54 * scale;
+
+  for (const svgPath of VECTOR_BRAND_PATHS) {
+    page.drawSvgPath(svgPath, {
+      x: originX,
+      y: originY,
+      scale,
+      color: BRAND_SLATE_DARK,
+      borderWidth: 0,
+    });
   }
-  return null;
+
+  return boxSize;
 }
 
 function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
@@ -110,21 +141,8 @@ async function createStandardA4Document(opts: DocChromeOptions) {
   });
 
   let y = height - 42;
-  const logo = await embedBrandLogo(pdfDoc);
-  let textStartX = margin;
-
-  if (logo) {
-    const logoHeight = 46;
-    const scale = logoHeight / logo.height;
-    const logoWidth = logo.width * scale;
-    page.drawImage(logo, {
-      x: margin,
-      y: y - logoHeight + 10,
-      width: logoWidth,
-      height: logoHeight,
-    });
-    textStartX = margin + logoWidth + 12;
-  }
+  const boxSize = drawVectorBrandMark(page, margin, y - 34, 44);
+  const textStartX = margin + boxSize + 12;
 
   const prop = opts.settings.property;
   page.drawText(safeAscii(prop.name).toUpperCase(), {

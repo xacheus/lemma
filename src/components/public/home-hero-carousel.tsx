@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, Bath, BedDouble, ChevronLeft, ChevronRight, MapPin, Users } from 'lucide-react';
 import { formatKwacha } from '@/lib/domain/money';
-import { optimizeImageUrl, representativePhotoUrl } from '@/lib/cloudinary/urls';
+import { optimizeImageUrl } from '@/lib/cloudinary/urls';
 
 export interface HeroSlide {
   id: string;
@@ -16,9 +16,7 @@ export interface HeroSlide {
   maxGuests: number;
   bedrooms: number;
   bathrooms: number;
-  photo: string;
-  representative: boolean;
-  sample: boolean;
+  photo?: string;
   available: boolean;
   availabilityNote: string;
 }
@@ -92,7 +90,7 @@ export function HomeHeroCarousel({
     <section
       className="relative isolate overflow-hidden bg-charcoal-950 text-white"
       aria-roledescription="carousel"
-      aria-label="Apartment photographs"
+      aria-label="Featured apartments"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
@@ -129,24 +127,23 @@ export function HomeHeroCarousel({
                 transition: `opacity ${reducedMotion ? 0 : FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={representativePhotoUrl(slide.photo, 'hero') ?? optimizeImageUrl(slide.photo, 'hero')}
-                onError={(event) => {
-                  if (slide.representative && !event.currentTarget.src.endsWith(slide.photo)) {
-                    event.currentTarget.src = slide.photo;
-                  }
-                }}
-                alt={slide.representative ? `Representative furnished interior for ${slide.name}` : `Interior of ${slide.name}`}
-                loading={i === 0 ? 'eager' : 'lazy'}
-                fetchPriority={i === 0 ? 'high' : 'auto'}
-                decoding="async"
-                className="h-full w-full object-cover"
-                style={{
-                  transform: isActive && !reducedMotion ? 'scale(1.05)' : 'scale(1)',
-                  transition: `transform ${reducedMotion ? 0 : INTERVAL_MS + FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
-                }}
-              />
+              {slide.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={optimizeImageUrl(slide.photo, 'hero')}
+                  alt={slide.name}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={i === 0 ? 'high' : 'auto'}
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                  style={{
+                    transform: isActive && !reducedMotion ? 'scale(1.05)' : 'scale(1)',
+                    transition: `transform ${reducedMotion ? 0 : INTERVAL_MS + FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                  }}
+                />
+              ) : (
+                <div className="h-full w-full bg-[radial-gradient(circle_at_75%_25%,rgba(196,154,69,0.22),transparent_48%),linear-gradient(135deg,#111720_0%,#1c2532_52%,#0e1216_100%)]" />
+              )}
             </div>
           );
         })}
@@ -159,7 +156,9 @@ export function HomeHeroCarousel({
           <div className="max-w-2xl">
             <p className="inline-flex items-center gap-1.5 text-[0.8rem] font-medium text-white/80">
               <MapPin size={13} className="text-gold-300" aria-hidden="true" />
-              <span>{propertyName} · {locationLabel}</span>
+              <span>
+                {propertyName} · {locationLabel}
+              </span>
             </p>
 
             <h1 className="mt-3 font-display text-[2.1rem] font-medium leading-[1.08] tracking-[-0.02em] text-white sm:text-[2.75rem] lg:text-[3.25rem]">
@@ -168,8 +167,8 @@ export function HomeHeroCarousel({
             </h1>
 
             <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-white/80">
-              Self-catering studios, one-bedroom and family units with backup power, reliable Wi-Fi
-              and secure compound parking—priced clearly in Zambian Kwacha and managed directly at our front desk.
+              Private self-catering stays with backup power, reliable Wi-Fi and secure compound
+              parking—priced clearly in Zambian Kwacha and managed directly at our front desk.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -212,44 +211,35 @@ export function HomeHeroCarousel({
               <span className="inline-flex items-center gap-1">
                 <Bath size={13} aria-hidden="true" /> {active.bathrooms} bath
               </span>
-              <span className="font-semibold text-white tabular-nums">
+              <span className="font-semibold tabular-nums text-white">
                 {formatKwacha(active.nightlyRate)}
                 <span className="font-normal text-white/65"> / night</span>
               </span>
             </div>
 
-            <div className="flex items-center gap-3 text-[0.72rem] text-white/65">
-              {active.representative || active.sample ? (
-                <span>
-                  {active.representative ? 'Representative stock photo' : ''}
-                  {active.representative && active.sample ? ' · ' : ''}
-                  {active.sample ? 'Example unit (confirm with reception)' : ''}
+            {count > 1 ? (
+              <div className="hidden items-center gap-1.5 text-[0.72rem] text-white/65 sm:flex">
+                <button
+                  type="button"
+                  onClick={() => go(index - 1)}
+                  aria-label="Previous apartment"
+                  className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white transition hover:bg-charcoal-950/80"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="px-1 tabular-nums text-white/75">
+                  {index + 1} / {count}
                 </span>
-              ) : null}
-              {count > 1 ? (
-                <div className="hidden items-center gap-1.5 sm:flex">
-                  <button
-                    type="button"
-                    onClick={() => go(index - 1)}
-                    aria-label="Previous photo"
-                    className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white transition hover:bg-charcoal-950/80"
-                  >
-                    <ChevronLeft size={15} />
-                  </button>
-                  <span className="px-1 tabular-nums text-white/75">
-                    {index + 1} / {count}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => go(index + 1)}
-                    aria-label="Next photo"
-                    className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white transition hover:bg-charcoal-950/80"
-                  >
-                    <ChevronRight size={15} />
-                  </button>
-                </div>
-              ) : null}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => go(index + 1)}
+                  aria-label="Next apartment"
+                  className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white transition hover:bg-charcoal-950/80"
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 

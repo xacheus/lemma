@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEmptyDatabase } from '../src/lib/db/store';
-import { buildStartingCatalogue } from '../src/lib/db/starting-catalogue';
+import { buildTestApartments } from './helpers';
 import { createReservation, paymentQuote, setReservationStatus, markNotification } from '../src/lib/domain/operations';
 import { registerCustomerAccount } from '../src/lib/domain/production-ops';
 import { settingsSchema } from '../src/lib/api/schemas';
@@ -13,7 +13,7 @@ const today = '2026-11-04';
 
 test('configured payment details are validated and only enabled methods appear in guest quotes', () => {
   const db = createEmptyDatabase(today);
-  db.apartments = buildStartingCatalogue(today).apartments;
+  db.apartments = buildTestApartments(today);
   const airtel = db.settings.payments.methods.find((m) => m.id === 'airtel_money')!;
   Object.assign(airtel, { recipientName: 'Test recipient', mobileNumber: 'test-mobile', merchantCode: 'test-merchant', agentCode: 'test-agent', instructions: 'Test instructions' });
   const bank = db.settings.payments.methods.find((m) => m.id === 'bank_transfer')!;
@@ -41,7 +41,7 @@ test('configured payment details are validated and only enabled methods appear i
 
 test('guest history excludes internal notifications and read state can be reversed', () => {
   const db = createEmptyDatabase(today);
-  db.apartments = buildStartingCatalogue(today).apartments;
+  db.apartments = buildTestApartments(today);
   const { user } = registerCustomerAccount(db, { email: 'guest@example.invalid', fullName: 'Test Guest', phoneNumber: 'test', password: 'test-password' });
   const booking = createReservation(db, user.uid, {
     userId: user.uid, apartmentId: db.apartments[0].id, checkIn: '2026-12-01', checkOut: '2026-12-02',

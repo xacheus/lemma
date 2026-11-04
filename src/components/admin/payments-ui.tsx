@@ -170,7 +170,7 @@ export function PaymentDialog({
 
         {exceeds ? (
           <Alert tone="warn" title="Above the outstanding balance">
-            {formatKwacha(numeric)} exceeds the remaining {formatKwacha(reservation.balanceDue)}. The server will refuse it — record the surplus against another folio or an incidentals invoice.
+            {formatKwacha(numeric)} exceeds the remaining {formatKwacha(reservation.balanceDue)}. Record the surplus against another folio or an incidentals invoice instead.
           </Alert>
         ) : null}
         {errors.submit ? (

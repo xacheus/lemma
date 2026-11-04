@@ -9,15 +9,12 @@ import type { Firestore, Transaction, QuerySnapshot, DocumentSnapshot } from 'fi
 import { cloudDocumentChanges, CLOUD_COLLECTIONS, cloudDocuments } from './cloud-documents';
 import { userRecordToStaffView } from '../domain/staff-view';
 import { DEFAULT_SETTINGS } from './default-settings';
-import { buildStartingCatalogue } from './starting-catalogue';
 import { computeDashboardSummary } from './summary';
 
 /**
- * Renames that must follow the business identity. Settings written by an earlier
- * build of this platform carry the previous trading name; rather than leaving it
- * on receipts and the public site, a stored value that exactly matches the old
- * default is upgraded to the current one. A name an operator typed deliberately
- * (anything else) is never touched.
+ * Upgrades legacy placeholder or template values stored by earlier builds so no
+ * fake property details, sample apartments, or technical environment variable names
+ * persist into the user interface. Operator-entered values are never overwritten.
  */
 const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string; from: string; to: string }[] = [
   { section: 'property', field: 'name', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.property.name },
@@ -44,8 +41,11 @@ const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string;
   { section: 'googleBusiness', field: 'businessName', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.googleBusiness!.businessName },
   { section: 'googleBusiness', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.googleBusiness!.addressLine },
   { section: 'googleBusiness', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.googleBusiness!.phone },
+  { section: 'googleBusiness', field: 'phone', from: '+260 574556207', to: DEFAULT_SETTINGS.googleBusiness!.phone },
   { section: 'googleBusiness', field: 'website', from: 'https://lemmaheights.zm', to: DEFAULT_SETTINGS.googleBusiness!.website },
 ];
+
+const LEGACY_SAMPLE_IDS = new Set(['apt-studio', 'apt-one_bed', 'apt-family']);
 
 function upgradeRenamedDefaults(db: Database) {
   for (const rule of RENAMED_DEFAULTS) {
@@ -53,69 +53,56 @@ function upgradeRenamedDefaults(db: Database) {
     if (section && section[rule.field] === rule.from) section[rule.field] = rule.to;
   }
 
-  // Remove only legacy placeholder destinations supplied by the application, not
-  // administrator-entered payment details.
+  if (db.settings?.tax?.registrationNumber === '14/220887/001') {
+    db.settings.tax.registrationNumber = '';
+  }
+
   for (const method of db.settings?.payments?.methods ?? []) {
-    if (method.id === 'bank_transfer' && [
-      'Lemma Apartments — account details are confirmed by reception before any transfer is made',
-      'Lemma Apartments. Account details are confirmed by reception before any transfer is made',
-    ].includes(method.accountNumber)) method.accountNumber = '';
-    if (method.id === 'cash' && method.accountNumber === 'Front Office Till 1') method.accountNumber = '';
-  }
-}
-
-/**
- * Seeds the three labelled starter apartments exactly once on a brand-new store.
- * Once `catalogueSeededAt` is recorded, deleting units in Admin never recreates them.
- */
-function seedStartingCatalogue(db: Database) {
-  if (db.catalogueSeededAt) return;
-  db.catalogueSeededAt = new Date().toISOString();
-  if (db.apartments.length === 0) {
-    db.apartments = buildStartingCatalogue(db.catalogueSeededAt).apartments;
-  }
-}
-
-/** Expand untouched sample galleries without overwriting real owner uploads. */
-function upgradeRepresentativePhotos(db: Database) {
-  const starting = buildStartingCatalogue(db.createdAt).apartments;
-  for (const original of starting) {
-    const existing = db.apartments.find((apt) => apt.id === original.id);
-    if (!existing || !existing.gallery?.length || !existing.photos?.length) continue;
     if (
-      !existing.gallery.every(
-        (photo) =>
-          photo.id.startsWith(`${original.id.slice(4)}-ph-`) &&
-          photo.url.startsWith('/images/apartments/'),
-      )
+      method.id === 'bank_transfer' &&
+      [
+        'Lemma Apartments — account details are confirmed by reception before any transfer is made',
+        'Lemma Apartments. Account details are confirmed by reception before any transfer is made',
+      ].includes(method.accountNumber)
     ) {
-      continue;
+      method.accountNumber = '';
     }
-    if (!existing.photos.every((url) => url.startsWith('/images/apartments/'))) continue;
-    const urls = new Set(existing.gallery.map((g) => g.url));
-    const additions = original.gallery?.filter((g) => !urls.has(g.url)) ?? [];
-    if (additions.length === 0) continue;
-    existing.gallery.push(
-      ...additions.map((g, index) => ({
-        ...g,
-        order: existing.gallery!.length + index,
-        isCover: false,
-      })),
-    );
-    existing.photos = existing.gallery.map((g) => g.url);
+    if (method.id === 'cash' && method.accountNumber === 'Front Office Till 1') {
+      method.accountNumber = '';
+    }
   }
-}
 
-/**
- * Unified Transactional Data Store (Cloud Firestore + Local Fallback Persistence)
- *
- * - When Cloud Firestore is configured and reachable: Firestore is authoritative,
- *   mutations execute inside `adminDb.runTransaction()`, and reads refresh regularly.
- * - When Cloud Firestore is not yet configured (local dev, preview builds, or Vercel
- *   deployments before Firebase Admin credentials are added) or cannot be reached:
- *   falls back cleanly to an atomic JSON store (`.data/` or `os.tmpdir()/lemma-data`)
- *   with bounded timeouts and a 30s cooldown so pages and booking enquiries keep working.
- */
+  const notifications = db.settings?.notifications;
+  if (notifications) {
+    if (notifications.whatsapp) {
+      notifications.whatsapp.provider = null;
+      if (/WHATSAPP_ACCESS_TOKEN|Cloud API/i.test(notifications.whatsapp.note ?? '')) {
+        notifications.whatsapp.note = DEFAULT_SETTINGS.notifications.whatsapp.note;
+      }
+    }
+    if (notifications.sms) {
+      notifications.sms.provider = null;
+      if (/SMS_WEBHOOK_URL|SMS_API_KEY/i.test(notifications.sms.note ?? '')) {
+        notifications.sms.note = DEFAULT_SETTINGS.notifications.sms.note;
+      }
+    }
+    if (notifications.email) {
+      notifications.email.provider = null;
+      if (/BREVO_API_KEY|EMAIL_FROM|Brevo/i.test(notifications.email.note ?? '')) {
+        notifications.email.note = DEFAULT_SETTINGS.notifications.email.note;
+      }
+    }
+  }
+
+  // Remove legacy auto-seeded sample stock units if they are untouched and unbooked.
+  const bookedApartmentIds = new Set((db.reservations ?? []).map((r) => r.apartmentId));
+  db.apartments = (db.apartments ?? []).filter((apt) => {
+    if (!LEGACY_SAMPLE_IDS.has(apt.id)) return true;
+    if (bookedApartmentIds.has(apt.id)) return true;
+    const onlyStockPhotos = (apt.photos ?? []).every((url) => url.startsWith('/images/apartments/'));
+    return !onlyStockPhotos;
+  });
+}
 
 function resolveDataDir(): string {
   if (process.env.LEMMA_DATA_DIR) return process.env.LEMMA_DATA_DIR;
@@ -248,7 +235,6 @@ function ensureSchemaCollections(db: Database): Database {
   return db;
 }
 
-/** True when a stored file predates this schema or was written by the old seeded build. */
 function isLegacyDataset(stored: Database): boolean {
   if (!stored || typeof stored !== 'object') return true;
   const version = Number(stored.version) || 0;
@@ -273,8 +259,6 @@ function load(): Database {
 
   db.__today = today;
   db = ensureSchemaCollections(db);
-  seedStartingCatalogue(db);
-  upgradeRepresentativePhotos(db);
   computeDashboardSummary(db);
   localCache = db;
   localCacheForDate = today;
@@ -306,7 +290,7 @@ let lastFallbackWarnAt = 0;
 export function markFirestoreFallback(reason?: unknown): void {
   firestoreCooldownUntil = Date.now() + FIRESTORE_COOLDOWN_MS;
   if (Date.now() - lastFallbackWarnAt > 30_000) {
-    console.warn('[firestore] Cloud store unavailable; using fallback dataset during cooldown:', reason);
+    console.warn('[store] Primary store unavailable; using fallback dataset during cooldown:', reason);
     lastFallbackWarnAt = Date.now();
   }
 }
@@ -331,7 +315,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-/** Reads ALL rows (including empty collections); a deleted row must not reappear. */
 async function readCloudDatabase(adminDb: Firestore, tx?: Transaction): Promise<Database> {
   const collectionReads = CLOUD_COLLECTIONS.map(({ collection }) => {
     const ref = adminDb.collection(collection);
@@ -382,11 +365,6 @@ async function readCloudDatabase(adminDb: Firestore, tx?: Transaction): Promise<
   db.updatedAt = counterData?.updatedAt ?? db.updatedAt;
   if (counterData?.catalogueSeededAt) {
     db.catalogueSeededAt = counterData.catalogueSeededAt;
-  } else if (db.apartments.length > 0) {
-    db.catalogueSeededAt = db.createdAt;
-  } else if (!counters.exists && !business.exists) {
-    // Brand-new, completely uninitialised cloud database: populate the labelled starter units once.
-    seedStartingCatalogue(db);
   }
   db.staff = (db.users ?? [])
     .filter((user) => user.role !== 'guest')
@@ -419,10 +397,7 @@ export async function ensureCloudFirestoreHydrated(force = false): Promise<void>
       const startedAtRevision = cloudRevision;
       try {
         const loaded = await withTimeout(readCloudDatabase(adminDb), CLOUD_READ_TIMEOUT_MS);
-        // A commit may have finished after this read began. Never replace the
-        // confirmed post-write cache with an older read from another request.
         if (cloudRevision !== startedAtRevision) return;
-        upgradeRepresentativePhotos(loaded);
         computeDashboardSummary(loaded);
         cloudCache = loaded;
         cloudCacheForDate = loaded.__today;
@@ -439,7 +414,8 @@ export async function ensureCloudFirestoreHydrated(force = false): Promise<void>
   await hydrateInFlight;
 }
 
-/** The one place that can commit cloud changes, deletions and booking counters. */
+const BATCH_LIMIT_MSG = 'Too many records were updated at once. Please save your changes in smaller steps.';
+
 async function cloudTransaction<T>(
   adminDb: Firestore,
   fn: (db: Database) => Promise<T> | T,
@@ -449,15 +425,12 @@ async function cloudTransaction<T>(
       async (tx) => {
         const db = await readCloudDatabase(adminDb, tx);
         const before = cloudDocuments(db);
-        upgradeRepresentativePhotos(db);
         const result = await fn(db);
         db.updatedAt = new Date().toISOString();
         computeDashboardSummary(db);
         const changes = cloudDocumentChanges(before, cloudDocuments(db));
-        // Firestore caps a transaction at 500 document writes. Fail BEFORE committing,
-        // rather than silently dropping the rest or splitting an atomic booking.
         if (changes.length > 496) {
-          throw new StoreUnavailableError('This operation exceeds the cloud transaction write limit.');
+          throw new StoreUnavailableError(BATCH_LIMIT_MSG);
         }
         for (const change of changes) {
           const ref = adminDb.doc(change.path);
@@ -468,8 +441,6 @@ async function cloudTransaction<T>(
           adminDb.collection('settings').doc('dashboard_summary'),
           JSON.parse(JSON.stringify(db.dashboardSummary)),
         );
-        // Every writer touches counters: concurrent writers retry with a fresh snapshot
-        // even if they would otherwise have changed different documents.
         tx.set(adminDb.collection('settings').doc('counters'), {
           ...db.sequences,
           cleaningState: db.cleaningState,
@@ -492,7 +463,6 @@ async function cloudTransaction<T>(
   return result;
 }
 
-/** Runs on the scheduler through the same cross-instance atomic write path. */
 export async function runReminderSweepOnStore(): Promise<{
   created: number;
   skipped: number;
@@ -512,7 +482,6 @@ function isDomainOrValidationError(error: unknown): boolean {
   return false;
 }
 
-/** Returns the active dataset (Cloud Firestore when connected, local store otherwise). */
 export function getDb(): Database {
   if (getAdminFirestore() && cloudCache) {
     if (cloudCacheForDate !== businessToday()) {
@@ -523,21 +492,17 @@ export function getDb(): Database {
   return load();
 }
 
-/** Guaranteed non-throwing fallback database for public read surfaces. */
 export function getFallbackDb(): Database {
   try {
     return getDb();
   } catch {
     const today = businessToday();
     const fallback = ensureSchemaCollections(createEmptyDatabase(today));
-    seedStartingCatalogue(fallback);
-    upgradeRepresentativePhotos(fallback);
     computeDashboardSummary(fallback);
     return fallback;
   }
 }
 
-/** All mutations are serialized locally and transactional across cloud instances. */
 export async function runAtomicTransaction<T>(fn: (db: Database) => Promise<T> | T): Promise<T> {
   const run = async (): Promise<T> => {
     const adminDb = getAdminFirestore();
@@ -548,15 +513,10 @@ export async function runAtomicTransaction<T>(fn: (db: Database) => Promise<T> |
           return await cloudTransaction(adminDb, fn);
         } catch (error) {
           if (isDomainOrValidationError(error)) throw error;
-          if (
-            error instanceof StoreUnavailableError &&
-            error.message.includes('transaction write limit')
-          ) {
+          if (error instanceof StoreUnavailableError && error.message === BATCH_LIMIT_MSG) {
             throw error;
           }
           markFirestoreFallback(error);
-          // If a real cloud database was already active in this process, fail closed on
-          // a transient write outage rather than silently writing to ephemeral disk.
           if (cloudHydrated) {
             throw new StoreUnavailableError();
           }
@@ -564,7 +524,6 @@ export async function runAtomicTransaction<T>(fn: (db: Database) => Promise<T> |
       }
     }
 
-    // Local / fallback atomic path: do not alter the cached object until `fn` succeeds.
     const db = JSON.parse(JSON.stringify(load())) as Database;
     const result = await fn(db);
     db.updatedAt = new Date().toISOString();
@@ -583,15 +542,10 @@ export async function runAtomicTransaction<T>(fn: (db: Database) => Promise<T> |
   return next;
 }
 
+/** Property record counts for management views — never exposes backend or filesystem details. */
 export function dbStats() {
   const db = getDb();
-  const cloud = isCloudStoreActive();
-  const file = dbFilePath();
   return {
-    backendMode: cloud ? 'firebase_cloud_firestore' : 'local',
-    file: cloud ? '' : file.replace(process.cwd() + path.sep, ''),
-    exists: cloud || fs.existsSync(file),
-    sizeBytes: !cloud && fs.existsSync(file) ? fs.statSync(file).size : 0,
     createdAt: db.createdAt,
     today: db.__today,
     counts: {

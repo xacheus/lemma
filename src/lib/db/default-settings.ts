@@ -2,7 +2,7 @@ import { isBrevoEmailConfigured } from '../notifications/email-config';
 import type { Settings } from '../domain/types';
 
 /**
- * Production default configuration for Lemma Apartments.
+ * Default property configuration for Lemma Apartments.
  * Every field is editable in `/admin/settings` and stored in `settings/business`
  * & `settings/google_business` — never hardcoded inside individual pages.
  */
@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
     name: 'VAT',
     ratePercent: 16,
     inclusive: false,
-    registrationNumber: '14/220887/001',
+    registrationNumber: '',
   },
   documents: {
     quotationPrefix: 'QUO',
@@ -50,7 +50,7 @@ export const DEFAULT_SETTINGS: Settings = {
     phone: '+260 574 556 207',
     website: '',
     description:
-      'Furnished apartments at Barlaston Park, Lusaka, Zambia. Studio, one-bedroom and family units with fibre Wi-Fi, backup power, secure parking and housekeeping, priced per night in Zambian Kwacha.',
+      'Furnished apartments at Barlaston Park, Lusaka, Zambia. Self-contained units with fibre Wi-Fi, backup power, secure parking and housekeeping, priced per night in Zambian Kwacha.',
     openingHours: [
       { day: 'Monday', open: '06:30', close: '22:00', closed: false },
       { day: 'Tuesday', open: '06:30', close: '22:00', closed: false },
@@ -60,13 +60,12 @@ export const DEFAULT_SETTINGS: Settings = {
       { day: 'Saturday', open: '07:00', close: '22:00', closed: false },
       { day: 'Sunday', open: '07:00', close: '22:00', closed: false },
     ],
-    // Populated with uploads from /admin/media. Empty until real photography exists.
     photos: [],
     placeId: '',
     mapsProfileUrl: '',
     googleVerified: false,
     verificationNote:
-      'Not yet verified by Google. Complete postal, phone, or video verification in Google Business Profile Manager before marking verified.',
+      'Complete ownership verification in Google Business Profile Manager before marking this listing as verified.',
     updatedAt: new Date().toISOString(),
   },
   booking: {
@@ -117,11 +116,6 @@ export const DEFAULT_SETTINGS: Settings = {
         accountNumber: '',
       },
     ],
-    /**
-     * Payment channels are chosen by the guest from this enabled list; the business
-     * sets which channels exist, their details and the default. Set
-     * lockMethodToAdmin to true to make reception choose the channel instead.
-     */
     lockMethodToAdmin: false,
     defaultMethod: 'airtel_money',
     allowPartialPayments: true,
@@ -134,20 +128,20 @@ export const DEFAULT_SETTINGS: Settings = {
     whatsapp: {
       enabled: true,
       connected: Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID),
-      provider: process.env.WHATSAPP_ACCESS_TOKEN ? 'Meta WhatsApp Cloud API' : null,
-      note: 'Configure WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID for automated delivery; otherwise use in-app + one-click WhatsApp dispatch.',
+      provider: null,
+      note: 'Send booking updates, arrival directions and balance reminders on WhatsApp.',
     },
     sms: {
       enabled: true,
       connected: Boolean(process.env.SMS_WEBHOOK_URL && process.env.SMS_API_KEY),
-      provider: process.env.SMS_WEBHOOK_URL ? 'Configured SMS Gateway' : null,
-      note: 'Configure SMS_WEBHOOK_URL and SMS_API_KEY for carrier delivery; otherwise logged in-app.',
+      provider: null,
+      note: 'Send short arrival and balance reminders by text message.',
     },
     email: {
       enabled: true,
       connected: isBrevoEmailConfigured(),
-      provider: isBrevoEmailConfigured() ? 'Brevo Transactional Email' : null,
-      note: 'Configure BREVO_API_KEY and a verified EMAIL_FROM for transactional email; configuration does not prove delivery.',
+      provider: null,
+      note: 'Send booking confirmations, official receipts and account recovery links by email.',
     },
     checkInReminderDays: 1,
     checkOutReminderDays: 1,

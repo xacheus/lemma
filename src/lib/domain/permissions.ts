@@ -61,7 +61,7 @@ export const PERMISSION_GROUPS: { title: string; note: string; keys: PermissionK
   },
   {
     title: 'Apartments & Media',
-    note: 'Apartment inventory, ZMW pricing rules and Cloudinary media library.',
+    note: 'Apartment inventory, ZMW pricing rules and property media library.',
     keys: ['apartments.view', 'apartments.manage', 'media.view', 'media.manage'],
   },
   {
