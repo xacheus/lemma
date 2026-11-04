@@ -82,3 +82,10 @@ The test signs in as the local fixture administrator, checks the major routes at
 320–1440px, and exercises the mobile calendar, navigation and booking dialog.
 It checks document width as well as visible elements extending beyond the viewport;
 it does not replace visual checks of zoom, text size or real-device interactions.
+
+To test Settings' network-failure handling and manual recovery against the same
+fixture and Chromium installation, run:
+
+```bash
+CHROMIUM_PATH=/path/to/chromium npm run test:settings-network
+```
