@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   AlertCircle,
+  Bell,
   CalendarDays,
   CheckCircle2,
   Download,
@@ -17,11 +18,12 @@ import {
 } from 'lucide-react';
 import type { SnapshotView } from '@/lib/view-types';
 import { BOOKING_STATUS_META, PAYMENT_STATUS_META } from '@/lib/domain/status';
+import { GuestNotifications } from './guest-notifications';
 
 export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: SnapshotView }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<SnapshotView>(initialSnapshot);
-  const [tab, setTab] = useState<'bookings' | 'documents' | 'profile'>('bookings');
+  const [tab, setTab] = useState<'bookings' | 'notifications' | 'documents' | 'profile'>('bookings');
 
   // Profile form state
   const [fullName, setFullName] = useState(snapshot.account?.fullName || snapshot.user.name);
@@ -158,6 +160,15 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
         {[
           { id: 'bookings', label: `My Bookings (${reservations.length})`, icon: CalendarDays },
           {
+            id: 'notifications',
+            label: `Notifications${
+              (snapshot.notifications ?? []).filter((n) => !n.readAt).length
+                ? ` (${(snapshot.notifications ?? []).filter((n) => !n.readAt).length})`
+                : ''
+            }`,
+            icon: Bell,
+          },
+          {
             id: 'documents',
             label: `Quotations, Invoices & Receipts (${quotations.length + invoices.length + receipts.length})`,
             icon: FileText,
@@ -179,6 +190,13 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
           </button>
         ))}
       </div>
+
+      {tab === 'notifications' ? (
+        <GuestNotifications
+          notifications={snapshot.notifications ?? []}
+          onChanged={(rows) => setSnapshot((s) => ({ ...s, notifications: rows }))}
+        />
+      ) : null}
 
       {/* Tab 1: Bookings */}
       {tab === 'bookings' ? (

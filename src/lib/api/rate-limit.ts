@@ -6,14 +6,34 @@ import { randomBytes } from 'node:crypto';
  * spammed into a wall of phantom requests.
  */
 const buckets = new Map<string, { tokens: number; updatedAt: number }>();
-const CAPACITY = 8;
-const REFILL_PER_MS = 8 / 60_000; // 8 requests per minute
+
+/** Separate caps so a burst of availability look-ups cannot use up booking attempts. */
+const PROFILES: Record<string, { capacity: number; perMinute: number }> = {
+  booking: { capacity: 8, perMinute: 8 },
+  default: { capacity: 30, perMinute: 60 },
+};
+
+function profileFor(key: string) {
+  const name = key.split(':')[0] ?? '';
+  return PROFILES[name] ?? PROFILES.default;
+}
 
 export function take(key: string): { allowed: boolean; retryAfterSeconds: number } {
+  const { capacity: CAPACITY, perMinute } = profileFor(key);
+  const REFILL = perMinute / 60_000;
+  return takeFrom(key, CAPACITY, REFILL);
+}
+
+function takeFrom(key: string, capacity: number, refillPerMs: number): {
+  allowed: boolean;
+  retryAfterSeconds: number;
+} {
   const now = Date.now();
-  const bucket = buckets.get(key) ?? { tokens: CAPACITY, updatedAt: now };
+  const CAPACITY = capacity;
+  const REFILL_PER_MS = refillPerMs;
+  const bucket = buckets.get(key) ?? { tokens: capacity, updatedAt: now };
   const elapsed = now - bucket.updatedAt;
-  bucket.tokens = Math.min(CAPACITY, bucket.tokens + elapsed * REFILL_PER_MS);
+  bucket.tokens = Math.min(capacity, bucket.tokens + elapsed * REFILL_PER_MS);
   bucket.updatedAt = now;
   if (bucket.tokens < 1) {
     buckets.set(key, bucket);

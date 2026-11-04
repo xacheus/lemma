@@ -131,7 +131,7 @@ export async function dispatchExternalNotification(input: {
   // 3. Transactional Email Integration Point (Resend)
   if (input.channel === 'email') {
     const resendKey = process.env.RESEND_API_KEY;
-    const from = process.env.EMAIL_FROM || 'Lemma Heights Apartments <reception@lemmaheights.zm>';
+    const from = process.env.EMAIL_FROM || 'Lemma Apartments <lemmaheights@gmail.com>';
     if (!resendKey) {
       return {
         status: 'not_connected',
@@ -213,7 +213,7 @@ export function buildBrandedEmailHtml(opts: {
   ctaLabel?: string;
   ctaUrl?: string;
 }): string {
-  const businessName = opts.businessName || opts.propertyName || 'Lemma Heights Apartments';
+  const businessName = opts.businessName || opts.propertyName || 'Lemma Apartments';
   const subjectText = opts.subject || opts.heading || businessName;
   const bodyContent = opts.body || (opts.bodyLines ?? []).join('\n');
   const address = opts.address || 'Plot 2144B, Chainama Lands, Great East Road, Lusaka, Zambia';

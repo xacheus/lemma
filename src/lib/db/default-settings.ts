@@ -1,25 +1,25 @@
 import type { Settings } from '../domain/types';
 
 /**
- * Production default configuration for Lemma Heights Apartments.
+ * Production default configuration for Lemma Apartments.
  * Every field is editable in `/admin/settings` and stored in `settings/business`
  * & `settings/google_business` — never hardcoded inside individual pages.
  */
 export const DEFAULT_SETTINGS: Settings = {
   property: {
-    name: 'Lemma Heights Apartments',
-    legalName: 'Lemma Heights (Private) Limited',
+    name: 'Lemma Apartments',
+    legalName: 'Lemma Apartments',
     logoUrl: '/brand/logo.jpg',
-    tagline: 'Serviced apartments on Great East Road, Chainama Lands, Lusaka',
-    addressLine: 'Plot 2144B, Chainama Lands, Great East Road',
+    tagline: 'Furnished apartments at Barlaston Park, Lusaka — booked night by night.',
+    addressLine: 'Barlaston Park',
     city: 'Lusaka',
     country: 'Zambia',
-    phone: '+260 211 470 662',
-    whatsapp: '+260 977 220 001',
-    email: 'reception@lemmaheights.zm',
-    website: 'https://lemmaheights.zm',
-    taxPayerId: '14/220887/001',
-    receptionHours: '06:30 – 22:00 daily. 24-hour security & late check-in by arrangement.',
+    phone: '+260 574 556 207',
+    whatsapp: '+260 574556207',
+    email: 'lemmaheights@gmail.com',
+    website: '',
+    taxPayerId: '',
+    receptionHours: 'Daily, 07:00 – 21:00. Late check-in by arrangement on WhatsApp.',
   },
   tax: {
     enabled: false,
@@ -37,19 +37,19 @@ export const DEFAULT_SETTINGS: Settings = {
       'A 50% deposit is required to confirm a reservation and hold apartment dates. Balance is payable prior to or upon check-in. Free cancellation up to 48 hours before scheduled check-in time (14:00 CAT). Quotations do not hold apartment availability until converted into a confirmed reservation.',
   },
   googleBusiness: {
-    businessName: 'Lemma Heights Apartments',
+    businessName: 'Lemma Apartments',
     primaryCategory: 'Serviced accommodation',
     secondaryCategories: ['Apartment complex', 'Extended stay hotel'],
-    addressLine: 'Plot 2144B, Chainama Lands, Great East Road',
+    addressLine: 'Barlaston Park',
     city: 'Lusaka',
     province: 'Lusaka Province',
     country: 'Zambia',
     postalCode: '10101',
     serviceArea: 'Lusaka, Zambia',
     phone: '+260 211 470 662',
-    website: 'https://lemmaheights.zm',
+    website: '',
     description:
-      'Upscale serviced apartments on Great East Road in Chainama Lands, Lusaka. Featuring studio, standard, deluxe, executive and family apartments with 200Mbps fibre Wi-Fi, solar and generator backup power, borehole water, secure parking and daily housekeeping.',
+      'Furnished apartments at Barlaston Park, Lusaka, Zambia. Studio, one-bedroom and family units with fibre Wi-Fi, backup power, secure parking and housekeeping, priced per night in Zambian Kwacha.',
     openingHours: [
       { day: 'Monday', open: '06:30', close: '22:00', closed: false },
       { day: 'Tuesday', open: '06:30', close: '22:00', closed: false },
@@ -88,18 +88,18 @@ export const DEFAULT_SETTINGS: Settings = {
         label: 'Airtel Money',
         enabled: true,
         instructions:
-          'Dial *181# -> Make Payment -> Pay Merchant -> Enter Merchant Code 4522108. Share transaction reference or upload SMS confirmation.',
+          'Dial *181# -> Make Payment -> Pay Merchant. Use the merchant code reception gives you on your booking confirmation, then upload the transaction reference or SMS confirmation so the payment can be verified.',
         accountLabel: 'Merchant Code',
-        accountNumber: '4522108',
+        accountNumber: '',
       },
       {
         id: 'mtn_money',
         label: 'MTN Mobile Money',
         enabled: true,
         instructions:
-          'Dial *158# -> MoMo Pay -> Merchant ID 8224471. Payment is credited once verified against the MTN MoMo merchant statement.',
+          'Dial *158# -> MoMo Pay. Use the merchant ID reception gives you on your booking confirmation. Payment is credited once it is verified against the MTN MoMo statement.',
         accountLabel: 'Merchant ID',
-        accountNumber: '8224471',
+        accountNumber: '',
       },
       {
         id: 'bank_transfer',
@@ -108,14 +108,14 @@ export const DEFAULT_SETTINGS: Settings = {
         instructions:
           'Transfer in ZMW to the corporate account below using your Booking or Quotation Number as the payment reference.',
         accountLabel: 'Bank / Account',
-        accountNumber: 'Lemma Heights (Pvt) Ltd — Zanaco Lusaka Business Centre — Acc 3011044827110 (Sort 010001)',
+        accountNumber: 'Lemma Apartments — account details are confirmed by reception before any transfer is made',
       },
       {
         id: 'cash',
         label: 'Cash',
         enabled: true,
         instructions:
-          'Payable in ZMW at the Lemma Heights reception desk against an official numbered receipt.',
+          'Payable in ZMW at the Lemma Apartments reception desk against an official numbered receipt.',
         accountLabel: 'Reception Desk',
         accountNumber: 'Front Office Till 1',
       },
@@ -151,7 +151,7 @@ export const DEFAULT_SETTINGS: Settings = {
     sendCancellationNotice: true,
     sendCleaningReminders: true,
     sendBalanceReminders: true,
-    senderName: 'Lemma Heights Reservations',
+    senderName: 'Lemma Apartments Reservations',
   },
   housekeeping: {
     turnaroundMinutes: 90,

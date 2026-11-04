@@ -37,6 +37,8 @@ export function PublicHeader({
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
   ];
+  const policy = property as typeof property & { policies?: { terms?: string } };
+  void policy;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -64,10 +66,10 @@ export function PublicHeader({
           />
           <div>
             <span className="block text-[0.95rem] font-bold tracking-[0.12em] text-navy-900">
-              LEMMA HEIGHTS
+              LEMMA APARTMENTS
             </span>
             <span className="block text-[0.65rem] uppercase tracking-[0.16em] text-navy-500">
-              Serviced Apartments · {property.city}
+              {property.addressLine || property.city} · {property.country}
             </span>
           </div>
         </Link>
@@ -196,7 +198,7 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
             />
             <div>
               <p className="text-[0.95rem] font-bold tracking-[0.14em] text-white">
-                LEMMA HEIGHTS APARTMENTS
+                LEMMA APARTMENTS
               </p>
               <p className="text-[0.68rem] uppercase tracking-[0.18em] text-navy-300">
                 {property.city}, {property.country}
@@ -205,7 +207,7 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
           </div>
           <p className="mt-4 max-w-md text-[0.86rem] leading-relaxed text-navy-300">
             {property.tagline ||
-              'Contemporary serviced apartments along Great East Road, Lusaka — solar-backed power, 200Mbps fibre, gated parking, and attentive daily housekeeping.'}
+              'Furnished apartments at Barlaston Park, Lusaka — booked night by night in Zambian Kwacha, with housekeeping, secure parking and someone on the phone when you need them.'}
           </p>
         </div>
 
@@ -235,6 +237,11 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
               </Link>
             </li>
             <li>
+              <Link href="/policies" className="hover:text-white">
+                Booking Terms &amp; Policies
+              </Link>
+            </li>
+            <li>
               <Link href="/login" className="hover:text-white">
                 Staff &amp; Management Login
               </Link>
@@ -250,7 +257,9 @@ export function PublicFooter({ property }: { property: Settings['property'] }) {
             <li className="flex items-start gap-2">
               <MapPin size={15} className="mt-0.5 shrink-0 text-lemma-light" />
               <span>
-                {property.addressLine}, {property.city}, {property.country}
+                {property.addressLine}
+              {property.city ? `, ${property.city}` : ''}
+              {property.country ? `, ${property.country}` : ''}
               </span>
             </li>
             <li className="flex items-center gap-2">

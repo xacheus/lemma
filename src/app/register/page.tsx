@@ -47,11 +47,11 @@ export default function RegisterPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/logo.jpg"
-            alt="Lemma Heights Apartments"
+            alt="Lemma Apartments"
             className="h-11 w-11 rounded-md object-cover ring-1 ring-white/20"
           />
           <div>
-            <p className="text-[1rem] font-semibold leading-none tracking-[0.14em]">LEMMA HEIGHTS</p>
+            <p className="text-[1rem] font-semibold leading-none tracking-[0.14em]">LEMMA APARTMENTS</p>
             <p className="mt-1 text-[0.68rem] uppercase tracking-[0.2em] text-navy-200">
               Serviced Apartments · Lusaka
             </p>
@@ -79,7 +79,7 @@ export default function RegisterPage() {
           <div className="mt-8 overflow-hidden rounded-md ring-1 ring-white/15">
             <PhotoFrame
               src="/images/rooms/luxury-bedroom.jpg"
-              alt="Lemma Heights Master Suite"
+              alt="Lemma Apartments interior"
               ratio="16 / 8"
               variant="detail"
             />
@@ -97,11 +97,11 @@ export default function RegisterPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/logo.jpg"
-              alt="Lemma Heights Apartments"
+              alt="Lemma Apartments"
               className="h-10 w-10 rounded-md object-cover ring-1 ring-sand-300"
             />
             <span className="text-[0.95rem] font-semibold tracking-[0.12em] text-navy-900">
-              LEMMA HEIGHTS
+              LEMMA APARTMENTS
             </span>
           </Link>
 

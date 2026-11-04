@@ -705,7 +705,7 @@ export async function generateReceiptPdf(
   y -= 18;
   page.drawText(
     safeAscii(
-      'This receipt confirms verified settlement recorded in the Lemma Heights Apartments property ledger.',
+      'This receipt confirms verified settlement recorded in the Lemma Apartments property ledger.',
     ),
     {
       x: margin,

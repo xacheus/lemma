@@ -6,6 +6,7 @@ import { CheckboxRow, DateInput, MoneyInput, SelectInput, TextArea, TextInput } 
 import { Modal } from '@/components/ui/overlays';
 import { Alert, Spinner } from '@/components/ui';
 import type { ApartmentView } from '@/lib/view-types';
+import { ApartmentPhotoManager } from './apartment-photos';
 
 const AMENITY_LIBRARY = [
   'Wi-Fi',
@@ -86,7 +87,7 @@ export function ApartmentEditor({
   onClose: () => void;
   apartment?: ApartmentView | null;
 }) {
-  const { request, toast } = useApp();
+  const { request, toast, snapshot, refresh } = useApp();
   const [draft, setDraft] = useState<Draft>(BLANK);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +167,7 @@ export function ApartmentEditor({
     <Modal
       open={open}
       onClose={onClose}
-      size="lg"
+      size="xl"
       title={draft.id ? `Edit ${draft.name}` : 'Add an apartment'}
       subtitle="Rate, capacity and out-of-service status feed directly into the availability engine and the public site."
       footer={
@@ -228,23 +229,49 @@ export function ApartmentEditor({
           </div>
         </fieldset>
 
+        <fieldset className="rounded-xl border border-sand-200 bg-white p-3">
+          <legend className="px-1 text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-navy-400">
+            Photographs
+          </legend>
+          {draft.id ? (
+            <ApartmentPhotoManager
+              apartmentId={draft.id}
+              photos={
+                (snapshot?.apartments.find((a) => a.id === draft.id)?.gallery as
+                  | import('@/lib/domain/types').ApartmentPhoto[]
+                  | undefined) ?? []
+              }
+              onChanged={() => void refresh()}
+            />
+          ) : (
+            <p className="rounded-md border border-dashed border-sand-300 bg-sand-50 px-3 py-4 text-[0.8rem] leading-relaxed text-navy-600">
+              Save the apartment first, then upload its photographs here. Uploads are stored in the
+              media library and served on the website immediately.
+            </p>
+          )}
+        </fieldset>
+
         <div className="grid gap-3.5 sm:grid-cols-2">
-          <TextArea
-            label="Photograph paths"
-            value={draft.photos.join('\n')}
-            onChange={(e) => set({ photos: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })}
-            rows={3}
-            hint="One path per line, e.g. /images/apartments/apt-02/01.jpg — see docs/PHOTOGRAPHY.md."
-          />
+          <TextArea label="House notes" value={draft.houseNotes} onChange={(e) => set({ houseNotes: e.target.value })} rows={3} maxLength={600} hint="Internal only — meter codes, quirks, key safe. Never shown to guests." />
           <div className="space-y-2">
-            <TextArea label="House notes" value={draft.houseNotes} onChange={(e) => set({ houseNotes: e.target.value })} rows={2} maxLength={600} hint="Internal only: meter codes, quirks, key safe." />
-            <CheckboxRow label="Listed on the public site" checked={draft.active} onChange={(on) => set({ active: on })} hint="Unlisted units stay bookable by staff but disappear from the website." />
+            <CheckboxRow
+              label="Published on the website"
+              checked={draft.active}
+              onChange={(on) => set({ active: on })}
+              hint="Unpublished units stay bookable by staff but are hidden from the public site."
+            />
             <CheckboxRow
               label="Out of service"
               checked={draft.outOfService}
               onChange={(on) => set({ outOfService: on })}
               hint="Blocks new bookings on this unit. Refused while future stays exist — cancel or move them first."
             />
+            {draft.photos.length > 0 ? (
+              <p className="rounded-md border border-sand-200 bg-sand-50 px-2.5 py-2 text-[0.74rem] leading-relaxed text-navy-500">
+                {draft.photos.length} photograph{draft.photos.length === 1 ? '' : 's'} attached. The
+                cover is chosen in the gallery above, not by file order.
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

@@ -2,29 +2,29 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://lemmaheights.zm'),
-  applicationName: 'Lemma Heights Apartments',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  applicationName: 'Lemma Apartments',
   title: {
-    default: 'Lemma Heights Apartments — Serviced Apartments in Lusaka, Zambia',
-    template: '%s · Lemma Heights Apartments',
+    default: 'Lemma Apartments — Furnished Apartments at Barlaston Park, Lusaka',
+    template: '%s · Lemma Apartments',
   },
   description:
-    'Upscale serviced apartments on Great East Road, Chainama Lands, Lusaka. Live availability, instant ZMW pricing, corporate quotations, and Airtel Money, MTN MoMo & bank transfer payments.',
+    'Furnished studio, one-bedroom and family apartments at Barlaston Park, Lusaka. Live availability, nightly rates in Zambian Kwacha, and secure online booking with Airtel Money, MTN Mobile Money, bank transfer or cash.',
   keywords: [
-    'Lemma Heights Apartments',
-    'Serviced apartments Lusaka',
-    'Apartments Great East Road Lusaka',
-    'Executive suites Zambia',
-    'Corporate accommodation Lusaka',
+    'Lemma Apartments',
+    'Apartments Barlaston Park',
+    'Furnished apartments Lusaka',
+    'Accommodation Lusaka Zambia',
+    'Apartment booking Zambia',
   ],
   manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'Lemma Heights Apartments — Serviced Apartments in Lusaka',
+    title: 'Lemma Apartments — Furnished Apartments in Lusaka',
     description:
-      'Modern serviced apartments in Lusaka with solar backup, high-speed fibre, live availability and online booking.',
+      'Furnished apartments at Barlaston Park, Lusaka, with live availability, night-by-night Kwacha pricing and online booking.',
     type: 'website',
     locale: 'en_ZM',
-    siteName: 'Lemma Heights Apartments',
+    siteName: 'Lemma Apartments',
   },
   icons: {
     icon: [

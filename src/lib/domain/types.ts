@@ -1,5 +1,5 @@
 /**
- * Lemma Heights Apartments — Production Domain Types
+ * Lemma Apartments — Production Domain Types
  *
  * Maps directly to the Firestore collection architecture:
  *   users/{uid}
@@ -834,6 +834,9 @@ export interface Settings {
     website: string;
     taxPayerId: string;
     receptionHours: string;
+    /** Optional public-facing copy; blank fields fall back to sensible defaults. */
+    privacyPolicy?: string;
+    bookingTerms?: string;
   };
   tax?: TaxSettings;
   documents?: DocumentNumberingSettings;
@@ -912,6 +915,11 @@ export interface Database {
   notifications: NotificationRecord[];
   settings: Settings;
   dashboardSummary?: DashboardSummaryDoc;
+  /**
+   * ISO timestamp of the one-time creation of the starting catalogue. Recorded so
+   * that deleting a starting apartment keeps it deleted on the next request.
+   */
+  catalogueSeededAt?: string;
   sequences: {
     reservation: number;
     receipt: number;

@@ -1,4 +1,5 @@
 import { publicRoute, HttpError } from '@/lib/api/http';
+import { take } from '@/lib/api/rate-limit';
 import { getDb } from '@/lib/db/store';
 import { searchAvailability } from '@/lib/domain/availability';
 import { businessToday } from '@/lib/domain/dates';
@@ -10,7 +11,12 @@ export const dynamic = 'force-dynamic';
  * Unauthenticated availability search for the public site. It returns apartments
  * and prices only — never guest names, never the ledger.
  */
-export const GET = publicRoute(({ search }) => {
+export const GET = publicRoute(({ search, req }) => {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'local';
+  const limit = take(`availability:${ip}`);
+  if (!limit.allowed) {
+    throw new HttpError('Too many availability checks — please wait a moment.', 429, 'rate_limited');
+  }
   const db = getDb();
   const checkIn = search.get('checkIn') ?? businessToday();
   const checkOut = search.get('checkOut') ?? '';

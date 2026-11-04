@@ -53,3 +53,16 @@ export function optimizeImageUrl(
   if (/^(f_|q_|c_|w_|h_)/.test(after)) return src;
   return `${src.slice(0, idx + marker.length)}${VARIANT_TRANSFORMS[variant]}/${after}`;
 }
+
+/**
+ * True when an image is one of the AI-generated illustrations that ship with the
+ * repository rather than a photograph of the property. Callers must label these
+ * in the interface — never present them as the actual building.
+ */
+export function isIllustrativeImage(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return url.startsWith('/images/apartments/');
+}
+
+/** Short label rendered over an illustrative frame. */
+export const ILLUSTRATIVE_IMAGE_LABEL = 'Illustrative image';

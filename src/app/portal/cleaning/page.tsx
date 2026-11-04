@@ -84,7 +84,7 @@ export default function CleaningPortalPage() {
     <div className="mx-auto max-w-lg pb-16">
       <header className="sticky top-0 z-20 border-b border-sand-200 bg-white/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
-          <img src="/brand/logo.jpg" alt="Lemma Heights Apartments" className="h-9 w-9 rounded-lg object-cover ring-1 ring-sand-300" />
+          <img src="/brand/logo.jpg" alt="Lemma Apartments" className="h-9 w-9 rounded-lg object-cover ring-1 ring-sand-300" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.92rem] font-semibold text-navy-800">Cleaning list</p>
             <p className="truncate text-[0.74rem] text-navy-400">
