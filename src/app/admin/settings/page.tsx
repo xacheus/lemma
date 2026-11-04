@@ -47,23 +47,30 @@ export default function SettingsPage() {
     counts: { apartments: number; guests: number; staff: number; reservations: number; payments: number; housekeeping: number; notifications: number };
   }
   const [stats, setStats] = useState<DataStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsAttempt, setStatsAttempt] = useState(0);
+  const canManageSettings = can('settings.manage');
 
   useEffect(() => {
     if (snapshot && !draft) setDraft(structuredClone(snapshot.settings));
   }, [snapshot, draft]);
 
   useEffect(() => {
-    if (!can('settings.manage')) return;
-    request<DataStats>('/api/data')
-      .then(setStats)
-      .catch(() => setStats(null));
-  }, [can, request]);
+    if (!canManageSettings) return;
+    let active = true;
+    setStatsLoading(true);
+    request<DataStats>('/api/data', { notifyOnError: false })
+      .then((data) => { if (active) setStats(data); })
+      .catch(() => { if (active) setStats(null); })
+      .finally(() => { if (active) setStatsLoading(false); });
+    return () => { active = false; };
+  }, [canManageSettings, request, statsAttempt]);
 
   const dirty = useMemo(() => (snapshot && draft ? JSON.stringify(snapshot.settings) !== JSON.stringify(draft) : false), [snapshot, draft]);
 
   if (!snapshot) return <Skeleton className="h-96" />;
 
-  if (!can('settings.manage') || !draft)
+  if (!canManageSettings || !draft)
     return (
       <div className="space-y-4">
         <PageHeader title="Settings" description="Property-wide configuration." />
@@ -635,7 +642,16 @@ export default function SettingsPage() {
                   <Figure label="Staff" value={stats.counts.staff} />
                 </>
               ) : (
-                <p className="col-span-4 text-navy-400">Storage figures unavailable — the data endpoint did not answer.</p>
+                <div className="col-span-full text-navy-500" role="status">
+                  {statsLoading ? 'Loading storage figures…' : (
+                    <>
+                      <p>Storage figures could not be loaded. Check your connection and try again.</p>
+                      <button type="button" className="link mt-1" onClick={() => setStatsAttempt((attempt) => attempt + 1)}>
+                        Retry storage figures
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </dl>
             <p className="mt-2 text-[0.74rem] leading-relaxed text-navy-500">

@@ -26,13 +26,28 @@ export class ApiError extends Error {
 }
 
 async function call<T>(path: string, init?: RequestInit & { data?: unknown }): Promise<T> {
-  const response = await fetch(path, {
-    method: init?.method ?? 'GET',
-    credentials: 'same-origin',
-    headers: init?.data ? { 'content-type': 'application/json' } : undefined,
-    body: init?.data ? JSON.stringify(init.data) : undefined,
-    signal: init?.signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: init?.method ?? 'GET',
+      credentials: 'same-origin',
+      headers: init?.data ? { 'content-type': 'application/json' } : undefined,
+      body: init?.data ? JSON.stringify(init.data) : undefined,
+      signal: init?.signal,
+    });
+  } catch (err) {
+    // A failed connection does not establish whether a write reached the server.
+    // Never retry mutations automatically or imply that they were not saved.
+    if (!(err instanceof TypeError)) throw err;
+    const isRead = ['GET', 'HEAD'].includes((init?.method ?? 'GET').toUpperCase());
+    throw new ApiError(
+      isRead
+        ? 'Could not connect to the server. Check your connection and try again.'
+        : 'The connection was interrupted. Check whether the change was saved before trying again.',
+      0,
+      'network_error',
+    );
+  }
   let payload: { ok: boolean; data?: T; error?: string; code?: string; details?: unknown } | null = null;
   try {
     payload = await response.json();
@@ -70,7 +85,7 @@ const ToastCtx = createContext<ToastContext>({ toasts: [], push: () => {}, dismi
 export function ToastViewport() {
   const { toasts, dismiss } = useContext(ToastCtx);
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[80] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2 no-print">
+    <div className="pointer-events-auto fixed bottom-4 right-4 z-[80] flex max-h-[50dvh] w-[min(24rem,calc(100vw-2rem))] flex-col gap-2 overflow-y-auto no-print" aria-live="polite">
       {toasts.map((toast) => (
         <div
           key={toast.id}
@@ -115,7 +130,7 @@ interface AppContextValue {
   error: string | null;
   busy: boolean;
   refresh: () => Promise<void>;
-  request: <R = unknown>(path: string, init?: { method?: string; data?: unknown }) => Promise<R>;
+  request: <R = unknown>(path: string, init?: { method?: string; data?: unknown; notifyOnError?: boolean }) => Promise<R>;
   can: (permission: PermissionKey) => boolean;
   toast: (t: Omit<Toast, 'id'>) => void;
   signOut: () => Promise<void>;
@@ -140,7 +155,10 @@ export function AppProvider({ bootstrap, children }: { bootstrap?: SnapshotView 
   const push = useCallback((toast: Omit<Toast, 'id'>) => {
     seq.current += 1;
     const id = seq.current;
-    setToasts((list) => [...list, { ...toast, id }]);
+    setToasts((list) => {
+      if (list.some((item) => item.tone === toast.tone && (toast.body ? item.body === toast.body : item.title === toast.title && !item.body))) return list;
+      return [...list, { ...toast, id }].slice(-3);
+    });
     window.setTimeout(() => setToasts((list) => list.filter((t) => t.id !== id)), toast.tone === 'error' ? 9000 : 4500);
   }, []);
 
@@ -167,7 +185,7 @@ export function AppProvider({ bootstrap, children }: { bootstrap?: SnapshotView 
   }, [bootstrap, refresh]);
 
   const request = useCallback(
-    async <R,>(path: string, init?: { method?: string; data?: unknown }) => {
+    async <R,>(path: string, init?: { method?: string; data?: unknown; notifyOnError?: boolean }) => {
       setBusyCount((n) => n + 1);
       try {
         const result = await call<R>(path, init);
@@ -181,7 +199,7 @@ export function AppProvider({ bootstrap, children }: { bootstrap?: SnapshotView 
         if (apiErr.status === 401) {
           setStatus('anonymous');
           push({ tone: 'error', title: 'Session expired', body: 'Sign in again to continue — nothing was saved.' });
-        } else {
+        } else if (init?.notifyOnError !== false) {
           push({ tone: 'error', title: 'Action not completed', body: apiErr.message });
         }
         throw apiErr;
@@ -197,6 +215,10 @@ export function AppProvider({ bootstrap, children }: { bootstrap?: SnapshotView 
     window.location.href = '/login';
   }, []);
 
+  // Consumers may use can in effects. Its identity must not change when a
+  // request toggles busyCount or a toast is shown, or those effects can loop.
+  const can = useCallback((permission: PermissionKey) => !!snapshot?.permissions?.includes(permission), [snapshot?.permissions]);
+
   const value = useMemo<AppContextValue>(
     () => ({
       snapshot,
@@ -205,11 +227,11 @@ export function AppProvider({ bootstrap, children }: { bootstrap?: SnapshotView 
       busy: busyCount > 0,
       refresh,
       request,
-      can: (permission) => !!snapshot?.permissions?.includes(permission),
+      can,
       toast: push,
       signOut,
     }),
-    [snapshot, status, error, busyCount, refresh, request, push, signOut],
+    [snapshot, status, error, busyCount, refresh, request, can, push, signOut],
   );
 
   return (
