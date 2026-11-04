@@ -23,8 +23,8 @@ export interface HeroSlide {
   availabilityNote: string;
 }
 
-const INTERVAL_MS = 6500;
-const FADE_MS = 1200;
+const INTERVAL_MS = 7000;
+const FADE_MS = 1400;
 
 /**
  * Homepage hero.
@@ -38,6 +38,9 @@ const FADE_MS = 1200;
  * visitor prefers reduced motion. It can also be stopped by hand, which stays stopped
  * for the session. Arrows, dots, keyboard arrows and swipe all work, so nothing
  * depends on the timer.
+ *
+ * The copy stays deliberately short: one headline, one line of supporting text, and the
+ * active apartment's facts. Anything longer fights the photograph it sits on.
  */
 export function HomeHeroCarousel({
   slides,
@@ -139,7 +142,7 @@ export function HomeHeroCarousel({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={optimizeImageUrl(slide.photo, 'hero')}
-                alt={`Interior of ${slide.name}${slide.illustrative ? ' — illustrative image' : ''}`}
+                alt={`Interior of ${slide.name}${slide.illustrative ? ' (illustrative image)' : ''}`}
                 loading={i === 0 ? 'eager' : 'lazy'}
                 fetchPriority={i === 0 ? 'high' : 'auto'}
                 decoding="async"
@@ -161,26 +164,21 @@ export function HomeHeroCarousel({
         <div className="absolute inset-0 flex items-end">
           <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 sm:pb-10 lg:px-8 lg:pb-14">
             <div className="max-w-2xl">
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-white/70">
-                <span>{propertyName}</span>
-                <span aria-hidden="true">·</span>
-                <span>{totalApartments} apartment{totalApartments === 1 ? '' : 's'}</span>
-                <span aria-hidden="true">·</span>
-                <span>Lusaka, Zambia</span>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-white/65">
+                {propertyName} <span aria-hidden="true">/</span> Lusaka
               </p>
 
-              <h1 className="mt-3 text-[2.05rem] font-semibold leading-[1.05] tracking-[-0.02em] text-white sm:text-[2.9rem] lg:text-[3.4rem]">
-                Furnished apartments
-                <span className="block text-white/70">you can book by the night.</span>
+              <h1 className="mt-4 max-w-2xl text-[2rem] font-semibold leading-[1.06] tracking-[-0.025em] text-white sm:text-[2.6rem] lg:text-[3.1rem]">
+                Serviced apartments
+                <span className="block text-white/65">booked by the night.</span>
               </h1>
 
-              <p className="mt-3 max-w-xl text-[0.92rem] leading-relaxed text-white/75 sm:text-[0.98rem]">
-                Each unit has its own kitchen, bathroom and living space, priced in Kwacha with no
-                card required to enquire. Pay by mobile money, transfer or cash — verified by a
-                person, not a robot.
+              <p className="mt-4 max-w-md text-[0.95rem] leading-relaxed text-white/70">
+                {totalApartments} private unit{totalApartments === 1 ? '' : 's'} in Barlaston Park.
+                Live availability, clear Kwacha rates, no card needed to enquire.
               </p>
 
-              <div className="mt-5 flex flex-wrap items-center gap-2.5">
+              <div className="mt-6 flex flex-wrap items-center gap-2.5">
                 <Link
                   href={`/apartments?${stayQuery}#availability`}
                   className="btn bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-900 transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/90"
@@ -191,12 +189,12 @@ export function HomeHeroCarousel({
                   href={`/apartments/${active.slug}?${stayQuery}#book`}
                   className="btn border border-white/35 px-4 py-2.5 text-[0.86rem] text-white transition-colors hover:border-white/70 hover:bg-white/10"
                 >
-                  Book now — {active.name}
+                  View {active.name}
                 </Link>
               </div>
 
               {/* The active apartment's facts, on one quiet line. */}
-              <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.78rem] text-white/75">
+              <div className="mt-6 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[0.78rem] text-white/70">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${
                     active.available ? 'bg-[#0f3d2b]/85 text-[#a9ecc6]' : 'bg-white/12 text-white/70'
@@ -208,22 +206,24 @@ export function HomeHeroCarousel({
                   {active.availabilityNote}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <Users size={13} aria-hidden="true" /> {active.maxGuests} guests
+                  <Users size={13} aria-hidden="true" /> {active.maxGuests}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <BedDouble size={13} aria-hidden="true" />
-                  {active.bedrooms === 0 ? 'Studio' : `${active.bedrooms} bedroom${active.bedrooms === 1 ? '' : 's'}`}
+                  {active.bedrooms === 0 ? 'Studio' : `${active.bedrooms} bed`}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Bath size={13} aria-hidden="true" /> {active.bathrooms} bath
                 </span>
-                <span className="text-white">
+                <span className="font-medium text-white">
                   {formatKwacha(active.nightlyRate)}
-                  <span className="text-white/60"> / night</span>
+                  <span className="font-normal text-white/55"> / night</span>
                 </span>
+                {/* Honest labelling: until the owner supplies real photography, the frame
+                    is a representative interior, and the page says so quietly. */}
                 {active.illustrative ? (
-                  <span className="rounded-sm border border-white/25 px-1.5 py-0.5 text-[0.62rem] uppercase tracking-[0.08em] text-white/60">
-                    Illustrative image
+                  <span className="text-[0.68rem] uppercase tracking-[0.1em] text-white/40">
+                    Representative image
                   </span>
                 ) : null}
               </div>
@@ -231,27 +231,47 @@ export function HomeHeroCarousel({
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Controls. The arrows sit low and to the edges, clear of the headline, and the
+            apartment switcher is a labelled index rather than anonymous dots. */}
         {count > 1 ? (
           <>
             <button
               type="button"
               onClick={() => go(index - 1)}
               aria-label="Previous apartment"
-              className="absolute left-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/70 sm:grid lg:left-5"
+              className="absolute bottom-9 left-4 hidden h-9 w-9 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/75 lg:grid xl:left-6"
             >
-              <ChevronLeft size={19} />
+              <ChevronLeft size={18} />
             </button>
             <button
               type="button"
               onClick={() => go(index + 1)}
               aria-label="Next apartment"
-              className="absolute right-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/70 sm:grid lg:right-5"
+              className="absolute bottom-9 right-4 hidden h-9 w-9 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white backdrop-blur-sm transition hover:bg-charcoal-950/75 lg:grid xl:right-6"
             >
-              <ChevronRight size={19} />
+              <ChevronRight size={18} />
             </button>
 
-            <div className="absolute inset-x-0 bottom-0 hidden justify-center gap-1.5 pb-3 sm:flex">
+            <div className="absolute right-4 top-3 flex items-center gap-2 sm:right-5 sm:top-5">
+              <span className="rounded-full bg-charcoal-950/45 px-2 py-1 text-[0.66rem] font-medium tabular-nums text-white/80 backdrop-blur-sm">
+                {String(index + 1).padStart(2, '0')} / {String(count).padStart(2, '0')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setUserStopped((v) => !v)}
+                aria-label={userStopped ? 'Resume the slideshow' : 'Pause the slideshow'}
+                className="grid h-8 w-8 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white/80 backdrop-blur-sm transition hover:bg-charcoal-950/70"
+              >
+                {userStopped ? <Play size={13} /> : <Pause size={13} />}
+              </button>
+            </div>
+
+            {/* Auto-advance indicator: a thin bar per frame that fills over the interval,
+                so the motion reads as a clock rather than a surprise. It is keyed on the
+                index so the animation restarts whenever the frame changes. Each bar is
+                also the control for its frame, which is why this lives on the bottom
+                edge of the whole hero rather than on the photograph. */}
+            <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1.5 px-4 pb-3 sm:px-6 lg:px-8">
               {slides.map((slide, i) => (
                 <button
                   key={slide.id}
@@ -259,21 +279,24 @@ export function HomeHeroCarousel({
                   onClick={() => go(i)}
                   aria-label={`Show ${slide.name}`}
                   aria-current={i === index}
-                  className={`h-1 rounded-full transition-all duration-500 ${
-                    i === index ? 'w-8 bg-white' : 'w-3 bg-white/40 hover:bg-white/70'
-                  }`}
-                />
+                  className="group h-5 flex-1"
+                >
+                  <span className="mt-2 block h-[3px] w-full overflow-hidden rounded-full bg-white/25 transition-colors group-hover:bg-white/40">
+                    {i === index ? (
+                      <span
+                        key={`${slide.id}-${index}-${userStopped ? 'p' : 'r'}`}
+                        className="block h-full origin-left rounded-full bg-white"
+                        style={
+                          userStopped || reducedMotion
+                            ? { transform: 'scaleX(1)' }
+                            : { animation: `hero-progress ${INTERVAL_MS}ms linear forwards` }
+                        }
+                      />
+                    ) : null}
+                  </span>
+                </button>
               ))}
             </div>
-
-            <button
-              type="button"
-              onClick={() => setUserStopped((v) => !v)}
-              aria-label={userStopped ? 'Resume the slideshow' : 'Pause the slideshow'}
-              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-charcoal-950/40 text-white/80 backdrop-blur-sm transition hover:bg-charcoal-950/70 sm:right-5 sm:top-5"
-            >
-              {userStopped ? <Play size={14} /> : <Pause size={14} />}
-            </button>
           </>
         ) : null}
       </div>

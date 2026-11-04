@@ -78,7 +78,7 @@ export function ApartmentsCatalogueClient({
         {publishedTotal > 0 ? (
           <p className="mt-1.5 text-[0.9rem] text-navy-600">
             Showing real-time availability for {initialCheckIn} to {initialCheckOut} ({units[0]?.nights ?? 1}{' '}
-            {(units[0]?.nights ?? 1) === 1 ? 'night' : 'nights'}) — {availableCount} of{' '}
+            {(units[0]?.nights ?? 1) === 1 ? 'night' : 'nights'}). {availableCount} of{' '}
             {filtered.length} {filtered.length === 1 ? 'apartment' : 'apartments'} available for
             immediate booking.
           </p>

@@ -13,12 +13,36 @@ export const loginSchema = z.object({
   firebaseIdToken: z.string().optional(),
 });
 
-// Strict customer registration schema — never accepts privileged role fields
+// Strict customer registration schema — never accepts privileged role fields.
+// Every free-text field is trimmed before it is validated, so a trailing space in a
+// pasted address is not reported back to the guest as an invalid email.
 export const registerSchema = z.object({
-  fullName: z.string().min(2, 'Full name is required.').max(100),
-  email: z.string().email('Enter a valid email address.'),
-  phoneNumber: z.string().min(6, 'Enter a reachable phone number.').max(28),
-  password: z.string().min(6, 'Password must be at least 6 characters.').max(128).optional(),
+  fullName: z
+    .string()
+    .trim()
+    .min(2, 'Please enter your full name.')
+    .max(100, 'Please use a shorter name.'),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, 'Please enter your email address.')
+    .email('That email address does not look right. Please check it.'),
+  phoneNumber: z
+    .string()
+    .trim()
+    .min(6, 'Please enter a phone number reception can reach you on.')
+    .max(28, 'That phone number is too long.')
+    // The form starts the field with a bare "+260" dialling code. Taken on its own it
+    // passes a length check but reaches nobody, so it is rejected here.
+    .refine((value) => (value.replace(/\D/g, '') ?? '').length >= 9, {
+      message: 'Please enter the rest of your phone number.',
+    }),
+  password: z
+    .string()
+    .min(6, 'Please choose a password of at least 6 characters.')
+    .max(128, 'That password is too long.')
+    .optional(),
   firebaseIdToken: z.string().optional(),
 });
 

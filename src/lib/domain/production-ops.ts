@@ -120,7 +120,26 @@ export function registerCustomerAccount(
 
   const existing = db.users.find((u) => u.email.toLowerCase() === email);
   if (existing) {
-    throw new OperationError('An account with that email address already exists.', 409, 'email_taken');
+    throw new OperationError(
+      'An account with that email address already exists. Sign in instead, or use another email address.',
+      409,
+      'email_taken',
+    );
+  }
+
+  // One account per phone number. Two registrations on the same number would each get
+  // their own guest profile while reception sees one person, so the second is refused
+  // and the guest is pointed at the account that already exists.
+  const phoneDigits = phoneNumber.replace(/\D/g, '');
+  if (phoneDigits.length >= 9) {
+    const samePhone = db.users.find((u) => u.phoneNumber.replace(/\D/g, '') === phoneDigits);
+    if (samePhone) {
+      throw new OperationError(
+        'An account with that phone number already exists. Sign in instead, or use another number.',
+        409,
+        'phone_taken',
+      );
+    }
   }
 
   const uid = input.firebaseUid?.trim() || `usr-${randomUUID().slice(0, 12)}`;

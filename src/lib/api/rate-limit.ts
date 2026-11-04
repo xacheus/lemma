@@ -10,6 +10,9 @@ const buckets = new Map<string, { tokens: number; updatedAt: number }>();
 /** Separate caps so a burst of availability look-ups cannot use up booking attempts. */
 const PROFILES: Record<string, { capacity: number; perMinute: number }> = {
   booking: { capacity: 8, perMinute: 8 },
+  // Sign-up is cheap to send and expensive to undo, so it is tighter than the default:
+  // five accounts an hour from one address is ample for a person and useless to a script.
+  register: { capacity: 3, perMinute: 3 },
   default: { capacity: 30, perMinute: 60 },
 };
 
@@ -19,9 +22,8 @@ function profileFor(key: string) {
 }
 
 export function take(key: string): { allowed: boolean; retryAfterSeconds: number } {
-  const { capacity: CAPACITY, perMinute } = profileFor(key);
-  const REFILL = perMinute / 60_000;
-  return takeFrom(key, CAPACITY, REFILL);
+  const { capacity, perMinute } = profileFor(key);
+  return takeFrom(key, capacity, perMinute / 60_000);
 }
 
 function takeFrom(key: string, capacity: number, refillPerMs: number): {
@@ -29,7 +31,6 @@ function takeFrom(key: string, capacity: number, refillPerMs: number): {
   retryAfterSeconds: number;
 } {
   const now = Date.now();
-  const CAPACITY = capacity;
   const REFILL_PER_MS = refillPerMs;
   const bucket = buckets.get(key) ?? { tokens: capacity, updatedAt: now };
   const elapsed = now - bucket.updatedAt;

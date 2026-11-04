@@ -6,6 +6,28 @@ import { useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Shield } from 'lucide-react';
 import { PhotoFrame } from '@/components/ui/photo';
 
+/**
+ * Guest sign-up.
+ *
+ * The form is built around what a first-time guest actually needs to know: what the
+ * account gets them, what happens next, and what a failure means. Field-level errors are
+ * shown under the field that caused them rather than as one opaque sentence above the
+ * submit button, and the button reports progress while the request is in flight.
+ */
+
+type FieldKey = 'fullName' | 'email' | 'phoneNumber' | 'password';
+
+const FIELD_ORDER: FieldKey[] = ['fullName', 'email', 'phoneNumber', 'password'];
+
+/** The server reports the failing field in `details[].path`; map that back to the form. */
+function fieldFromError(details: unknown): FieldKey | null {
+  if (!Array.isArray(details) || details.length === 0) return null;
+  const first = details[0] as { path?: unknown };
+  const path = typeof first?.path === 'string' ? first.path : '';
+  const key = path.split('.')[0] as FieldKey;
+  return FIELD_ORDER.includes(key) ? key : null;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
@@ -15,30 +37,67 @@ export default function RegisterPage() {
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<Partial<Record<FieldKey, string>>>({});
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
+    if (busy) return;
+
+    // Cheap client-side checks first, so the guest is not made to wait on a round trip
+    // for something the browser can already see.
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phoneNumber.trim();
+    const nextFieldErrors: Partial<Record<FieldKey, string>> = {};
+    if (trimmedName.length < 2) nextFieldErrors.fullName = 'Please enter your full name.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      nextFieldErrors.email = 'That email address does not look right. Please check it.';
+    }
+    if (trimmedPhone.replace(/\D/g, '').length < 9) {
+      nextFieldErrors.phoneNumber = 'Please enter the rest of your phone number.';
+    }
+    if (password.length < 6) nextFieldErrors.password = 'Please use at least 6 characters.';
+    setFieldError(nextFieldErrors);
     setError(null);
+    if (Object.keys(nextFieldErrors).length > 0) return;
+
+    setBusy(true);
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ fullName, email, phoneNumber, password }),
+        body: JSON.stringify({
+          fullName: trimmedName,
+          email: trimmedEmail,
+          phoneNumber: trimmedPhone,
+          password,
+        }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
+
       if (!res.ok || !json.ok) {
-        setError(json.error ?? 'Could not create your account.');
+        const message: string = json.error ?? 'Could not create your account. Please try again.';
+        setError(message);
+        // An account that already exists is not a mistake in a field; it is a signpost.
+        if (json.code !== 'email_taken' && json.code !== 'phone_taken') {
+          const key = fieldFromError(json.details);
+          if (key) setFieldError({ [key]: message });
+        }
         setBusy(false);
         return;
       }
+
+      // The route signs the guest in as part of the response, so go straight to the
+      // account page rather than back to the sign-in form.
       router.push('/account');
       router.refresh();
     } catch {
-      setError('Network error while creating your account.');
+      setError('We could not reach the server. Check your connection and try again.');
       setBusy(false);
     }
   }
+
+  const taken = error?.includes('already exists') ?? false;
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
@@ -60,25 +119,25 @@ export default function RegisterPage() {
 
         <div className="max-w-lg">
           <h1 className="text-[1.95rem] font-semibold leading-[1.2] tracking-tight">
-            Create your guest account for faster reservations and instant receipts.
+            Book faster with a guest account.
           </h1>
           <ul className="mt-5 space-y-2.5 text-[0.88rem] text-navy-200">
             <li className="flex items-center gap-2.5">
               <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              View live booking confirmations and ZMW payment verification status
+              See your bookings and payment status in one place
             </li>
             <li className="flex items-center gap-2.5">
               <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Download official PDF quotations, tax invoices, and verified receipts
+              Download quotations, invoices and receipts
             </li>
             <li className="flex items-center gap-2.5">
               <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Manage your contact details and submit stay amendments directly to reception
+              Send stay changes straight to reception
             </li>
           </ul>
           <div className="mt-8 overflow-hidden rounded-md ring-1 ring-white/15">
             <PhotoFrame
-              src="/images/rooms/luxury-bedroom.jpg"
+              src="/images/apartments/apt-01/01.jpg"
               alt="Lemma Apartments interior"
               ratio="16 / 8"
               variant="detail"
@@ -106,7 +165,7 @@ export default function RegisterPage() {
           </Link>
 
           <h2 className="text-[1.45rem] font-semibold tracking-tight text-navy-900">
-            Register guest account
+            Create your guest account
           </h2>
           <p className="mt-1 text-[0.85rem] text-navy-500">
             Already have an account?{' '}
@@ -115,7 +174,7 @@ export default function RegisterPage() {
             </Link>
           </p>
 
-          <form onSubmit={submit} className="card mt-6 p-6 space-y-4">
+          <form onSubmit={submit} noValidate className="card mt-6 space-y-4 p-6">
             <div>
               <label className="label mb-1 block" htmlFor="fullName">
                 Full name
@@ -123,11 +182,22 @@ export default function RegisterPage() {
               <input
                 id="fullName"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="field"
+                onChange={(e) => {
+                  setFullName(e.target.value);
+                  setFieldError((f) => ({ ...f, fullName: undefined }));
+                }}
+                autoComplete="name"
+                className={`field ${fieldError.fullName ? 'field-invalid' : ''}`}
                 placeholder="e.g. Chanda Mwale"
+                aria-invalid={fieldError.fullName ? true : undefined}
+                aria-describedby={fieldError.fullName ? 'fullName-error' : undefined}
                 required
               />
+              {fieldError.fullName ? (
+                <p id="fullName-error" className="mt-1 text-[0.76rem] font-medium text-st-cancelled">
+                  {fieldError.fullName}
+                </p>
+              ) : null}
             </div>
 
             <div>
@@ -138,11 +208,25 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="field"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setFieldError((f) => ({ ...f, email: undefined }));
+                }}
+                autoComplete="email"
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                className={`field ${fieldError.email ? 'field-invalid' : ''}`}
                 placeholder="name@company.co.zm"
+                aria-invalid={fieldError.email ? true : undefined}
+                aria-describedby={fieldError.email ? 'email-error' : undefined}
                 required
               />
+              {fieldError.email ? (
+                <p id="email-error" className="mt-1 text-[0.76rem] font-medium text-st-cancelled">
+                  {fieldError.email}
+                </p>
+              ) : null}
             </div>
 
             <div>
@@ -153,24 +237,42 @@ export default function RegisterPage() {
                 id="phone"
                 type="tel"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="field"
+                onChange={(e) => {
+                  setPhoneNumber(e.target.value);
+                  setFieldError((f) => ({ ...f, phoneNumber: undefined }));
+                }}
+                autoComplete="tel"
+                inputMode="tel"
+                className={`field ${fieldError.phoneNumber ? 'field-invalid' : ''}`}
                 placeholder="+260 97 700 0000"
+                aria-invalid={fieldError.phoneNumber ? true : undefined}
+                aria-describedby={fieldError.phoneNumber ? 'phone-error' : undefined}
                 required
               />
+              {fieldError.phoneNumber ? (
+                <p id="phone-error" className="mt-1 text-[0.76rem] font-medium text-st-cancelled">
+                  {fieldError.phoneNumber}
+                </p>
+              ) : null}
             </div>
 
             <div>
               <label className="label mb-1 block" htmlFor="password">
-                Password (minimum 6 characters)
+                Password
               </label>
               <div className="relative">
                 <input
                   id="password"
                   type={reveal ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="field pr-10"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldError((f) => ({ ...f, password: undefined }));
+                  }}
+                  autoComplete="new-password"
+                  className={`field pr-10 ${fieldError.password ? 'field-invalid' : ''}`}
+                  aria-invalid={fieldError.password ? true : undefined}
+                  aria-describedby={fieldError.password ? 'password-error' : 'password-hint'}
                   minLength={6}
                   required
                 />
@@ -178,26 +280,52 @@ export default function RegisterPage() {
                   type="button"
                   onClick={() => setReveal((v) => !v)}
                   className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-navy-400 hover:bg-sand-100"
-                  aria-label="Toggle password visibility"
+                  aria-label={reveal ? 'Hide password' : 'Show password'}
                 >
                   {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+              {fieldError.password ? (
+                <p id="password-error" className="mt-1 text-[0.76rem] font-medium text-st-cancelled">
+                  {fieldError.password}
+                </p>
+              ) : (
+                <p id="password-hint" className="mt-1 text-[0.76rem] text-navy-400">
+                  At least 6 characters.
+                </p>
+              )}
             </div>
 
             {error ? (
-              <p className="flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] font-medium text-st-cancelled">
-                <AlertCircle size={15} className="mt-0.5 shrink-0" /> {error}
-              </p>
+              <div className="flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] font-medium text-st-cancelled">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                <span>
+                  {error}
+                  {taken ? (
+                    <>
+                      {' '}
+                      <Link href="/login" className="underline underline-offset-2">
+                        Sign in
+                      </Link>
+                      .
+                    </>
+                  ) : null}
+                </span>
+              </div>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="btn btn-primary w-full justify-center py-2.5"
-            >
-              {busy ? 'Creating account...' : 'Create guest account'} <ArrowRight size={15} />
+            <button type="submit" disabled={busy} className="btn btn-primary w-full justify-center py-2.5">
+              {busy ? 'Creating your account...' : 'Create guest account'}{' '}
+              {busy ? null : <ArrowRight size={15} />}
             </button>
+
+            <p className="text-center text-[0.74rem] leading-relaxed text-navy-400">
+              By creating an account you agree to our{' '}
+              <Link href="/policies" className="underline underline-offset-2 hover:text-navy-700">
+                booking terms
+              </Link>
+              .
+            </p>
           </form>
         </div>
       </div>

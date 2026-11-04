@@ -193,6 +193,16 @@
   animation: hero-line 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* The hero's auto-advance clock: fills over one interval, then the frame changes. */
+@keyframes hero-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* People who ask for less motion get none of the decoration. */
 @media (prefers-reduced-motion: reduce) {
   .reveal,
