@@ -1,3 +1,4 @@
+import { publicPaymentMethod, type PublicPaymentMethod } from './payment-details';
 import { isSampleListing } from './sample-listings';
 import { randomUUID } from 'node:crypto';
 import type {
@@ -79,6 +80,8 @@ export interface NotifyInput {
   apartmentId?: ID | null;
   scheduledFor?: string | null;
   actor?: string;
+  recipientUid?: ID | null;
+  href?: string | null;
 }
 
 /**
@@ -94,24 +97,38 @@ export function draftNotification(db: Database, input: NotifyInput): Notificatio
     title: input.title,
     body: input.body,
     recipientName: input.recipientName,
+    recipientUid: input.recipientUid ?? null,
+    href: input.href ?? null,
     recipientContact: input.recipientContact,
     guestId: input.guestId ?? null,
     reservationId: input.reservationId ?? null,
     apartmentId: input.apartmentId ?? null,
     createdAt: nowISO(),
     scheduledFor: input.scheduledFor ?? null,
-    deliveryStatus: input.channel === 'in_app' ? 'delivered_manually' : 'not_connected',
+    deliveryStatus: input.channel === 'in_app' ? 'in_app_only' : 'not_connected',
     deliveryDetail:
       input.channel === 'in_app'
-        ? 'Recorded in the operations log — nothing left the building.'
+        ? 'Available in the app. No push delivery is implied.'
         : 'No messaging provider is connected. Copy the text or open it in a handset, then mark it sent.',
-    markedDeliveredAt: input.channel === 'in_app' ? nowISO() : null,
+    markedDeliveredAt: null,
     markedDeliveredBy: input.actor ?? null,
     readAt: null,
     createdAutomatically: true,
   };
   db.notifications.unshift(record);
   return record;
+}
+
+/** Record a guest-facing event as part of the same transaction as the booking. */
+function notifyGuest(db: Database, reservation: Reservation, event: NotificationRecord['event'], title: string, body: string, href = '/account#bookings') {
+  const guest = db.guests.find((g) => g.id === reservation.guestId);
+  if (!guest) return;
+  draftNotification(db, {
+    event, channel: 'in_app', title, body, recipientName: guest.fullName,
+    recipientUid: reservation.userId ?? guest.userId ?? null,
+    recipientContact: '', guestId: guest.id, reservationId: reservation.id,
+    apartmentId: reservation.apartmentId, href,
+  });
 }
 
 function guestFirstName(guest: Guest) {
@@ -398,6 +415,9 @@ export function createReservation(db: Database, actorId: ID, input: ReservationI
     });
   }
 
+  notifyGuest(db, reservation, 'new_booking', `Booking received · ${reference}`,
+    status === 'inquiry' ? 'Your booking request has been received. It is awaiting confirmation.' : 'Your booking has been received.');
+
   if (status === 'inquiry') {
     draftNotification(db, {
       event: 'booking_request',
@@ -560,6 +580,11 @@ export function setReservationStatus(
   }
   const beforeStatus = r.status;
   r.status = status;
+  if (status === 'reserved' && ['inquiry', 'pending_confirmation'].includes(beforeStatus)) {
+    notifyGuest(db, r, 'booking_confirmation', `Booking confirmed · ${r.reference}`, 'Your booking has been confirmed. View your booking for the details.');
+  } else if (status === 'cancelled') {
+    notifyGuest(db, r, 'cancellation', `Booking cancelled · ${r.reference}`, 'Your booking has been cancelled.');
+  }
   log(db, r.id, actorId, `Status → ${status.replace(/_/g, ' ')}`, note);
   recomputeReservation(db, r.id);
   appendAuditLog(db, {
@@ -651,6 +676,7 @@ export function cancelReservation(
 
   const priorStatus = r.status;
   r.status = 'cancelled';
+  notifyGuest(db, r, 'cancellation', `Booking cancelled · ${r.reference}`, 'Your booking has been cancelled.');
   r.cancelledAt = nowISO();
   r.cancellationReason = reason;
   r.history.unshift({
@@ -767,13 +793,7 @@ export interface PaymentQuote {
   allowPartial: boolean;
   guestChoosesMethod: boolean;
   defaultMethod: PaymentMethod;
-  methods: {
-    id: PaymentMethod;
-    label: string;
-    instructions: string;
-    accountLabel: string;
-    accountNumber: string;
-  }[];
+  methods: PublicPaymentMethod[];
   openClaim: GuestSubmittedPayment | null;
   claims: GuestSubmittedPayment[];
   proofUploadEnabled: boolean;
@@ -804,18 +824,12 @@ export function paymentQuote(db: Database, reservation: Reservation): PaymentQuo
     allowPartial: settings.allowPartialPayments !== false,
     guestChoosesMethod: !settings.lockMethodToAdmin,
     defaultMethod:
-      settings.defaultMethod ??
-      (settings.methods.find((m) => m.enabled)?.id as PaymentMethod | undefined) ??
+      settings.methods.find((m) => m.enabled && m.id === settings.defaultMethod)?.id ??
+      settings.methods.find((m) => m.enabled)?.id ??
       'airtel_money',
     methods: settings.methods
       .filter((m) => m.enabled)
-      .map((m) => ({
-        id: m.id as PaymentMethod,
-        label: m.label,
-        instructions: m.instructions,
-        accountLabel: m.accountLabel,
-        accountNumber: m.accountNumber,
-      })),
+      .map(publicPaymentMethod),
     openClaim: own.find((c) => c.status === 'awaiting_verification') ?? null,
     claims: [...own].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
     proofUploadEnabled: settings.proofUploadEnabled,
@@ -1000,8 +1014,8 @@ export function rejectPaymentClaim(
   db.paymentClaims = db.paymentClaims ?? [];
   const claim = db.paymentClaims.find((c) => c.id === claimId);
   if (!claim) throw new OperationError('Payment claim not found.', 404, 'not_found');
-  if (claim.status === 'linked') {
-    throw new OperationError('That claim has already been banked as a receipt.', 409, 'already_state');
+  if (claim.status !== 'awaiting_verification') {
+    throw new OperationError('That claim has already been reviewed.', 409, 'already_state');
   }
   const reviewer = actorName(db, actorId);
   claim.status = 'rejected';
@@ -1050,6 +1064,15 @@ export function rejectPaymentClaim(
 }
 
 export function recordPayment(db: Database, actorId: ID, input: PaymentInput): Payment {
+  if (input.claimId) {
+    const claim = (db.paymentClaims ?? []).find((c) => c.id === input.claimId);
+    if (!claim) throw new OperationError('Payment claim not found.', 404, 'not_found');
+    if (claim.status !== 'awaiting_verification') throw new OperationError('That payment claim has already been reviewed.', 409, 'already_state');
+    // All entry points use the immutable submitted claim, not client-supplied
+    // copies of its amount, reference, method, booking or attachment.
+    input = { ...input, reservationId: claim.reservationId, amount: claim.amount,
+      method: claim.method, reference: claim.reference, paidAt: claim.paidAt, proof: claim.proof };
+  }
   const r = db.reservations.find((x) => x.id === input.reservationId);
   if (!r) throw new OperationError('Reservation not found.', 404, 'not_found');
   if (r.status === 'cancelled') {
@@ -1058,7 +1081,7 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
   const amount = Math.round(Number(input.amount) * 100) / 100;
   if (!(amount > 0)) throw new OperationError('Enter an amount greater than zero.', 422, 'validation');
   const methodSetting = db.settings.payments.methods.find((m) => m.id === input.method);
-  if (!methodSetting?.enabled) throw new OperationError(`${methodSetting?.label ?? 'That method'} is switched off in Settings → Payments.`, 422, 'method_disabled');
+  if (!methodSetting || (!methodSetting.enabled && !input.claimId)) throw new OperationError(`${methodSetting?.label ?? 'That method'} is switched off in Settings → Payments.`, 422, 'method_disabled');
 
   const existingVerified = db.payments
     .filter((p) => p.reservationId === r.id && p.verificationStatus === 'verified' && p.kind !== 'refund')
@@ -1186,7 +1209,8 @@ export function recordPayment(db: Database, actorId: ID, input: PaymentInput): P
 
   recomputeReservation(db, r.id);
   if (payment.verificationStatus === 'verified') {
-    issueOfficialReceipt(db, payment, resolvedName);
+    const receipt = issueOfficialReceipt(db, payment, resolvedName);
+    notifyGuest(db, r, 'payment_verified', `Payment verified · ${r.reference}`, `Your payment has been verified. Receipt ${receipt.receiptNumber} is ready.`, `/receipt/${receipt.id}`);
   }
 
   appendAuditLog(db, {
@@ -1247,7 +1271,7 @@ export function setPaymentVerification(
 ): Payment {
   const p = db.payments.find((x) => x.id === paymentId);
   if (!p) throw new OperationError('Payment not found.', 404, 'not_found');
-  if (p.verificationStatus === status) throw new OperationError(`That receipt is already ${status}.`, 409, 'already_state');
+  if (p.verificationStatus !== 'pending') throw new OperationError('Only pending payments may be verified or rejected. Use the refund process to reverse a verified payment.', 409, 'already_state');
   const verifierName = actorName(db, actorId);
   const beforeStatus = p.verificationStatus;
   p.verificationStatus = status;
@@ -1273,27 +1297,12 @@ export function setPaymentVerification(
     });
     recomputeReservation(db, r.id);
     if (status === 'verified') {
-      issueOfficialReceipt(db, p, verifierName);
+      const receipt = issueOfficialReceipt(db, p, verifierName);
+      notifyGuest(db, r, 'payment_verified', `Payment verified · ${r.reference}`, `Your payment has been verified. Receipt ${receipt.receiptNumber} is ready.`, `/receipt/${receipt.id}`);
     }
-    const guest = db.guests.find((g) => g.id === r.guestId);
-    if (guest && db.settings.notifications.sendPaymentConfirmation) {
-      draftNotification(db, {
-        event: status === 'verified' ? 'payment_verified' : 'payment_rejected',
-        channel: 'in_app',
-        title:
-          status === 'verified'
-            ? `Payment verified · ${r.reference} (${p.receiptNumber ?? p.reference})`
-            : `Payment rejected · ${r.reference}`,
-        body:
-          status === 'verified'
-            ? `Payment of K${p.amount.toLocaleString('en-US')} (${p.method.replace(/_/g, ' ')}) verified by ${verifierName}. Official receipt ${p.receiptNumber ?? ''} issued.`
-            : `Payment of K${p.amount.toLocaleString('en-US')} (${p.method.replace(/_/g, ' ')}) was rejected: ${p.verificationNote}`,
-        recipientName: guest.fullName,
-        recipientContact: guest.phone,
-        guestId: guest.id,
-        reservationId: r.id,
-        apartmentId: r.apartmentId,
-      });
+    if (status === 'rejected') {
+      notifyGuest(db, r, 'payment_rejected', `Payment rejected · ${r.reference}`,
+        `Payment of K${p.amount.toLocaleString('en-US')} was rejected: ${p.verificationNote}`);
     }
   }
 
@@ -1822,7 +1831,7 @@ export function setStaffPermissions(
 export function markNotification(db: Database, id: ID, patch: { read?: boolean; delivered?: boolean; note?: string; actor?: string }): NotificationRecord {
   const n = db.notifications.find((x) => x.id === id);
   if (!n) throw new OperationError('Notification not found.', 404, 'not_found');
-  if (patch.read) n.readAt = nowISO();
+  if (patch.read !== undefined) n.readAt = patch.read ? nowISO() : null;
   if (patch.delivered) {
     n.deliveryStatus = 'delivered_manually';
     n.markedDeliveredAt = nowISO();
@@ -1919,6 +1928,7 @@ export function runReminderSweep(db: Database): { created: number; skipped: numb
           reservationId: r.id,
           apartmentId: r.apartmentId,
         });
+        notifyGuest(db, r, 'checkin_reminder', `Check-in reminder · ${r.reference}`, `Your check-in is on ${formatMediumDate(r.checkIn)} from ${db.settings.booking.checkInTime}.`);
         created += 1;
       }
     }
@@ -1940,6 +1950,7 @@ export function runReminderSweep(db: Database): { created: number; skipped: numb
           reservationId: r.id,
           apartmentId: r.apartmentId,
         });
+        notifyGuest(db, r, 'checkout_reminder', `Check-out reminder · ${r.reference}`, `Your check-out is on ${formatMediumDate(r.checkOut)} by ${db.settings.booking.checkOutTime}.`);
         created += 1;
       }
     }

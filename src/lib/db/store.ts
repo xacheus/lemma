@@ -53,18 +53,14 @@ function upgradeRenamedDefaults(db: Database) {
     if (section && section[rule.field] === rule.from) section[rule.field] = rule.to;
   }
 
-  const methods = db.settings?.payments?.methods;
-  if (Array.isArray(methods)) {
-    for (const method of methods) {
-      if (
-        method?.id === 'bank_transfer' &&
-        method.accountNumber ===
-          'Lemma Apartments — account details are confirmed by reception before any transfer is made'
-      ) {
-        method.accountNumber =
-          'Lemma Apartments. Account details are confirmed by reception before any transfer is made';
-      }
-    }
+  // Remove only legacy placeholder destinations supplied by the application, not
+  // administrator-entered payment details.
+  for (const method of db.settings?.payments?.methods ?? []) {
+    if (method.id === 'bank_transfer' && [
+      'Lemma Apartments — account details are confirmed by reception before any transfer is made',
+      'Lemma Apartments. Account details are confirmed by reception before any transfer is made',
+    ].includes(method.accountNumber)) method.accountNumber = '';
+    if (method.id === 'cash' && method.accountNumber === 'Front Office Till 1') method.accountNumber = '';
   }
 }
 

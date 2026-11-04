@@ -768,6 +768,7 @@ export interface NotificationRecord {
   title: string;
   body: string;
   recipientUid?: ID | null;
+  href?: string | null;
   recipientName: string;
   recipientContact: string;
   guestId: ID | null;
@@ -794,6 +795,17 @@ export interface PaymentMethodSetting {
   instructions: string;
   accountLabel: string;
   accountNumber: string;
+  networkName?: string;
+  recipientName?: string;
+  mobileNumber?: string;
+  merchantCode?: string;
+  agentCode?: string;
+  businessName?: string;
+  bankName?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  bankBranch?: string;
+  additionalInstructions?: string;
 }
 
 export interface ChannelSetting {

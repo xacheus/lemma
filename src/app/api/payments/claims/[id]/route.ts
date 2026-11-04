@@ -36,6 +36,7 @@ export const GET = apiRoute({
 
 export const PATCH = apiRoute({
   permission: 'payments.verify',
+  roles: ['admin', 'super_admin'],
   handler: async ({ req, session, params }) => {
     const body = await readBody(req, guestPaymentClaimReviewSchema);
     if (body.status !== 'rejected') {

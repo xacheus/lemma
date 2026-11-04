@@ -7,6 +7,12 @@ import type {
   Settings,
 } from './types';
 
+export type PricingSettings = {
+  booking: Pick<Settings['booking'], 'taxesIncluded' | 'depositPercent'>;
+  tax?: Settings['tax'];
+  property: Pick<Settings['property'], 'taxPayerId'>;
+};
+
 export interface NightPriceBreakdown {
   date: string;
   rate: number;
@@ -59,7 +65,7 @@ function isWeekendNight(isoDate: string): boolean {
  */
 export function calculateStayPricing(args: {
   apartment: Apartment;
-  settings: Settings;
+  settings: PricingSettings;
   checkIn: string;
   checkOut: string;
   guestCount: number;
@@ -270,7 +276,7 @@ export function calculateStayPricing(args: {
   };
 }
 
-function emptyPricing(settings: Settings): StayPricingResult {
+function emptyPricing(settings: PricingSettings): StayPricingResult {
   const taxCfg = settings.tax ?? {
     enabled: false,
     name: 'VAT',

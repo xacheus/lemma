@@ -88,11 +88,8 @@ export async function POST(req: Request) {
         contactWhatsapp: db.settings.property.whatsapp,
         payment: chosen && !sample
           ? {
+              ...chosen,
               method: chosen.id,
-              label: chosen.label,
-              instructions: chosen.instructions,
-              accountLabel: chosen.accountLabel,
-              accountNumber: chosen.accountNumber,
               totalAmount: quote.totalAmount,
               depositPercent: quote.depositPercent,
               suggestedAmount: quote.suggestedAmount,

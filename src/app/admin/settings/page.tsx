@@ -235,6 +235,7 @@ export default function SettingsPage() {
         </Panel>
 
         <Panel title="Money" subtitle="Where guests pay and how a receipt becomes a payment" bodyClass="p-4 space-y-3">
+          <Link href="/admin/payment-methods" className="link">Open Payment Methods for full destination details</Link>
           {draft.payments.methods.map((m, index) => (
             <div key={m.id} className="rounded-xl border border-sand-200 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">

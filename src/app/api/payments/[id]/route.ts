@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 
 export const PATCH = apiRoute({
   permission: 'payments.verify',
+  roles: ['admin', 'super_admin'],
   handler: async ({ req, session, params }) => {
     const patch = await readBody(req, paymentVerifySchema);
     return runAtomicTransaction((db) => ({

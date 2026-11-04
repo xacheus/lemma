@@ -1,3 +1,5 @@
+import { DEFAULT_SETTINGS } from '../db/default-settings';
+import { publicPaymentMethod } from '../domain/payment-details';
 import type {
   Apartment,
   AuditLogRecord,
@@ -221,11 +223,15 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
         (rc.reservationId && myReservationIds.has(rc.reservationId)) ||
         (rc.guestId && myGuestIds.has(rc.guestId)),
     );
-    const myNotifications = db.notifications.filter(
-      (n) =>
-        (n.reservationId && myReservationIds.has(n.reservationId)) ||
-        (n.guestId && myGuestIds.has(n.guestId)),
-    );
+    const myNotifications = db.notifications.filter((n) => {
+      if (n.recipientUid) return n.recipientUid === user.id;
+      // Legacy records did not store a UID. Only expose records addressed to the
+      // guest, not reception's internal messages about that same booking.
+      const ownsBooking = Boolean(n.reservationId && myReservationIds.has(n.reservationId));
+      const guest = db.guests.find((g) => g.id === n.guestId);
+      return Boolean(guest && n.recipientName === guest.fullName &&
+        (ownsBooking || (!n.reservationId && myGuestIds.has(guest.id))));
+    });
 
     const publicApts: ApartmentSummary[] = db.apartments
       .filter((a) => a.active && a.publicationStatus !== 'draft')
@@ -247,7 +253,13 @@ export function buildSnapshot(db: Database, sessionOrUser: Session | StaffUser):
       account,
       permissions: [...permissions],
       today,
-      settings: db.settings,
+      // The guest portal needs a contact number and public payment information,
+      // never the property's disabled destinations or internal policies.
+      settings: {
+        ...structuredClone(DEFAULT_SETTINGS),
+        property: { ...structuredClone(DEFAULT_SETTINGS.property), whatsapp: db.settings.property.whatsapp },
+        payments: { ...structuredClone(DEFAULT_SETTINGS.payments), methods: db.settings.payments.methods.filter((m) => m.enabled).map((m) => ({ ...publicPaymentMethod(m), enabled: true })) },
+      },
       apartments: publicApts,
       cleaningState: {},
       guests: myGuests,

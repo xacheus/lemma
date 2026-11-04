@@ -189,6 +189,7 @@ export const NAV_SECTIONS: {
   { href: '/admin/media', label: 'Media Library', permission: 'media.view', group: 'property' },
   { href: '/admin/guests', label: 'Guests', permission: 'guests.view', group: 'property' },
   { href: '/admin/payments', label: 'Payments', permission: 'payments.view', group: 'commercial' },
+  { href: '/admin/payment-methods', label: 'Payment Methods', permission: 'settings.manage', group: 'commercial' },
   { href: '/admin/quotations', label: 'Quotations', permission: 'quotations.view', group: 'commercial' },
   { href: '/admin/invoices', label: 'Invoices', permission: 'invoices.view', group: 'commercial' },
   { href: '/admin/reports', label: 'Reports', permission: 'reports.view', group: 'commercial' },
