@@ -103,7 +103,7 @@ export default function RegisterPage() {
   const taken = error?.includes('already exists') ?? false;
 
   return (
-    <main className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+    <main className="grid grid-cols-1 min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <div className="relative hidden flex-col justify-between bg-navy-900 px-10 py-10 text-white lg:flex">
         <Link href="/" className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -56,12 +56,12 @@ export default function DashboardPage() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-9 w-56" />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }, (_, i) => (
             <Skeleton key={i} className="h-[6.5rem]" />
           ))}
         </div>
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <Skeleton className="h-64 lg:col-span-2" />
           <Skeleton className="h-64" />
         </div>
@@ -101,7 +101,7 @@ export default function DashboardPage() {
           subtitle="Three records make the rest of this workspace work"
           bodyClass="p-4"
         >
-          <ol className="grid gap-3 sm:grid-cols-3">
+          <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
               {
                 href: '/admin/apartments',
@@ -137,7 +137,7 @@ export default function DashboardPage() {
       ) : null}
 
       {metrics.pendingVerification > 0 || metrics.openMaintenance > 0 ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {metrics.pendingVerification > 0 ? (
             <Link href="/admin/payments?filter=pending">
               <Alert tone="warn" title={`${formatKwacha(metrics.pendingVerification)} recorded but not verified`}>
@@ -155,7 +155,7 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={BedDouble} label="Total apartments" value={String(snap.total)} foot={
             <span>
               <Link href="/admin/apartments" className="font-semibold text-teal-600 hover:underline">
@@ -199,7 +199,7 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Panel
           title="Revenue banked — last 14 days"
           subtitle="Verified receipts only: mobile money, EFT and cash counted at the desk, net of refunds."
@@ -210,7 +210,7 @@ export default function DashboardPage() {
           }
         >
           <AreaChart data={metrics.revenueDaily.map((d) => ({ label: d.label, value: d.value, sub: `${d.weekday} ${d.label}` }))} format={(n) => formatKwacha(n)} />
-          <div className="mt-3 grid grid-cols-3 gap-3 border-t border-sand-200 pt-3 text-[0.78rem]">
+          <div className="mt-3 grid grid-cols-1 gap-3 border-t sm:grid-cols-3 border-sand-200 pt-3 text-[0.78rem]">
             <Metric label="This month" value={formatKwacha(metrics.monthRevenue)} />
             <Metric label="Awaiting verification" value={formatKwacha(metrics.pendingVerification)} tone={metrics.pendingVerification ? 'warn' : undefined} />
             <Metric label="Outstanding balances" value={`${formatKwacha(metrics.outstandingTotal)} · ${metrics.outstandingCount} folios`} tone={metrics.outstandingCount ? 'warn' : undefined} />
@@ -226,7 +226,7 @@ export default function DashboardPage() {
         </Panel>
       </section>
 
-      <section className="grid gap-3 lg:grid-cols-3">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <Panel
           title="Arrivals today"
           subtitle={`${metrics.checkInsToday.length} guest${metrics.checkInsToday.length === 1 ? '' : 's'} expected`}
@@ -361,7 +361,7 @@ export default function DashboardPage() {
         </Panel>
       </section>
 
-      <section className="grid gap-3 lg:grid-cols-[1.1fr_1fr]">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <Panel
           title="Next seven days"
           subtitle="Confirmed arrivals only — enquiries and cancellations are excluded"
@@ -373,7 +373,8 @@ export default function DashboardPage() {
           }
         >
           {metrics.upcoming.length ? (
-            <table className="w-full text-[0.82rem]">
+            <div className="responsive-table-container">
+            <table className="responsive-table w-full text-[0.82rem]">
               <thead>
                 <tr className="border-b border-sand-200 text-left">
                   <th className="th pb-2">Arrival</th>
@@ -385,21 +386,22 @@ export default function DashboardPage() {
               <tbody className="divide-y divide-sand-100">
                 {metrics.upcoming.map((r) => (
                   <tr key={r.id} className="row-hover">
-                    <td className="td">
+                    <td data-label="Arrival" className="td">
                       <Link href={`/admin/reservations/${r.id}`} className="font-semibold text-navy-800 hover:text-teal-600">
                         {relativeDayLabel(r.checkIn, snapshot.today)}
                       </Link>
                       <span className="block text-[0.72rem] text-navy-400">{formatMediumDate(r.checkIn)} · {r.nights}N</span>
                     </td>
-                    <td className="td">{r.guest?.fullName}</td>
-                    <td className="td text-navy-500">Apt {r.apartment?.number}</td>
-                    <td className="td text-right tabular-nums">
+                    <td data-label="Guest" className="td">{r.guest?.fullName}</td>
+                    <td data-label="Apartment" className="td text-navy-500">Apt {r.apartment?.number}</td>
+                    <td data-label="Balance" className="td text-right tabular-nums">
                       {r.balanceDue > 0 ? <span className="font-semibold text-navy-800">{formatKwacha(r.balanceDue)}</span> : <span className="text-st-available">settled</span>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <EmptyState icon={CalendarDays} title="Nothing arriving in the next week" body="The forward calendar is quiet — a good moment for the corporate rate push." />
           )}

@@ -344,7 +344,7 @@ export function GuestClaimQueue() {
       >
         {viewing ? (
           <div className="space-y-3">
-            <dl className="grid gap-x-4 gap-y-1.5 text-[0.82rem] sm:grid-cols-2">
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-[0.82rem] sm:grid-cols-2">
               {[
                 ['Guest', reservationFor(viewing)?.guest?.fullName ?? 'Unknown guest'],
                 ['Booking', reservationFor(viewing)?.reference ?? '—'],

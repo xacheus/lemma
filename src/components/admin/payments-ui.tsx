@@ -111,14 +111,14 @@ export function PaymentDialog({
       }
     >
       <form id="payment-form" onSubmit={submit} className="space-y-4">
-        <div className="grid gap-2 rounded-xl border border-sand-200 bg-sand-50/60 p-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 rounded-xl border border-sand-200 bg-sand-50/60 p-3 sm:grid-cols-4">
           <Figure label="Folio total" value={formatKwacha(reservation.totalAmount)} />
           <Figure label="Verified banked" value={formatKwacha(reservation.verifiedPaid)} tone="good" />
           <Figure label="Awaiting verification" value={formatKwacha(reservation.pendingVerification)} tone={reservation.pendingVerification ? 'warn' : undefined} />
           <Figure label="Balance due" value={formatKwacha(reservation.balanceDue)} tone={reservation.balanceDue ? 'bad' : 'good'} />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <MoneyInput label="Amount received" required value={amount} onValueChange={(n) => setAmount(String(n))} error={errors.amount} hint={reservation.depositDue ? `Policy deposit is ${formatKwacha(reservation.depositDue)}` : undefined} />
           <SelectInput
             label="Payment method"
@@ -258,7 +258,7 @@ export function VerificationDialog({
       }
     >
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
           <div className="space-y-2">
             <Row label="Amount claimed" value={<span className="text-[1.15rem] font-bold tabular-nums text-navy-800">{formatKwacha(payment.amount)}</span>} />
             <Row label="Method" value={PAYMENT_METHOD_META[payment.method].label} />
@@ -414,7 +414,7 @@ export function MessageComposer({
       }
     >
       <div className="space-y-3.5">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <TextInput label="Recipient" value={recipient} onChange={(e) => setTitle(`Message to ${e.target.value.split(' ')[0] || 'guest'}`)} disabled />
           <TextInput label="Contact number" value={contact} onChange={() => {}} disabled hint={channel === 'email' ? 'Email address shown here is the guest’s mobile — switch channel to correct it' : undefined} />
         </div>

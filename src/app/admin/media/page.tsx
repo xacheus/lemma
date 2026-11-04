@@ -169,7 +169,7 @@ export default function AdminMediaPage() {
           <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
             <Upload size={16} className="text-lemma-dark" /> Upload Photographs or PDF Documents
           </h2>
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <div className="sm:col-span-2">
               <label className="label mb-1 block">Select Image(s) or PDF (Max 10MB / 15MB)</label>
               <input
@@ -211,7 +211,7 @@ export default function AdminMediaPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className="label mb-1 block">Title</label>
               <input
@@ -249,12 +249,12 @@ export default function AdminMediaPage() {
 
       {/* Filters */}
       <div className="card flex flex-wrap items-center gap-3 p-4">
-        <div>
+        <div className="min-w-0 max-w-full">
           <label className="label mb-1 block">Filter by Apartment</label>
           <select
             value={aptFilter}
             onChange={(e) => setAptFilter(e.target.value)}
-            className="field w-auto"
+            className="field w-full sm:w-auto"
           >
             <option value="all">All Apartments &amp; Property</option>
             {snapshot.apartments.map((a) => (
@@ -264,12 +264,12 @@ export default function AdminMediaPage() {
             ))}
           </select>
         </div>
-        <div>
+        <div className="min-w-0 max-w-full">
           <label className="label mb-1 block">Filter by Category</label>
           <select
             value={catFilter}
             onChange={(e) => setCatFilter(e.target.value)}
-            className="field w-auto"
+            className="field w-full sm:w-auto"
           >
             <option value="all">All Categories</option>
             <option value="apartment">Apartment Gallery</option>
@@ -286,7 +286,7 @@ export default function AdminMediaPage() {
           <h3 className="text-[0.95rem] font-semibold text-navy-900">
             Gallery Sequence — Apt {selectedApartmentForReorder.number} ({selectedApartmentForReorder.name})
           </h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {selectedApartmentForReorder.gallery.map((g, idx) => (
               <div key={g.id} className="rounded-md border border-sand-200 p-2.5 space-y-2">
                 <PhotoFrame src={g.url} alt={g.title} ratio="16 / 10" variant="thumbnail" />
@@ -327,7 +327,7 @@ export default function AdminMediaPage() {
       ) : null}
 
       {/* Central Media Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {mediaItems.map((item) => (
           <div key={item.id} className="card flex flex-col overflow-hidden">
             {item.mediaType === 'document' ? (
@@ -411,8 +411,8 @@ export default function AdminMediaPage() {
 
       {/* Preview Lightbox */}
       {previewItem ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/75 p-4">
-          <div className="card w-full max-w-3xl overflow-hidden p-4 space-y-3">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/75 p-4">
+          <div className="card my-auto w-full max-w-3xl overflow-hidden p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[1rem] font-semibold text-navy-900">{previewItem.title}</h3>
@@ -454,8 +454,8 @@ export default function AdminMediaPage() {
 
       {/* Edit Metadata Modal */}
       {editItem ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 p-4">
-          <form onSubmit={handleSaveEdit} className="card w-full max-w-md space-y-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/50 p-4">
+          <form onSubmit={handleSaveEdit} className="card my-auto w-full max-w-md space-y-4 p-4 sm:p-6">
             <h3 className="text-[1.05rem] font-semibold text-navy-900">Edit Media Details</h3>
             <div>
               <label className="label mb-1 block">Title</label>
@@ -475,7 +475,7 @@ export default function AdminMediaPage() {
                 className="field"
               />
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setEditItem(null)}

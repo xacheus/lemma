@@ -47,7 +47,7 @@ export default async function FolioPrintPage({ params }: { params: Promise<{ id:
     >
       <PrintHeader property={p} documentLabel="Guest folio" documentNumber={view.reference} issuedOn={formatMediumDate(db.__today)} />
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <p className="print-label">Guest</p>
           <p className="mt-1 text-[1.05rem] font-semibold text-navy-900">{view.guest?.fullName ?? '—'}</p>
@@ -190,7 +190,7 @@ export default async function FolioPrintPage({ params }: { params: Promise<{ id:
       </section>
 
       {view.notes || view.guest?.specialRequests ? (
-        <section className="mt-6 grid gap-4 sm:grid-cols-2">
+        <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {view.notes ? (
             <div>
               <p className="print-label mb-1">Desk notes</p>

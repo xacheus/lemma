@@ -230,7 +230,7 @@ export default function ReservationDetailPage() {
         </Alert>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <div className="space-y-3">
           <Panel title="Stay" icon={CalendarClock}>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[0.84rem] sm:grid-cols-3">

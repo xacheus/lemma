@@ -174,7 +174,7 @@ export default async function HomePage({
             <form
               action="/apartments"
               method="get"
-              className="grid gap-3 rounded-lg border border-sand-200 bg-sand-50/60 p-3.5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.8fr_auto] lg:items-end"
+              className="grid grid-cols-1 gap-3 rounded-lg border border-sand-200 bg-sand-50/60 p-3.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] lg:items-end"
             >
               <div>
                 <label className="label mb-1 block" htmlFor="home-checkin">
@@ -275,7 +275,7 @@ export default async function HomePage({
               </div>
             </div>
           ) : (
-            <div className="stagger mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="stagger mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {published.map((apt) => {
                 const hit = hitById.get(apt.id);
                 const fits = apt.maxGuests >= guests;
@@ -397,7 +397,7 @@ export default async function HomePage({
 
         {/* ------------------------------------------------------- what's included */}
         <Reveal as="section" className="border-y border-sand-200 bg-sand-50">
-          <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:px-8">
+          <div className="mx-auto grid grid-cols-1 max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:px-8">
             <div>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
                 What every apartment includes
@@ -410,7 +410,7 @@ export default async function HomePage({
                 the nightly rate. There is no separate service charge at check-out.
               </p>
 
-              <dl className="mt-6 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <dl className="mt-6 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                 {[
                   { icon: Wifi, title: 'Wi-Fi included', body: 'Working internet in every apartment, suitable for calls.' },
                   { icon: Zap, title: 'Backup power', body: 'Lights, internet and the fridge stay on through an outage.' },
@@ -430,7 +430,7 @@ export default async function HomePage({
               </dl>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {featuredPhotos.slice(0, 3).map((photo, i) => (
                 <div key={`${photo}-${i}`} className={i === 2 ? 'sm:col-span-2' : ''}>
                   <div className="relative overflow-hidden rounded-md">
@@ -454,7 +454,7 @@ export default async function HomePage({
 
         {/* -------------------------------------------------------------- find us */}
         <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr]">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="rounded-lg border border-sand-200 bg-white p-6 sm:p-8">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-lemma-dark">
                 Reception

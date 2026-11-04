@@ -246,7 +246,7 @@ export default function HousekeepingPage() {
       </div>
 
       {view === 'board' ? (
-        <div className="grid gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
           {COLUMNS.map((column) => {
             const items = tasks.filter((t) => t.status === column.status);
             const Icon = column.icon;
@@ -365,7 +365,7 @@ export default function HousekeepingPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <Panel title="Team workload" subtitle="Open jobs per cleaner today, counted from the board above" bodyClass="divide-y divide-sand-100">
           {cleaners.length ? (
             cleaners.map((c) => {
@@ -645,7 +645,7 @@ function ScheduleJobModal({ open, onClose }: { open: boolean; onClose: () => voi
       }
       size="md"
     >
-      <div className="grid gap-3.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
         <SelectInput
           label="Apartment"
           value={draft.apartmentId}

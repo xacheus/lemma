@@ -53,8 +53,8 @@ export function ReservationTable({
   );
 
   return (
-    <div className="scroll-slim overflow-x-auto">
-      <table className="w-full min-w-[62rem] border-collapse">
+    <div className="responsive-table-container scroll-slim overflow-x-auto">
+      <table className="responsive-table w-full min-w-[62rem] border-collapse">
         <thead className="bg-sand-50/80">
           <tr className="border-b border-sand-200">
             <Header label="Reference" />
@@ -81,43 +81,43 @@ export function ReservationTable({
                 className={`row-hover ${isToday ? 'bg-gold-50/40' : ''} ${hovered === r.id && onOpen ? 'cursor-pointer' : ''}`}
                 onClick={() => onOpen?.(r)}
               >
-                <td className="td whitespace-nowrap">
+                <td data-label="Reference" className="td whitespace-nowrap">
                   <span className="font-mono text-[0.76rem] font-semibold text-navy-700">{r.reference}</span>
                   {r.isTodayCheckIn ? <span className="ml-1.5 chip bg-teal-50 text-teal-700">in today</span> : null}
                   {r.isTodayCheckOut ? <span className="ml-1.5 chip bg-sand-200 text-navy-600">out today</span> : null}
                 </td>
-                <td className="td">
+                <td data-label="Guest" className="td">
                   <span className="block max-w-[14rem] truncate font-semibold text-navy-800">{r.guest?.fullName ?? '—'}</span>
                   {!compact && r.guest?.company ? <span className="block max-w-[14rem] truncate text-[0.72rem] text-navy-400">{r.guest.company}</span> : null}
                   {!compact && r.guest?.phone ? <span className="block text-[0.72rem] tabular-nums text-navy-400">{r.guest.phone}</span> : null}
                 </td>
-                <td className="td">
+                <td data-label="Apartment" className="td">
                   <span className="block font-medium text-navy-700">Apt {r.apartment?.number}</span>
                   <span className="block max-w-[11rem] truncate text-[0.74rem] text-navy-400">{r.apartment?.name}</span>
                 </td>
-                <td className="td whitespace-nowrap">
+                <td data-label="Stay" className="td whitespace-nowrap">
                   <span className="block text-[0.8rem] text-navy-700">{stay}</span>
                   <span className="block text-[0.72rem] text-navy-400">
                     {r.nights} night{r.nights === 1 ? '' : 's'} · {r.guestCount} guest{r.guestCount > 1 ? 's' : ''} ·{' '}
                     {r.checkIn < today ? 'in progress' : relativeDayLabel(r.checkIn, today)}
                   </span>
                 </td>
-                <td className="td text-[0.78rem] text-navy-500">{SOURCE_META[r.source]}</td>
-                <td className="td">
+                <td data-label="Source" className="td text-[0.78rem] text-navy-500">{SOURCE_META[r.source]}</td>
+                <td data-label="Booking" className="td">
                   <StatusChip className={BOOKING_STATUS_META[r.status].chip}>{BOOKING_STATUS_META[r.status].label}</StatusChip>
                 </td>
-                <td className="td">
+                <td data-label="Payment" className="td">
                   <StatusChip className={PAYMENT_STATUS_META[r.paymentStatus].chip}>{PAYMENT_STATUS_META[r.paymentStatus].label}</StatusChip>
                   {r.pendingVerification > 0 ? <span className="mt-0.5 block text-[0.68rem] font-medium text-gold-700">{formatKwacha(r.pendingVerification)} unverified</span> : null}
                 </td>
-                <td className="td text-right tabular-nums">
+                <td data-label="Total" className="td text-right tabular-nums">
                   <span className="font-semibold text-navy-800">{formatKwacha(r.totalAmount)}</span>
                   {!compact ? <span className="block text-[0.7rem] text-navy-400">{formatKwacha(r.nightlyRate)}/night</span> : null}
                 </td>
-                <td className="td text-right tabular-nums">
+                <td data-label="Balance" className="td text-right tabular-nums">
                   {r.balanceDue > 0 ? <span className="font-semibold text-st-cancelled">{formatKwacha(r.balanceDue)}</span> : <span className="text-st-available">settled</span>}
                 </td>
-                <td className="td text-right">
+                <td data-label="" className="td text-right">
                   {linkToDetail ? (
                     <Link
                       href={`/admin/reservations/${r.id}`}
@@ -126,6 +126,10 @@ export function ReservationTable({
                     >
                       Open folio
                     </Link>
+                  ) : onOpen ? (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); onOpen(r); }} className="text-[0.75rem] font-semibold text-teal-600 hover:underline">
+                      Open reservation
+                    </button>
                   ) : null}
                 </td>
               </tr>

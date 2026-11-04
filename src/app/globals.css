@@ -426,3 +426,45 @@
   .fallback-hero-image { animation: none; opacity: 0; transform: none; }
   .fallback-hero-image-0 { opacity: 1; }
 }
+
+/* Intrinsic sizing: grid and flex children, fields and long user-supplied text
+   must be able to shrink without pushing the page wider than the viewport. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  body { overflow-wrap: anywhere; }
+  img, video, canvas, svg { max-width: 100%; }
+  input, select, textarea { min-width: 0; max-width: 100%; }
+}
+@layer components {
+  .card, .field { min-width: 0; max-width: 100%; }
+  .btn { max-width: 100%; }
+}
+
+/* Turn the shared data tables into labelled records, not clipped tables, on
+   narrow screens. Header controls remain available for sorting. */
+.responsive-table-container { container-type: inline-size; min-width: 0; }
+@container (max-width: 64rem) {
+  .responsive-table { min-width: 0; display: block; }
+  .responsive-table thead, .responsive-table tbody { display: block; }
+  .responsive-table thead tr { display: flex; flex-wrap: wrap; }
+  .responsive-table thead th { display: block; width: auto; padding: .4rem .65rem; }
+  .responsive-table thead th:not(:has(button)) { display: none; }
+  .responsive-table thead:has(button)::before { content: 'Sort by'; display: block; padding: .4rem .65rem 0; color: #707e91; font-size: .7rem; font-weight: 600; }
+  .responsive-table tbody tr { display: block; padding: .6rem .75rem; border-bottom: 1px solid #e3e7ed; }
+  .responsive-table tbody td { display: block; width: 100%; padding: .3rem 0; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  .responsive-table tbody td[data-label]:not([data-label=""])::before {
+    content: attr(data-label); display: block; color: #707e91; font-size: .67rem;
+    font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .responsive-table tbody .truncate { white-space: normal; overflow: visible; text-overflow: clip; max-width: none; }
+  .responsive-table tbody td > .flex { flex-wrap: wrap; }
+}
+
+/* The role matrix lives in a dashboard column, so use its own width rather
+   than the viewport to decide when the comparison table fits. */
+.permission-matrix-container { container-type: inline-size; min-width: 0; }
+.permission-matrix-table { display: none; }
+@container (min-width: 38rem) {
+  .permission-matrix-cards { display: none; }
+  .permission-matrix-table { display: table; }
+}

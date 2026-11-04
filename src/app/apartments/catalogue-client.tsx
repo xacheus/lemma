@@ -100,7 +100,7 @@ export function ApartmentsCatalogueClient({
       {/* Filter & Availability Bar */}
       <form
         onSubmit={applySearch}
-        className="card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6"
+        className="card grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6"
       >
         <div>
           <label className="label mb-1 block" htmlFor="cat-in">
@@ -220,7 +220,7 @@ export function ApartmentsCatalogueClient({
           </div>
         </div>
       ) : (
-      <div className="stagger grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="stagger grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((item) => {
           const { apartment: apt } = item;
           const detailHref = `/apartments/${apt.slug}?checkIn=${encodeURIComponent(initialCheckIn)}&checkOut=${encodeURIComponent(initialCheckOut)}&guests=${initialGuests}`;

@@ -78,7 +78,7 @@ export function CalendarBoard() {
   return (
     <div className="space-y-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button onClick={() => step(-1)} className="btn-secondary h-9 w-9 p-0" aria-label="Previous period">
             <ArrowLeft size={16} />
           </button>
@@ -138,7 +138,39 @@ export function CalendarBoard() {
           }}
         />
       ) : view === 'week' ? (
-        <div className="card overflow-hidden">
+        <div className="min-w-0">
+          <div className="space-y-3 xl:hidden">
+            {rows.map(({ apartment, cells }) => (
+              <section key={apartment.id} className="card p-3">
+                <Link href={`/admin/apartments/${apartment.id}`} className="block font-semibold text-navy-800 hover:text-teal-600">
+                  Apt {apartment.number} · {apartment.name}
+                </Link>
+                <p className="mb-2 text-[0.72rem] text-navy-400">{formatKwacha(apartment.nightlyRate)} · sleeps {apartment.maxGuests}</p>
+                <div className="divide-y divide-sand-100">
+                  {week.days.map((date) => {
+                    const cell = cells.find((c) => c.date === date);
+                    if (!cell) return null;
+                    const meta = DAY_STATUS_META[cell.status] ?? DAY_STATUS_META.available;
+                    return (
+                      <div key={date} className="flex flex-wrap items-center justify-between gap-2 py-2 text-[0.8rem]">
+                        <button className="font-semibold text-navy-700 hover:underline" onClick={() => { setAnchor(date); setView('day'); }}>
+                          {formatMediumDate(date)}{date === today ? ' · Today' : ''}
+                        </button>
+                        <button className={`rounded px-2 py-1 text-left ${meta.bg} ${meta.text}`} onClick={() => {
+                          if (cell.reservationId) openReservation(cell.reservationId);
+                          else if (can('reservations.create') && cell.status === 'available' && date >= today) shell.openBooking({ apartmentId: apartment.id, checkIn: date, checkOut: addISO(date, 2) });
+                          else { setAnchor(date); setView('day'); }
+                        }}>
+                          {cell.guestName ? `${cell.guestName} · ${meta.label}` : meta.label}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+          <div className="card hidden overflow-hidden xl:block">
           <div className="scroll-slim overflow-x-auto">
             <table className="w-full min-w-[52rem] border-collapse">
               <thead>
@@ -191,6 +223,7 @@ export function CalendarBoard() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </div>
       ) : (
@@ -282,14 +315,27 @@ function MonthGrid({
 
   return (
     <div className="card overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-sand-200 bg-sand-50/80">
+      <div className="divide-y divide-sand-100 sm:hidden">
+        {weeks.flat().map((date) => {
+          const info = dayInfo(date);
+          return (
+            <button key={date} onClick={() => onPickDay(date)} className={`block w-full px-3 py-2 text-left ${date === today ? 'bg-gold-50' : ''}`}>
+              <span className="font-semibold text-navy-800">{formatMediumDate(date)}{date === today ? ' · Today' : ''}</span>
+              <span className="block text-[0.75rem] text-navy-500">{info.rate}% occupied · {info.occupied} in · {info.cleaning} cleaning · {info.available} free</span>
+              {info.arrivals.map((a) => <span key={`in-${a.id}`} className="block text-[0.75rem] text-st-reserved">Arrival: {a.name}</span>)}
+              {info.departures.map((a) => <span key={`out-${a.id}`} className="block text-[0.75rem] text-navy-500">Departure: {a.name}</span>)}
+            </button>
+          );
+        })}
+      </div>
+      <div className="hidden grid-cols-7 border-b border-sand-200 bg-sand-50/80 sm:grid">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
           <div key={d} className="px-2 py-1.5 text-center text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-navy-400">
             {d}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div className="hidden grid-cols-7 sm:grid">
         {weeks.flat().map((date) => {
           const info = dayInfo(date);
           const inMonth = date.slice(0, 7) === anchor.slice(0, 7);
@@ -391,19 +437,19 @@ function DayColumn({
   const tasks = snapshot.housekeeping.filter((t) => t.date === date);
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <div className="card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sand-200 bg-sand-50/70 px-4 py-2.5">
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button onClick={() => onDate(addISO(date, -1))} className="btn-secondary h-8 w-8 p-0" aria-label="Previous day">
               <ArrowLeft size={14} />
             </button>
-            <p className="min-w-[11rem] px-1 text-[0.86rem] font-semibold text-navy-800">{formatLongDate(date)}</p>
+            <p className="px-1 text-[0.86rem] font-semibold text-navy-800">{formatLongDate(date)}</p>
             <button onClick={() => onDate(addISO(date, 1))} className="btn-secondary h-8 w-8 p-0" aria-label="Next day">
               <ArrowRight size={14} />
             </button>
           </div>
-          <div className="flex items-center gap-1.5 text-[0.72rem]">
+          <div className="flex flex-wrap items-center gap-1.5 text-[0.72rem]">
             {(['available', 'reserved', 'occupied', 'cleaning', 'maintenance'] as const).map((k) => {
               const count = apartments.filter((a) => dayStatus(source, a, date, snapshot.today).status === k).length;
               return (
@@ -423,7 +469,7 @@ function DayColumn({
             return (
               <li key={apartment.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
                 <span className={`h-9 w-1.5 shrink-0 rounded-full ${meta.bg}`} aria-hidden />
-                <div className="w-[11rem] shrink-0">
+                <div className="w-full min-w-0 sm:w-[11rem] sm:shrink-0">
                   <p className="text-[0.84rem] font-semibold text-navy-800">
                     Apt {apartment.number} · {apartment.name}
                   </p>
@@ -431,11 +477,11 @@ function DayColumn({
                     {formatKwacha(apartment.nightlyRate)} · sleeps {apartment.maxGuests} · {apartment.bedrooms || 'studio'} bed
                   </p>
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 w-full sm:flex-1">
                   {reservation ? (
-                    <button onClick={() => onOpen(reservation.id)} className="group flex w-full items-center gap-2 text-left">
+                    <button onClick={() => onOpen(reservation.id)} className="group flex w-full flex-wrap items-center gap-2 text-left">
                       <span className="min-w-0">
-                        <span className="block truncate text-[0.83rem] font-medium text-navy-700 group-hover:text-teal-600">
+                        <span className="block text-[0.83rem] font-medium text-navy-700 group-hover:text-teal-600">
                           {cell.guestName} · {reservation.nights}N · {formatKwacha(reservation.totalAmount)}
                         </span>
                         <span className="block text-[0.7rem] text-navy-400">

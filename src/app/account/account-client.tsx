@@ -495,7 +495,7 @@ export function GuestAccountClient({
 
       {/* Tab 2: Quotations, Invoices & Verified Receipts */}
       {tab === 'documents' ? (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="card p-5 space-y-3">
             <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
               <FileText size={16} className="text-lemma-dark" /> Quotations ({quotations.length})
@@ -688,8 +688,8 @@ export function GuestAccountClient({
       ) : null}
 
       {cancelTargetId ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 p-4">
-          <form onSubmit={submitCancelRequest} className="card w-full max-w-md space-y-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/50 p-4">
+          <form onSubmit={submitCancelRequest} className="card my-auto w-full max-w-md space-y-4 p-4 sm:p-6">
             <h3 className="text-[1.08rem] font-semibold text-navy-900">
               Request Booking Cancellation
             </h3>
@@ -714,7 +714,7 @@ export function GuestAccountClient({
             {cancelErr ? (
               <p className="text-[0.8rem] text-st-cancelled">{cancelErr}</p>
             ) : null}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setCancelTargetId(null)}

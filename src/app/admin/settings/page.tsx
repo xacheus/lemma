@@ -129,9 +129,9 @@ export default function SettingsPage() {
         reception tells guests, but this build does not yet police it. External integrations (mobile-money APIs, SMS aggregators, SMTP) are deliberately not connected.
       </Alert>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel title="Property identity" subtitle="Printed on receipts, folios and the guest-facing site" bodyClass="p-4 space-y-3.5">
-          <div className="grid gap-3.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <TextInput label="Trading name" value={draft.property.name} onChange={(e) => set('property', { name: e.target.value })} />
             <TextInput label="Legal name" value={draft.property.legalName} onChange={(e) => set('property', { legalName: e.target.value })} hint="Appears on receipts and bank instructions" />
             <TextInput label="Phone" value={draft.property.phone} onChange={(e) => set('property', { phone: e.target.value })} />
@@ -140,7 +140,7 @@ export default function SettingsPage() {
             <TextInput label="Website" value={draft.property.website} onChange={(e) => set('property', { website: e.target.value })} />
           </div>
           <TextInput label="Address line" value={draft.property.addressLine} onChange={(e) => set('property', { addressLine: e.target.value })} />
-          <div className="grid gap-3.5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             <TextInput label="City" value={draft.property.city} onChange={(e) => set('property', { city: e.target.value })} />
             <TextInput label="Country" value={draft.property.country} onChange={(e) => set('property', { country: e.target.value })} />
             <TextInput label="TPIN" value={draft.property.taxPayerId} onChange={(e) => set('property', { taxPayerId: e.target.value })} hint="ZRA tax payer ID" />
@@ -178,7 +178,7 @@ export default function SettingsPage() {
         </Panel>
 
         <Panel title="Booking rules" subtitle="These drive the availability engine and the quote on every new folio" bodyClass="p-4 space-y-3.5">
-          <div className="grid gap-3.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <TextInput
               label="Check-in from"
               type="time"
@@ -241,7 +241,7 @@ export default function SettingsPage() {
                   label={m.enabled ? 'Offered to guests' : 'Hidden'}
                 />
               </div>
-              <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
+              <div className="mt-2.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <TextInput
                   label="Label"
                   value={m.accountLabel}
@@ -284,7 +284,7 @@ export default function SettingsPage() {
               onChange={(on) => set('payments', { lockMethodToAdmin: on })}
               hint="Off (default) · the guest picks from the enabled channels above when they pay. On · reception assigns the channel and the guest only records what they paid."
             />
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <SelectInput
                 label="Default channel for guests"
                 value={draft.payments.defaultMethod ?? 'airtel_money'}
@@ -322,7 +322,7 @@ export default function SettingsPage() {
               onChange={(on) => set('payments', { requireVerification: on })}
               hint="Enforced · on, even a manager's entry sits in the queue until verified. Off, staff with payments.verify can bank cash at the desk immediately."
             />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextInput label="Receipt number prefix" value={draft.payments.receiptPrefix} onChange={(e) => set('payments', { receiptPrefix: e.target.value })} hint="Enforced · receipts print as PREFIX-YYYYMMDD-0001" />
             </div>
           </div>
@@ -355,7 +355,7 @@ export default function SettingsPage() {
             );
           })}
 
-          <div className="grid gap-3.5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             <TextInput label="Check-in reminder (days)" type="number" min={0} max={30} value={String(draft.notifications.checkInReminderDays)} onChange={(e) => set('notifications', { checkInReminderDays: Number(e.target.value) })} hint="Enforced by the sweep" />
             <TextInput label="Departure reminder (days)" type="number" min={0} max={30} value={String(draft.notifications.checkOutReminderDays)} onChange={(e) => set('notifications', { checkOutReminderDays: Number(e.target.value) })} />
             <TextInput label="Balance reminder (days before)" type="number" min={0} max={30} value={String(draft.notifications.balanceReminderDays)} onChange={(e) => set('notifications', { balanceReminderDays: Number(e.target.value) })} />
@@ -394,7 +394,7 @@ export default function SettingsPage() {
         </Panel>
 
         <Panel title="Housekeeping" subtitle="How turnovers are produced and paced" bodyClass="p-4 space-y-3.5">
-          <div className="grid gap-3.5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             <TextInput label="Turnaround allowance (min)" type="number" min={15} max={300} value={String(draft.housekeeping.turnaroundMinutes)} onChange={(e) => set('housekeeping', { turnaroundMinutes: Number(e.target.value) })} hint="Target time between departure and ready" />
             <TextInput label="Pre-arrival check (min)" type="number" min={0} max={120} value={String(draft.housekeeping.preArrivalInspectionMinutes)} onChange={(e) => set('housekeeping', { preArrivalInspectionMinutes: Number(e.target.value) })} hint="Built into the due time on new jobs" />
             <div className="flex items-end">
@@ -440,7 +440,7 @@ export default function SettingsPage() {
             }
             hint="Enforced · never hardcoded; turn off if rates are exempt or non-VAT registered"
           />
-          <div className="grid gap-3.5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             <TextInput
               label="Tax Label"
               value={draft.tax?.name ?? 'VAT'}
@@ -462,7 +462,7 @@ export default function SettingsPage() {
               onChange={(on) => set('tax', { ...(draft.tax ?? {}), inclusive: on } as Settings['tax'])}
             />
           </div>
-          <div className="grid gap-3.5 sm:grid-cols-3 border-t border-sand-100 pt-3">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3 border-t border-sand-100 pt-3">
             <TextInput
               label="Quotation Prefix"
               value={draft.documents?.quotationPrefix ?? 'QUO'}
@@ -528,7 +528,7 @@ export default function SettingsPage() {
               below to submit or update your listing accurately.
             </p>
           </div>
-          <div className="grid gap-3.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <TextInput
               label="Google Business Name"
               value={draft.googleBusiness?.businessName ?? draft.property.name}
@@ -603,7 +603,7 @@ export default function SettingsPage() {
         </Panel>
 
         <Panel title="Locale & data storage" subtitle="Where the live records are kept, and what this property currently holds" bodyClass="p-4 space-y-3.5">
-          <div className="grid gap-3.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <SelectInput
               label="Currency"
               value="ZMW"
@@ -614,7 +614,7 @@ export default function SettingsPage() {
             />
             <TextInput label="Currency symbol" value={draft.locale.currencySymbol} onChange={(e) => set('locale', { currencySymbol: e.target.value })} hint="Used in every money figure on screen and on paper" />
           </div>
-          <div className="grid gap-3.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <TextInput label="Time zone" value={draft.locale.timezone} disabled onChange={() => undefined} hint="Business date and day boundaries" />
             <TextInput label="Date style" value={draft.locale.dateStyle} disabled onChange={() => undefined} hint="day-month-year, as used in Zambia" />
           </div>

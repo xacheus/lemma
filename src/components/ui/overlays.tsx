@@ -49,7 +49,7 @@ export function Modal({
       <div
         ref={panel}
         tabIndex={-1}
-        className={`relative my-auto w-full ${width} overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-pop outline-none`}
+        className={`relative my-auto flex max-h-[calc(100dvh-2rem)] min-w-0 w-full ${width} flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-pop outline-none`}
       >
         <header className="flex items-start justify-between gap-4 border-b border-sand-200 bg-sand-50/60 px-5 py-3.5">
           <div className="min-w-0">
@@ -60,7 +60,7 @@ export function Modal({
             <X size={17} />
           </button>
         </header>
-        <div className="scroll-slim max-h-[calc(100vh-16rem)] overflow-y-auto px-5 py-4">{children}</div>
+        <div className="scroll-slim min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer ? <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-sand-200 bg-sand-50/60 px-5 py-3">{footer}</footer> : null}
       </div>
     </div>
@@ -90,7 +90,7 @@ export function Drawer({
   return (
     <div className="fixed inset-0 z-[65] flex justify-end bg-navy-950/40 no-print" role="dialog" aria-modal="true">
       <button className="absolute inset-0 cursor-default" aria-label="Close panel" onClick={onClose} tabIndex={-1} />
-      <aside className={`relative flex h-full w-full ${width} flex-col border-l border-sand-200 bg-white shadow-pop`}>
+      <aside className={`relative flex h-full min-w-0 w-full ${width} flex-col border-l border-sand-200 bg-white shadow-pop`}>
         <header className="flex items-start justify-between gap-4 border-b border-sand-200 px-5 py-4">
           <div className="min-w-0">
             <h2 className="text-[1rem] font-semibold text-navy-800">{title}</h2>
@@ -100,7 +100,7 @@ export function Drawer({
             <X size={17} />
           </button>
         </header>
-        <div className="scroll-slim flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="scroll-slim min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer ? <footer className="flex flex-wrap items-center gap-2 border-t border-sand-200 bg-sand-50/70 px-5 py-3">{footer}</footer> : null}
       </aside>
     </div>

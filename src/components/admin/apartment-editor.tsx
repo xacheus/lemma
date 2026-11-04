@@ -166,7 +166,7 @@ export function ApartmentEditor({
       <div className="space-y-4">
         {error ? <Alert tone="error" title="Not saved">{error}</Alert> : null}
 
-        <div className="grid gap-3.5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
           <TextInput label="Display name" required value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Deluxe Suite" />
           <SelectInput label="Tier" value={draft.tier} onChange={(e) => set({ tier: e.target.value })} options={TIERS} />
           <TextInput label="Unit code" value={apartment ? `${apartment.code} · Apt ${apartment.number}` : 'Assigned on save'} disabled onChange={() => undefined} hint={draft.id ? undefined : 'Numbers run in sequence.'} />
@@ -184,7 +184,7 @@ export function ApartmentEditor({
           placeholder="Shown to guests on the public site."
         />
 
-        <div className="grid gap-3.5 sm:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-5">
           <NumberField label="Sleeps" value={draft.maxGuests} min={1} max={12} onChange={(n) => set({ maxGuests: n })} />
           <NumberField label="Bedrooms" value={draft.bedrooms} min={0} max={8} onChange={(n) => set({ bedrooms: n })} />
           <NumberField label="Bathrooms" value={draft.bathrooms} min={1} max={6} onChange={(n) => set({ bathrooms: n })} />
@@ -192,7 +192,7 @@ export function ApartmentEditor({
           <MoneyInput label="Nightly rate" value={draft.nightlyRate} onValueChange={(n) => set({ nightlyRate: n })} hint="ZMW, per night" />
         </div>
 
-        <div className="grid gap-3.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <NumberField label="Size (m²)" value={draft.sizeSqm} min={8} max={600} onChange={(n) => set({ sizeSqm: n })} />
           <TextInput label="Bed configuration" value={draft.bedConfiguration} onChange={(e) => set({ bedConfiguration: e.target.value })} placeholder="1 king + 2 singles" />
         </div>
@@ -221,7 +221,7 @@ export function ApartmentEditor({
           )}
         </fieldset>
 
-        <div className="grid gap-3.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
           <TextArea label="House notes" value={draft.houseNotes} onChange={(e) => set({ houseNotes: e.target.value })} rows={3} maxLength={600} hint="Internal only — meter codes, quirks, key safe. Never shown to guests." />
           <div className="space-y-2">
             <CheckboxRow

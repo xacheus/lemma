@@ -29,7 +29,7 @@ export default async function ContactPage() {
           </p>
         </div>
 
-        <div className="stagger grid gap-8 lg:grid-cols-[1.05fr_1fr]">
+        <div className="stagger grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="space-y-6">
             <div className="card space-y-4 p-6">
               <div className="flex items-center gap-2.5 border-b border-sand-100 pb-3.5">
@@ -115,7 +115,7 @@ export default async function ContactPage() {
               <h2 className="text-[1.05rem] font-semibold text-navy-900">
                 Accepted ZMW Payment Channels
               </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {payments.methods
                   .filter((m) => m.enabled)
                   .map((m) => (

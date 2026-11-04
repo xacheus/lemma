@@ -324,7 +324,7 @@ export default function NotificationsPage() {
         <Pagination page={page} pages={pages} total={rows.length} perPage={PAGE_SIZE} onPage={setPage} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="What the property sends automatically" subtitle="Triggers wired into the register, and when they fire" bodyClass="p-4">
           <ul className="space-y-2 text-[0.82rem]">
             {[
