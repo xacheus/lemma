@@ -410,3 +410,19 @@
     padding: 0 !important;
   }
 }
+
+/* A quiet photographic fallback when no published apartment has images. */
+.fallback-hero-image { opacity: 0; animation: fallback-hero-cycle 21s infinite; }
+.fallback-hero-image-1 { animation-delay: 7s; }
+.fallback-hero-image-2 { animation-delay: 14s; }
+.fallback-hero:hover .fallback-hero-image,
+.fallback-hero:focus-within .fallback-hero-image { animation-play-state: paused; }
+@keyframes fallback-hero-cycle {
+  0%, 30% { opacity: 1; transform: scale(1.04); }
+  36%, 94% { opacity: 0; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fallback-hero-image { animation: none; opacity: 0; transform: none; }
+  .fallback-hero-image-0 { opacity: 1; }
+}

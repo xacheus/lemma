@@ -132,19 +132,31 @@ export default async function HomePage({
             totalApartments={published.length}
           />
         ) : (
-          <section className="border-b border-sand-200 bg-sand-50">
-            <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-lemma-dark">
+          <section className="fallback-hero relative isolate overflow-hidden bg-charcoal-950 text-white">
+            <div className="absolute inset-0" aria-hidden="true">
+              {['/images/apartments/apt-01/01.jpg', '/images/apartments/apt-02/01.jpg', '/images/apartments/apt-03/01.jpg'].map((src, index) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={src} src={src} alt="" className={`fallback-hero-image fallback-hero-image-${index} absolute inset-0 h-full w-full object-cover`} />
+              ))}
+              <div className="absolute inset-0 bg-gradient-to-r from-charcoal-950/90 via-charcoal-950/65 to-charcoal-950/30" />
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal-950/80 to-transparent" />
+            </div>
+            <div className="relative mx-auto flex min-h-[30rem] max-w-7xl flex-col justify-end px-4 py-14 sm:px-6 lg:min-h-[36rem] lg:px-8 lg:pb-20">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-white/70">
                 {property.addressLine} · {property.city}, {property.country}
               </p>
-              <h1 className="mt-3 max-w-3xl text-[2.15rem] font-semibold leading-[1.06] tracking-[-0.02em] text-navy-900 sm:text-[2.9rem]">
+              <h1 className="mt-4 max-w-3xl text-[2.15rem] font-semibold leading-[1.06] tracking-[-0.02em] sm:text-[2.9rem]">
                 Furnished apartments
-                <span className="block text-navy-500">you can book by the night.</span>
+                <span className="block text-white/70">you can book by the night.</span>
               </h1>
-              <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-navy-600">
+              <p className="mt-4 max-w-xl text-[0.95rem] leading-relaxed text-white/75">
                 Find an apartment in Lusaka. Explore options, then confirm the unit and rate
                 with reception before your stay.
               </p>
+              <Link href={`/apartments?${stayQuery}#availability`} className="btn mt-6 w-fit bg-white px-5 py-2.5 text-[0.86rem] font-semibold text-charcoal-900 hover:bg-white/90">
+                Check availability <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <p className="mt-5 text-[0.7rem] text-white/70">Representative stock photos · not of the property</p>
             </div>
           </section>
         )}

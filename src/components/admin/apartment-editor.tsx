@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/overlays';
 import { Alert, Spinner } from '@/components/ui';
 import type { ApartmentView } from '@/lib/view-types';
 import { ApartmentPhotoManager } from './apartment-photos';
+import { PhotoPlaceholders } from './photo-placeholders';
 import { AMENITY_LIBRARY, normaliseAmenities } from '@/lib/domain/amenities';
 
 
@@ -216,10 +217,7 @@ export function ApartmentEditor({
               onChanged={() => void refresh()}
             />
           ) : (
-            <p className="rounded-md border border-dashed border-sand-300 bg-sand-50 px-3 py-4 text-[0.8rem] leading-relaxed text-navy-600">
-              Save the apartment first, then upload its photographs here. Uploads are stored in the
-              media library and served on the website immediately.
-            </p>
+            <PhotoPlaceholders message="Save the apartment first, then upload its photographs here. The first photo becomes the cover unless you choose another." />
           )}
         </fieldset>
 
