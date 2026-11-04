@@ -14,6 +14,7 @@ import {
 import { useApp } from '@/components/providers/app';
 import { Alert } from '@/components/ui';
 import type { ApartmentPhoto } from '@/lib/domain/types';
+import { PhotoPlaceholders } from './photo-placeholders';
 
 /**
  * Apartment photograph manager — the real thing.
@@ -250,9 +251,7 @@ export function ApartmentPhotoManager({ apartmentId, photos, onChanged }: Props)
       </div>
 
       {ordered.length === 0 ? (
-        <p className="rounded-md border border-sand-200 bg-white px-3 py-4 text-center text-[0.82rem] text-navy-500">
-          No photographs for this apartment yet.
-        </p>
+        <PhotoPlaceholders message="No photographs yet. Add your own images above to fill these slots." />
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {ordered.map((photo, index) => (

@@ -138,7 +138,7 @@ export function HomeHeroCarousel({
               className="absolute inset-0 will-change-[opacity]"
               style={{
                 opacity: isActive ? 1 : 0,
-                transition: `opacity ${FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                transition: `opacity ${reducedMotion ? 0 : FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -156,8 +156,8 @@ export function HomeHeroCarousel({
                 decoding="async"
                 className="h-full w-full object-cover"
                 style={{
-                  transform: isActive ? 'scale(1.07)' : 'scale(1)',
-                  transition: `transform ${INTERVAL_MS + FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                  transform: isActive && !reducedMotion ? 'scale(1.07)' : 'scale(1)',
+                  transition: `transform ${reducedMotion ? 0 : INTERVAL_MS + FADE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
                 }}
               />
             </div>
