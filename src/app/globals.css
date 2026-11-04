@@ -459,6 +459,7 @@
  * transition plays a polished entrance instead of snapping content into view.
  */
 @keyframes lemma-fade-in {
+  from { opacity: 0; }
   to { opacity: 1; }
 }
 
@@ -613,6 +614,51 @@
   animation: lemma-slide-up 0.75s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
+/* Hero: slow ken-burns scale on the background image for a living photograph feel. */
+@keyframes lemma-ken-burns {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.hero-bg-scale {
+  animation: lemma-ken-burns 16s cubic-bezier(0.25, 1, 0.5, 1) infinite alternate;
+}
+
+/* Hero photo stack: overlapping framed brand photos with a gentle staggered drift. */
+@keyframes lemma-photo-drift-1 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-4px, -6px, 0) scale(1.02); }
+}
+@keyframes lemma-photo-drift-2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(6px, 4px, 0) scale(1.03); }
+}
+@keyframes lemma-photo-drift-3 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-2px, 8px, 0) scale(1.015); }
+}
+
+.photo-stack {
+  position: relative;
+  display: inline-flex;
+}
+.photo-stack-item {
+  position: absolute;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -6px rgba(14, 18, 22, 0.35);
+  transition: transform 0.5s ease, z-index 0.3s ease;
+  will-change: transform;
+}
+.photo-stack-item:hover, .photo-stack-item:focus {
+  z-index: 5;
+  transform: scale(1.08);
+}
+.photo-stack-item-1 { animation: lemma-photo-drift-1 10s ease-in-out infinite; }
+.photo-stack-item-2 { animation: lemma-photo-drift-2 11s ease-in-out infinite 1.2s; }
+.photo-stack-item-3 { animation: lemma-photo-drift-3 9s ease-in-out infinite 2.4s; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-in,
   .animate-in-fast,
@@ -633,7 +679,9 @@
   .animate-fade-in,
   .animate-fade-down,
   .animate-scale-in,
-  .animate-slide-in-right {
+  .animate-slide-in-right,
+  .hero-bg-scale,
+  .photo-stack-item {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
