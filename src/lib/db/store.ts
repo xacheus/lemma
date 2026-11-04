@@ -9,6 +9,7 @@ import { getAdminFirestore } from '../firebase/admin';
 import type { Firestore, Transaction, QuerySnapshot, DocumentSnapshot } from 'firebase-admin/firestore';
 import { cloudDocumentChanges, CLOUD_COLLECTIONS, cloudDocuments } from './cloud-documents';
 import { userRecordToStaffView } from '../domain/staff-view';
+import { OFFICIAL_BRAND_NAME, RESERVATIONS_SENDER_NAME } from '../brand';
 import { DEFAULT_SETTINGS } from './default-settings';
 import { computeDashboardSummary } from './summary';
 
@@ -17,9 +18,13 @@ import { computeDashboardSummary } from './summary';
  * fake property details, sample apartments, or technical environment variable names
  * persist into the user interface. Operator-entered values are never overwritten.
  */
-const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string; from: string; to: string }[] = [
-  { section: 'property', field: 'name', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.property.name },
+const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness' | 'notifications'; field: string; from: string; to: string }[] = [
+  { section: 'property', field: 'name', from: 'Lemma Apartments', to: OFFICIAL_BRAND_NAME },
+  { section: 'property', field: 'legalName', from: 'Lemma Apartments', to: OFFICIAL_BRAND_NAME },
   { section: 'property', field: 'legalName', from: 'Lemma Heights (Private) Limited', to: DEFAULT_SETTINGS.property.legalName },
+  { section: 'googleBusiness', field: 'businessName', from: 'Lemma Apartments', to: OFFICIAL_BRAND_NAME },
+  { section: 'notifications', field: 'senderName', from: 'Lemma Apartments Reservations', to: RESERVATIONS_SENDER_NAME },
+  { section: 'notifications', field: 'senderName', from: 'Lemma Reservations', to: RESERVATIONS_SENDER_NAME },
   { section: 'property', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.property.addressLine },
   { section: 'property', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.property.phone },
   { section: 'property', field: 'whatsapp', from: '+260 977 220 001', to: DEFAULT_SETTINGS.property.whatsapp },
@@ -39,7 +44,6 @@ const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string;
     from: 'Daily, 07:00 – 21:00. Late check-in by arrangement on WhatsApp.',
     to: DEFAULT_SETTINGS.property.receptionHours,
   },
-  { section: 'googleBusiness', field: 'businessName', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.googleBusiness!.businessName },
   { section: 'googleBusiness', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.googleBusiness!.addressLine },
   { section: 'googleBusiness', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.googleBusiness!.phone },
   { section: 'googleBusiness', field: 'phone', from: '+260 574556207', to: DEFAULT_SETTINGS.googleBusiness!.phone },

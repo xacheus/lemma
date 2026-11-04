@@ -83,7 +83,7 @@ async function book(body, session = null) {
 }
 
 const run = async () => {
-  console.log(`\nLemma Apartments — end-to-end check against ${BASE}\n`);
+  console.log(`\nLemma Heights Apartments — end-to-end check against ${BASE}\n`);
 
   console.log('1. Staff sign-in & clean initial state');
   const login = await call('/api/auth/login', { method: 'POST', body: { username: ADMIN_EMAIL, password: ADMIN_PASSWORD }, session: 'admin' });
@@ -118,9 +118,9 @@ const run = async () => {
     const existingMethods = snap.json?.data?.settings?.payments?.methods ?? [];
     const configuredMethods = existingMethods.map((m) =>
       m.id === 'airtel_money'
-        ? { ...m, accountNumber: '0970000111', mobileNumber: '0970000111', recipientName: 'Lemma Apartments', instructions: 'Send via Airtel Money to 0970000111 quoting your booking reference.' }
+        ? { ...m, accountNumber: '0970000111', mobileNumber: '0970000111', recipientName: 'Lemma Heights Apartments', instructions: 'Send via Airtel Money to 0970000111 quoting your booking reference.' }
         : m.id === 'mtn_money'
-          ? { ...m, accountNumber: '0960000222', mobileNumber: '0960000222', recipientName: 'Lemma Apartments', instructions: 'Send via MTN MoMo to 0960000222 quoting your booking reference.' }
+          ? { ...m, accountNumber: '0960000222', mobileNumber: '0960000222', recipientName: 'Lemma Heights Apartments', instructions: 'Send via MTN MoMo to 0960000222 quoting your booking reference.' }
           : m,
     );
     await call('/api/settings', { method: 'PATCH', body: { payments: { methods: configuredMethods } } });

@@ -27,6 +27,7 @@ import {
 import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole, NAV_SECTIONS, permissionsFor } from '@/lib/domain/permissions';
+import { normalizeBusinessName } from '@/lib/brand';
 import { BrandMark } from './brand-mark';
 
 /**
@@ -212,7 +213,7 @@ export function SiteMenu({
             <BrandMark tone="light" size="sm" />
             <div>
               <p className="font-display text-[0.95rem] font-semibold text-navy-900">
-                {property.name || 'Lemma Apartments'}
+                {normalizeBusinessName(property.name)}
               </p>
               <p className="text-[0.68rem] text-sand-600">
                 {property.city || 'Lusaka'} · Navigation

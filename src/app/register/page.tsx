@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
 import { BrandMark } from '@/components/public/brand-mark';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 import { Entrance, StaggerGroup } from '@/components/ui/motion';
 
 type FieldKey = 'fullName' | 'email' | 'phoneNumber' | 'password';
@@ -113,7 +114,7 @@ export default function RegisterPage() {
           <BrandMark tone="dark" size="lg" />
           <div>
             <p className="font-display text-[1.12rem] font-semibold leading-none text-white">
-              Lemma Apartments
+              {OFFICIAL_BRAND_NAME}
             </p>
             <p className="mt-1 text-[0.74rem] text-sand-300">
               Barlaston Park · Lusaka, Zambia
@@ -159,7 +160,7 @@ export default function RegisterPage() {
             <BrandMark tone="light" size="md" />
             <div>
               <span className="block font-display text-[1.05rem] font-semibold text-navy-900">
-                Lemma Apartments
+                {OFFICIAL_BRAND_NAME}
               </span>
               <span className="block text-[0.7rem] text-sand-600">Lusaka, Zambia</span>
             </div>

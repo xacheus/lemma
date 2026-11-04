@@ -5,6 +5,7 @@ import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 import { BrandMark } from '@/components/public/brand-mark';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 
 function ForgotPasswordInner() {
   const searchParams = useSearchParams();
@@ -71,7 +72,7 @@ function ForgotPasswordInner() {
           <BrandMark tone="light" size="md" />
           <div>
             <p className="font-display text-[1.05rem] font-semibold text-navy-900">
-              Lemma Apartments
+              {OFFICIAL_BRAND_NAME}
             </p>
             <p className="text-[0.7rem] text-sand-600">
               Account Security

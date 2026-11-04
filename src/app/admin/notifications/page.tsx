@@ -24,6 +24,7 @@ import { MessageComposer } from '@/components/admin/payments-ui';
 import { formatDateTime, formatMediumDate, relativeDayLabel } from '@/lib/domain/dates';
 import { formatKwacha } from '@/lib/domain/money';
 import { DELIVERY_META } from '@/lib/domain/status';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 import type { NotificationChannel, NotificationRecord, ReservationView } from '@/lib/domain/types';
 
 type Filter = 'all' | 'unread' | 'awaiting' | 'sent' | 'failed';
@@ -445,7 +446,7 @@ function ComposerChooser({ reservations, onClose }: { reservations: ReservationV
 function composerBody(r: ReservationView): string {
   const first = r.guest?.fullName?.split(' ')[0] ?? 'guest';
   return [
-    `Hello ${first}, this is ${r.apartment ? `Apt ${r.apartment.number} at` : ''} Lemma Apartments.`,
+    `Hello ${first}, this is ${r.apartment ? `Apt ${r.apartment.number} at` : ''} ${OFFICIAL_BRAND_NAME}.`,
     `Your booking ${r.reference} for ${formatMediumDate(r.checkIn)} to ${formatMediumDate(r.checkOut)} is on our register.`,
     r.balanceDue ? `A balance of ${formatKwacha(r.balanceDue)} is still outstanding — you can settle by Airtel Money, MTN Mobile Money, at the desk or by bank transfer.` : 'Your folio is fully settled, so nothing further is due.',
     'Reception is staffed from 06:30 to 22:00. Reply here and we will help.',

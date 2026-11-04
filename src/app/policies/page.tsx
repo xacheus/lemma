@@ -3,13 +3,14 @@ import { Mail, MessageCircle, Phone } from 'lucide-react';
 import { readPublicSiteData } from '@/lib/public/read-site-data';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { unreadForSession } from '@/lib/domain/inbox';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Booking terms, cancellation and privacy',
   description:
-    'How bookings, deposits, cancellations and guest information work at Lemma Apartments in Lusaka.',
+    `How bookings, deposits, cancellations and guest information work at ${OFFICIAL_BRAND_NAME} in Lusaka.`,
 };
 
 /**
@@ -196,7 +197,7 @@ export default async function PoliciesPage() {
           <div className="mt-3 flex flex-wrap gap-2.5">
             {waDigits ? (
               <a
-                href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments, I have a question about a booking.')}`}
+                href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${OFFICIAL_BRAND_NAME}, I have a question about a booking.`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn-primary py-2 text-[0.82rem]"

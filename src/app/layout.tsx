@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 
 /**
  * The canonical origin, used for absolute URLs in metadata and OG tags.
@@ -24,33 +25,33 @@ function siteOrigin(): string {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
-  applicationName: 'Lemma Apartments',
+  applicationName: OFFICIAL_BRAND_NAME,
   title: {
-    default: 'Lemma Apartments — Apartments in Lusaka, Zambia',
-    template: '%s · Lemma Apartments',
+    default: `${OFFICIAL_BRAND_NAME} — Apartments in Lusaka, Zambia`,
+    template: `%s · ${OFFICIAL_BRAND_NAME}`,
   },
   description:
-    'Self-catering furnished apartments at Barlaston Park, Lusaka. Check dates in Zambian Kwacha (ZMW) and book directly with reception.',
+    'Self-catering furnished apartments at Barlaston Park, Lusaka, Zambia. Check dates in Zambian Kwacha (ZMW) and book directly with reception.',
   keywords: [
-    'Lemma Apartments',
+    OFFICIAL_BRAND_NAME,
     'Barlaston Park Lusaka',
     'Furnished apartments Lusaka',
     'Serviced apartments Lusaka Zambia',
   ],
   manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'Lemma Apartments — Furnished Apartments in Lusaka',
+    title: `${OFFICIAL_BRAND_NAME} — Furnished Apartments in Lusaka`,
     description:
-      'Self-catering apartments at Barlaston Park, Lusaka, priced per night in Zambian Kwacha.',
+      'Self-catering apartments at Barlaston Park, Lusaka, Zambia, priced per night in Zambian Kwacha.',
     type: 'website',
     locale: 'en_ZM',
-    siteName: 'Lemma Apartments',
+    siteName: OFFICIAL_BRAND_NAME,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Lemma Apartments — Furnished Apartments in Lusaka',
+    title: `${OFFICIAL_BRAND_NAME} — Furnished Apartments in Lusaka`,
     description:
-      'Self-catering apartments at Barlaston Park, Lusaka, priced per night in Zambian Kwacha.',
+      'Self-catering apartments at Barlaston Park, Lusaka, Zambia, priced per night in Zambian Kwacha.',
   },
   icons: {
     icon: [

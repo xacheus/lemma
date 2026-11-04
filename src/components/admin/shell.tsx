@@ -29,6 +29,7 @@ import {
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app';
 import { NAV_SECTIONS } from '@/lib/domain/permissions';
+import { normalizeBusinessName } from '@/lib/brand';
 import { formatLongDate } from '@/lib/domain/dates';
 import { ROLE_META } from '@/lib/domain/status';
 import { ReservationFormDialog } from '@/components/admin/reservation-form';
@@ -147,7 +148,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <BrandMark tone="dark" size="sm" />
       <span className="min-w-0">
         <span className="block truncate font-display text-[0.98rem] font-medium leading-tight text-white">
-          {snapshot.settings.property.name || 'Lemma Apartments'}
+          {normalizeBusinessName(snapshot.settings.property.name)}
         </span>
         <span className="mt-0.5 block truncate text-[0.68rem] text-navy-300">Property workspace</span>
       </span>

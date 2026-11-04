@@ -1,3 +1,4 @@
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 import { isBrevoEmailConfigured } from '@/lib/notifications/email-config';
 import { buildBrandedEmailHtml, sendEmailNotification } from '@/lib/notifications/providers';
 import { NextResponse } from 'next/server';
@@ -129,10 +130,10 @@ export async function POST(req: Request) {
       const textBody = `We received your booking request ${created.reference}. Your request is ${created.status === 'inquiry' ? 'awaiting confirmation' : 'recorded'}.${access}`;
       await sendEmailNotification({
         to: input.email,
-        subject: 'Your Lemma Apartments booking request',
+        subject: `Your ${OFFICIAL_BRAND_NAME} booking request`,
         textBody,
         htmlBody: buildBrandedEmailHtml({
-          subject: 'Your Lemma Apartments booking request',
+          subject: `Your ${OFFICIAL_BRAND_NAME} booking request`,
           body: textBody,
           ctaLabel: emailLink && session?.user.role !== 'guest' ? 'Open booking' : undefined,
           ctaUrl: emailLink && session?.user.role !== 'guest' ? emailLink : undefined,

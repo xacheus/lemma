@@ -1,7 +1,8 @@
 import { ImageResponse } from 'next/og';
+import { OFFICIAL_BRAND_NAME } from '@/lib/brand';
 
 export const runtime = 'nodejs';
-export const alt = 'Lemma Apartments — Furnished Self-Catering Apartments in Lusaka, Zambia';
+export const alt = `${OFFICIAL_BRAND_NAME} — Furnished Self-Catering Apartments in Lusaka, Zambia`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -75,7 +76,7 @@ export default function OpenGraphImage() {
                   color: '#FFFFFF',
                 }}
               >
-                Lemma Apartments
+                {OFFICIAL_BRAND_NAME}
               </span>
               <span
                 style={{
