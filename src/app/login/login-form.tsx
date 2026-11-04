@@ -72,19 +72,14 @@ export function LoginPage({
               return;
             }
           } catch (err) {
-            const code = (err as { code?: string }).code ?? '';
-            // A wrong password is a wrong password — do not silently retry elsewhere.
-            if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-              setError('Invalid email or password.');
-              setBusy(false);
-              return;
-            }
-            // No account in Firebase with that address: fall through to the local one.
-            if (code !== 'auth/user-not-found' && code !== 'auth/invalid-email') {
-              setError('Firebase sign-in failed. Check your connection and try again.');
-              setBusy(false);
-              return;
-            }
+            // Do not stop at the first refusal. `auth/invalid-credential` is returned
+            // for both a wrong password and an address that has no Firebase Auth
+            // account at all, and this app also holds accounts that only exist in its
+            // own database. Treating that code as final locked out every guest who
+            // registered at /register. Fall through to the password path and let it
+            // have the last word: it is the only authority that knows about both kinds
+            // of account, and it still rejects a genuinely wrong password.
+            void err;
           }
         }
       }
