@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Shield } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
 import { BrandMark } from '@/components/public/brand-mark';
+import { Entrance, StaggerGroup } from '@/components/ui/motion';
 
 type FieldKey = 'fullName' | 'email' | 'phoneNumber' | 'password';
 
@@ -28,6 +29,18 @@ export default function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<Partial<Record<FieldKey, string>>>({});
+  const [errorShake, setErrorShake] = useState(false);
+  const [shakeFields, setShakeFields] = useState<Set<FieldKey>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+
+  // Shake the error banner once when a message appears, and shake any fields
+  // the server rejected, so problems catch the eye without changing wording.
+  useEffect(() => {
+    if (!error) return;
+    setErrorShake(true);
+    const timer = setTimeout(() => setErrorShake(false), 550);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,6 +63,9 @@ export default function RegisterPage() {
     if (Object.keys(nextFieldErrors).length > 0) return;
 
     setBusy(true);
+    setError(null);
+    setFieldError({});
+    setShakeFields(new Set());
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -66,14 +82,20 @@ export default function RegisterPage() {
       if (!res.ok || !json.ok) {
         const message: string = json.error ?? 'Could not create your account. Please try again.';
         setError(message);
-        if (json.code !== 'email_taken' && json.code !== 'phone_taken') {
-          const key = fieldFromError(json.details);
-          if (key) setFieldError({ [key]: message });
+        const key = fieldFromError(json.details);
+        if (json.code !== 'email_taken' && json.code !== 'phone_taken' && key) {
+          setFieldError({ [key]: message });
+          setShakeFields(new Set([key]));
+          setTimeout(() => setShakeFields(new Set()), 550);
         }
         setBusy(false);
         return;
       }
 
+      setBusy(false);
+      setSubmitted(true);
+      // Let the drawn checkmark play before the guest lands on their account.
+      await new Promise((resolve) => setTimeout(resolve, 700));
       router.replace('/account?welcome=1');
       router.refresh();
     } catch {
@@ -132,7 +154,7 @@ export default function RegisterPage() {
       </div>
 
       <div className="flex flex-col justify-center bg-sand-50 px-5 py-10 sm:px-10">
-        <div className="mx-auto w-full max-w-[27rem]">
+        <Entrance variant="up" delay={40} className="mx-auto w-full max-w-[27rem]">
           <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
             <BrandMark tone="light" size="md" />
             <div>
@@ -154,10 +176,11 @@ export default function RegisterPage() {
           </p>
 
           <form onSubmit={submit} noValidate className="card mt-6 space-y-4 p-6">
-            <div>
-              <label className="label mb-1 block" htmlFor="fullName">
-                Full name
-              </label>
+            <StaggerGroup spacing={0.09}>
+              <div className={shakeFields.has('fullName') ? 'shake' : ''}>
+                <label className="label mb-1 block" htmlFor="fullName">
+                  Full name
+                </label>
               <input
                 id="fullName"
                 value={fullName}
@@ -179,7 +202,7 @@ export default function RegisterPage() {
               ) : null}
             </div>
 
-            <div>
+            <div className={shakeFields.has('email') ? 'shake' : ''}>
               <label className="label mb-1 block" htmlFor="email">
                 Email address
               </label>
@@ -208,7 +231,7 @@ export default function RegisterPage() {
               ) : null}
             </div>
 
-            <div>
+            <div className={shakeFields.has('phoneNumber') ? 'shake' : ''}>
               <label className="label mb-1 block" htmlFor="phone">
                 Phone / WhatsApp number
               </label>
@@ -235,7 +258,7 @@ export default function RegisterPage() {
               ) : null}
             </div>
 
-            <div>
+            <div className={shakeFields.has('password') ? 'shake' : ''}>
               <label className="label mb-1 block" htmlFor="password">
                 Password
               </label>
@@ -274,9 +297,14 @@ export default function RegisterPage() {
                 </p>
               )}
             </div>
+            </StaggerGroup>
 
             {error ? (
-              <div className="flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] font-medium text-st-cancelled">
+              <div
+                className={`flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelledBg px-3 py-2 text-[0.8rem] font-medium text-st-cancelled slide-in-down ${errorShake ? 'shake' : ''}`}
+                role="alert"
+                aria-live="polite"
+              >
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
                 <span>
                   {error}
@@ -293,14 +321,28 @@ export default function RegisterPage() {
               </div>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="btn btn-primary w-full justify-center py-2.5"
-            >
-              {busy ? 'Creating your account…' : 'Create guest account'}{' '}
-              {busy ? null : <ArrowRight size={15} />}
-            </button>
+            {submitted ? (
+              <div className="pop-in flex items-center justify-center gap-2 py-2.5 text-[0.84rem] font-medium text-navy-700">
+                <CheckCircle2 size={15} className="text-st-paid" /> Account created
+              </div>
+            ) : (
+              <button
+                type="submit"
+                disabled={busy}
+                className="btn btn-primary w-full justify-center py-2.5"
+              >
+                {busy ? (
+                  <>
+                    <Loader2 size={14} className="mr-2 animate-spin" />
+                    Creating your account…
+                  </>
+                ) : (
+                  <>
+                    Create guest account <ArrowRight size={15} />
+                  </>
+                )}
+              </button>
+            )}
 
             <p className="text-center text-[0.74rem] leading-relaxed text-sand-600">
               By creating an account you agree to our{' '}
@@ -310,7 +352,7 @@ export default function RegisterPage() {
               .
             </p>
           </form>
-        </div>
+        </Entrance>
       </div>
     </main>
   );

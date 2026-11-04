@@ -1,6 +1,91 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Children, isValidElement, type CSSProperties, type ReactElement, useEffect, useRef, useState } from 'react';
+
+/**
+ * Honors `prefers-reduced-motion: reduce` so animated UIs stay usable for
+ * everyone. Safe to call before mounting: returns `false` on the server.
+ */
+export function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduced(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return reduced;
+}
+
+/**
+ * One-time entrance animation for login, register and other client-mounted
+ * panels. Unlike `Reveal` this plays on mount rather than on scroll, so
+ * above-the-fold forms never wait for an IntersectionObserver tick.
+ *
+ * The element is always rendered (never conditionally removed), so there is no
+ * hydration mismatch and no flash of missing content.
+ */
+export function Entrance({
+  children,
+  className = '',
+  variant = 'up',
+  delay = 0,
+  as: Tag = 'div',
+}: {
+  children: React.ReactNode;
+  className?: string;
+  variant?: 'up' | 'down' | 'scale' | 'pop';
+  delay?: number;
+  as?: 'div' | 'section' | 'header' | 'main' | 'article';
+}) {
+  const entryClass =
+    variant === 'down' ? 'slide-in-down' : variant === 'scale' ? 'scale-in' : variant === 'pop' ? 'pop-in' : 'slide-in-up';
+
+  return (
+    <Tag className={`animate-in ${entryClass} ${className}`} style={{ animationDelay: `${delay}ms` }}>
+      {children}
+    </Tag>
+  );
+}
+
+/**
+ * Staggers a one-time entrance across a list of elements by adding an
+ * `animation-delay` to each clone, so lists feel sequenced rather than static.
+ * No extra DOM nodes are added.
+ */
+export function StaggerGroup({
+  children,
+  spacing = 0.07,
+  variant = 'up',
+}: {
+  children: React.ReactNode;
+  spacing?: number;
+  variant?: 'up' | 'down' | 'scale';
+}) {
+  const entryClass =
+    variant === 'down' ? 'slide-in-down' : variant === 'scale' ? 'scale-in' : 'slide-in-up';
+
+  return (
+    <>
+      {Children.toArray(children).map((child, index) => {
+        if (!isValidElement(child)) return null;
+        const element = child as ReactElement<{ className?: string; style?: CSSProperties }>;
+        const key = element.key ?? index;
+        return (
+          <element.type
+            key={key}
+            {...(element.props as unknown as Record<string, unknown>)}
+            className={`${entryClass} ${(element.props.className ?? '').trim()}`.trim()}
+            style={{ ...element.props.style, animationDelay: `${index * spacing}s` }}
+          />
+        );
+      })}
+    </>
+  );
+}
 
 /**
  * Scroll-triggered reveal.
