@@ -61,10 +61,25 @@ const STAGE_META: Record<PaymentStage, { label: string; chip: string; note: stri
   },
 };
 
-export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: SnapshotView }) {
+export function GuestAccountClient({
+  initialSnapshot,
+  justRegistered = false,
+}: {
+  initialSnapshot: SnapshotView;
+  justRegistered?: boolean;
+}) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<SnapshotView>(initialSnapshot);
   const [tab, setTab] = useState<'bookings' | 'notifications' | 'documents' | 'profile'>('bookings');
+  // The sign-up redirect carries ?welcome=1. Acknowledge it once, then take it out of the
+  // address bar so a refresh or a bookmark does not replay the greeting.
+  const [showWelcome, setShowWelcome] = useState(justRegistered);
+  useEffect(() => {
+    if (!justRegistered) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('welcome');
+    window.history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
+  }, [justRegistered]);
 
   // Profile form state
   const [fullName, setFullName] = useState(snapshot.account?.fullName || snapshot.user.name);
@@ -222,6 +237,29 @@ export function GuestAccountClient({ initialSnapshot }: { initialSnapshot: Snaps
           </button>
         </div>
       </div>
+
+      {showWelcome ? (
+        <div className="flex items-start gap-3 rounded-lg border border-st-paid/30 bg-st-paidBg px-4 py-3">
+          <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-st-paid" />
+          <div className="min-w-0">
+            <p className="text-[0.88rem] font-semibold text-navy-900">
+              Your account is ready.
+            </p>
+            <p className="mt-0.5 text-[0.82rem] text-navy-600">
+              You are signed in. Browse the apartments when you are ready to book; your
+              stays, payments and documents will collect here.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowWelcome(false)}
+            className="ml-auto rounded p-1 text-navy-400 hover:bg-white/60"
+            aria-label="Dismiss"
+          >
+            <XCircle size={15} />
+          </button>
+        </div>
+      ) : null}
 
       {owed > 0 ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-sand-300 bg-sand-50 px-4 py-3">

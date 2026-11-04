@@ -102,12 +102,22 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof HttpError || error instanceof OperationError) {
       return NextResponse.json(
-        { ok: false, error: error.message, code: error.code },
+        { ok: false, error: error.message, code: error.code, details: error.details },
         { status: error.status },
       );
     }
+    // A storage outage is not the guest's mistake and must not read like a rejection of
+    // what they typed. Say so plainly, and mark it retryable so the form can invite them
+    // to press the button again rather than to change their details.
+    console.error('[register] unexpected failure:', error);
     return NextResponse.json(
-      { ok: false, error: 'Registration could not be completed.', code: 'server_error' },
+      {
+        ok: false,
+        error:
+          'We could not finish creating your account because our records service is unavailable. Nothing was lost. Please try again in a moment.',
+        code: 'server_error',
+        retryable: true,
+      },
       { status: 500 },
     );
   }
