@@ -7,7 +7,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, 
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { Role } from '@/lib/domain/types';
 import { getFirebaseClientAuth, isFirebaseClientConfigured } from '@/lib/firebase/client';
-import { BrandMark } from '@/components/public/brand-mark';
+import { brandMonogram } from '@/components/public/brand-mark';
 import { Entrance, Reveal, StaggerGroup } from '@/components/ui/motion';
 
 function destinationForRole(role: Role, nextPath: string | null): string {
@@ -101,17 +101,28 @@ export function LoginPage({
   }
 
   const brandTitle = propertyName || 'Lemma Apartments';
+  const monogram = brandMonogram(brandTitle);
 
   return (
-    <main className="grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      <div className="relative hidden flex-col justify-between bg-charcoal-950 px-10 py-10 text-white lg:flex">
-        <Link href="/" className="flex items-center gap-3">
-          <BrandMark tone="dark" size="lg" />
+    <main className="public-shell grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-swdl-navy px-10 py-10 text-white lg:flex">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-swdl-gold/15 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-swdl-navySoft/60 blur-3xl"
+        />
+        <Link href="/" className="relative flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.9rem] font-extrabold tracking-[0.05em] text-swdl-navy">
+            {monogram}
+          </span>
           <div>
-            <p className="font-display text-[1.12rem] font-semibold leading-none text-white">
+            <p className="font-heading text-[1.05rem] font-extrabold uppercase leading-none tracking-[0.14em] text-white">
               {brandTitle}
             </p>
-            <p className="mt-1 text-[0.74rem] text-sand-300">
+            <p className="mt-1.5 font-heading text-[0.62rem] font-bold uppercase tracking-[0.18em] text-swdl-gold">
               Barlaston Park · Lusaka, Zambia
             </p>
           </div>
@@ -120,10 +131,10 @@ export function LoginPage({
         <div className="max-w-md space-y-6">
           <Reveal variant="up" delay={20} className="mb-4">
             <div>
-              <h1 className="font-display text-[2.15rem] font-medium leading-[1.15] tracking-[-0.015em] text-white">
+              <h1 className="font-heading text-[2.1rem] font-extrabold leading-[1.15] tracking-[-0.01em] text-white">
                 Your bookings, payment references &amp; ZMW receipts in one place.
               </h1>
-              <p className="mt-3.5 text-[0.92rem] leading-relaxed text-sand-300">
+              <p className="mt-3.5 text-[0.92rem] leading-relaxed text-[#B9C5D1]">
                 Sign in to view upcoming stays, upload mobile-money or bank transfer references, and
                 download verified quotations, invoices and official receipts.
               </p>
@@ -131,48 +142,52 @@ export function LoginPage({
           </Reveal>
 
           <Reveal variant="up" delay={90}>
-            <ul className="space-y-3 border-t border-white/10 pt-5 text-[0.86rem] text-sand-200">
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Live confirmation &amp; deposit verification status
+            <ul className="check-gold space-y-1 text-[0.88rem] text-[#D7DEE6]">
+            <li>
+              <CheckCircle2 size={16} className="shrink-0 text-swdl-gold" aria-hidden="true" />
+              <span>Live confirmation &amp; deposit verification status</span>
             </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Downloadable PDF receipts for corporate expense claims
+            <li>
+              <CheckCircle2 size={16} className="shrink-0 text-swdl-gold" aria-hidden="true" />
+              <span>Downloadable PDF receipts for corporate expense claims</span>
             </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Direct date-change or cancellation requests to reception
+            <li>
+              <CheckCircle2 size={16} className="shrink-0 text-swdl-gold" aria-hidden="true" />
+              <span>Direct date-change or cancellation requests to reception</span>
             </li>
           </ul>
           </Reveal>
         </div>
 
-        <p className="text-[0.75rem] text-sand-400">
+        <p className="relative text-[0.75rem] text-[#8FA0B0]">
           {brandTitle} · Lusaka, Zambia · Staff accounts use this same sign-in screen.
         </p>
       </div>
 
-      <div className="flex flex-col justify-center bg-sand-50 px-5 py-10 sm:px-10">
+      <div className="flex flex-col justify-center bg-swdl-light px-5 py-10 sm:px-10">
         <Entrance variant="up" delay={40} className="mx-auto w-full max-w-[27rem]">
           <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
-            <BrandMark tone="light" size="md" />
+            <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.84rem] font-extrabold tracking-[0.05em] text-swdl-navy">
+              {monogram}
+            </span>
             <div>
-              <p className="font-display text-[1.05rem] font-semibold text-navy-900">
+              <p className="font-heading text-[1rem] font-extrabold uppercase tracking-[0.13em] text-swdl-navy">
                 {brandTitle}
               </p>
-              <p className="text-[0.7rem] text-sand-600">Lusaka, Zambia</p>
+              <p className="font-heading text-[0.6rem] font-bold uppercase tracking-[0.18em] text-swdl-goldDark">
+                Lusaka, Zambia
+              </p>
             </div>
           </Link>
 
-          <h2 className="font-display text-[1.65rem] font-medium tracking-[-0.015em] text-navy-900">
+          <h2 className="font-heading text-[1.7rem] font-extrabold tracking-[-0.01em]">
             Sign in
           </h2>
-          <p className="mt-1 text-[0.86rem] text-sand-700">
+          <p className="mt-1 text-[0.88rem] text-swdl-muted">
             Access your guest bookings and receipts.
           </p>
 
-          <form onSubmit={submit} className="card mt-6 p-6">
+          <form onSubmit={submit} className="swdl-card mt-6 p-6 sm:p-7">
             <StaggerGroup spacing={0.08}>
               <div>
                 <label className="label mb-1.5 block" htmlFor="username">
@@ -187,7 +202,7 @@ export function LoginPage({
                   placeholder="name@example.com"
                   required
                 />
-                <p className="mt-1 text-[0.72rem] text-sand-600">
+                <p className="mt-1 text-[0.74rem] text-swdl-muted">
                   Staff members may also enter their desk username.
                 </p>
               </div>
@@ -199,7 +214,7 @@ export function LoginPage({
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-[0.76rem] font-medium text-lemma-dark hover:underline"
+                    className="text-[0.76rem] font-semibold text-swdl-goldDark transition-colors hover:text-swdl-navy"
                   >
                     Forgot password?
                   </Link>
@@ -218,7 +233,7 @@ export function LoginPage({
                   <button
                     type="button"
                     onClick={() => setReveal((v) => !v)}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-sand-500 hover:bg-sand-100 hover:text-navy-800"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-swdl-muted transition-colors hover:bg-swdl-light hover:text-swdl-navy"
                     aria-label={reveal ? 'Hide password' : 'Show password'}
                   >
                     {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -229,7 +244,7 @@ export function LoginPage({
               <button
                 type="submit"
                 disabled={busy}
-                className="btn btn-primary mt-5 w-full justify-center py-2.5"
+                className="btn btn-gold mt-5 w-full justify-center py-2.5"
               >
                 {busy ? (
                   <>
@@ -243,12 +258,12 @@ export function LoginPage({
                 )}
               </button>
 
-              <div className="mt-5 space-y-2.5 border-t border-sand-200 pt-4 text-[0.8rem] text-sand-700">
+              <div className="mt-5 space-y-2.5 border-t border-[#DFE3E8] pt-4 text-[0.82rem] text-swdl-muted">
                 <div className="flex items-center justify-between">
                   <span>New guest?</span>
                   <Link
                     href="/register"
-                    className="inline-flex items-center gap-1.5 font-semibold text-navy-900 hover:text-lemma-dark"
+                    className="inline-flex items-center gap-1.5 font-semibold text-swdl-navy transition-colors hover:text-swdl-goldDark"
                   >
                     <UserPlus size={14} /> Create guest account
                   </Link>
@@ -257,7 +272,7 @@ export function LoginPage({
                   <span>Booked without an account?</span>
                   <Link
                     href="/booking/access"
-                    className="inline-flex items-center gap-1.5 font-medium text-lemma-dark hover:underline"
+                    className="inline-flex items-center gap-1.5 font-medium text-swdl-goldDark transition-colors hover:text-swdl-navy"
                   >
                     <KeyRound size={13} /> Find by reference
                   </Link>
@@ -276,11 +291,11 @@ export function LoginPage({
             ) : null}
           </form>
 
-          <div className="mt-5 flex items-center justify-between text-[0.78rem] text-sand-600">
-            <Link href="/" className="hover:text-navy-900">
+          <div className="mt-5 flex items-center justify-between text-[0.8rem] text-swdl-muted">
+            <Link href="/" className="transition-colors hover:text-swdl-navy">
               ← Back to website
             </Link>
-            <Link href="/policies" className="hover:text-navy-900">
+            <Link href="/policies" className="transition-colors hover:text-swdl-navy">
               Booking terms
             </Link>
           </div>

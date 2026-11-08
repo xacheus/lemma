@@ -14,7 +14,7 @@ export default async function GuestBookingPage({
   const { db, session } = await readPublicSiteData();
 
   return (
-    <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
+    <div className="public-shell flex min-h-screen flex-col">
       <PublicHeader
         property={db.settings.property}
         session={session}

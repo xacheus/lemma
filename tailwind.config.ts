@@ -84,6 +84,27 @@ const config: Config = {
           600: '#3D4959',
           700: '#2B3441',
         },
+        /*
+         * SWDL reference palette — deep navy + warm brass gold on a soft
+         * off-white canvas. Used by the public guest-facing pages so the
+         * marketing site matches the premium real-estate look the brand
+         * approved, while operational screens keep the Lemma slate tokens.
+         */
+        swdl: {
+          navy: '#0F2B46',
+          navySoft: '#16436B',
+          navyDeep: '#0A1E33',
+          navyInk: '#0A192A',
+          gold: '#C9A15A',
+          goldDark: '#A8823F',
+          goldSoft: '#F0E2C6',
+          light: '#F7F5F0',
+          card: '#FBFBFA',
+          line: '#DFE3E8',
+          ink: '#2B2B2B',
+          muted: '#6B7280',
+          mutedLight: '#B9C5D1',
+        },
         lemma: {
           DEFAULT: '#707E91',
           dark: '#485669',
@@ -108,6 +129,13 @@ const config: Config = {
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         display: ['Fraunces', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
+        /*
+         * Public guest pages use the reference site's voice: a wide geometric
+         * face for headings/branding and a neutral humanist sans for body copy
+         * (the reference stacks 'Segoe UI', 'Helvetica Neue', Arial).
+         */
+        heading: ['Montserrat', 'Inter', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        body: ['"Public Sans"', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       fontSize: {
@@ -117,11 +145,17 @@ const config: Config = {
         card: '0 1px 3px rgba(24, 22, 19, 0.04), 0 1px 2px rgba(24, 22, 19, 0.03)',
         pop: '0 14px 34px -10px rgba(20, 22, 26, 0.14), 0 3px 8px rgba(20, 22, 26, 0.05)',
         inset: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+        /* Reference-site elevation: soft navy-tinted card shadow + lifted hover. */
+        swdl: '0 10px 30px rgba(15, 43, 70, 0.12)',
+        'swdl-lift': '0 18px 40px rgba(15, 43, 70, 0.2)',
+        'swdl-nav': '0 2px 12px rgba(0, 0, 0, 0.25)',
       },
       borderRadius: {
         lg: '0.5rem',
         xl: '0.625rem',
         '2xl': '0.75rem',
+        /* Reference card radius (14px) used across the public pages. */
+        '3xl': '0.875rem',
       },
       maxWidth: {
         shell: '84rem',
@@ -163,6 +197,16 @@ const config: Config = {
           '70%': { transform: 'scale(1.5)', opacity: '0' },
           '100%': { transform: 'scale(1.5)', opacity: '0' },
         },
+        /* Infinite photo marquee from the reference gallery. */
+        'marquee-x': {
+          from: { transform: 'translate3d(0, 0, 0)' },
+          to: { transform: 'translate3d(-50%, 0, 0)' },
+        },
+        /* Reference entrance: 26px rise over 0.9s. */
+        'swdl-fade-up': {
+          from: { opacity: '0', transform: 'translate3d(0, 26px, 0)' },
+          to: { opacity: '1', transform: 'translate3d(0, 0, 0)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both',
@@ -172,6 +216,8 @@ const config: Config = {
         'slide-in-right': 'slide-in-right 0.45s cubic-bezier(0.16, 1, 0.3, 1) both',
         'hero-pan': 'hero-pan 14s ease-out both',
         'pulse-ring': 'pulse-ring 2.4s cubic-bezier(0.24, 0, 0.38, 1) infinite',
+        'marquee-x': 'marquee-x 35s linear infinite',
+        'swdl-fade-up': 'swdl-fade-up 0.9s ease both',
       },
     },
   },

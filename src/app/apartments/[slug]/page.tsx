@@ -81,7 +81,7 @@ export default async function ApartmentDetailPage({
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
+    <div className="public-shell flex min-h-screen flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -97,7 +97,7 @@ export default async function ApartmentDetailPage({
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Link
           href={`/apartments?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`}
-          className="inline-flex items-center gap-1.5 text-[0.83rem] font-medium text-sand-700 hover:text-navy-900"
+          className="inline-flex items-center gap-1.5 text-[0.83rem] font-medium text-swdl-muted hover:text-swdl-navy"
         >
           <ArrowLeft size={14} /> All apartments
         </Link>
@@ -106,20 +106,20 @@ export default async function ApartmentDetailPage({
           {/* Left: Gallery & Specifications */}
           <div className="space-y-6">
             <div>
-              <p className="text-[0.8rem] font-medium text-lemma-dark">
+              <p className="text-[0.8rem] font-medium text-swdl-goldDark">
                 {APARTMENT_TIER_LABELS[apartment.tier] || apartment.tier} · Unit {apartment.code}
               </p>
-              <h1 className="mt-1 font-display text-[2rem] font-medium tracking-[-0.015em] text-navy-900 sm:text-[2.25rem]">
+              <h1 className="mt-1 font-heading text-[2rem] font-extrabold tracking-[-0.01em] sm:text-[2.25rem]">
                 {apartment.name}
               </h1>
               {apartment.tagline ? (
-                <p className="mt-1.5 text-[0.95rem] leading-relaxed text-sand-700">
+                <p className="mt-1.5 text-[0.95rem] leading-relaxed text-swdl-muted">
                   {apartment.tagline}
                 </p>
               ) : null}
             </div>
 
-            <div className="card overflow-hidden p-3 sm:p-4">
+            <div className="swdl-card overflow-hidden p-3 sm:p-4">
               <PhotoStrip
                 photos={galleryPhotos}
                 alt={apartment.name}
@@ -128,103 +128,103 @@ export default async function ApartmentDetailPage({
               />
             </div>
 
-            <div className="card grid grid-cols-2 gap-4 p-5 sm:grid-cols-5">
+            <div className="swdl-card grid grid-cols-2 gap-4 p-5 sm:grid-cols-5">
               <div>
-                <p className="text-[0.72rem] font-medium text-sand-600">Sleeps</p>
-                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-navy-900">
-                  <Users size={15} className="text-lemma-dark" /> Up to {apartment.maxGuests}
+                <p className="text-[0.72rem] font-medium text-swdl-muted">Sleeps</p>
+                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-swdl-navy">
+                  <Users size={15} className="text-swdl-goldDark" /> Up to {apartment.maxGuests}
                 </p>
               </div>
               <div>
-                <p className="text-[0.72rem] font-medium text-sand-600">Bedrooms</p>
-                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-navy-900">
-                  <BedDouble size={15} className="text-lemma-dark" />{' '}
+                <p className="text-[0.72rem] font-medium text-swdl-muted">Bedrooms</p>
+                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-swdl-navy">
+                  <BedDouble size={15} className="text-swdl-goldDark" />{' '}
                   {apartment.bedrooms === 0 ? 'Studio' : apartment.bedrooms}
                 </p>
               </div>
               <div>
-                <p className="text-[0.72rem] font-medium text-sand-600">Bathrooms</p>
-                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-navy-900">
-                  <Bath size={15} className="text-lemma-dark" /> {apartment.bathrooms}
+                <p className="text-[0.72rem] font-medium text-swdl-muted">Bathrooms</p>
+                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-swdl-navy">
+                  <Bath size={15} className="text-swdl-goldDark" /> {apartment.bathrooms}
                 </p>
               </div>
               <div>
-                <p className="text-[0.72rem] font-medium text-sand-600">Floor area</p>
-                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-navy-900">
-                  <Maximize2 size={15} className="text-lemma-dark" /> {apartment.sizeSqm} m²
+                <p className="text-[0.72rem] font-medium text-swdl-muted">Floor area</p>
+                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-swdl-navy">
+                  <Maximize2 size={15} className="text-swdl-goldDark" /> {apartment.sizeSqm} m²
                 </p>
               </div>
               <div>
-                <p className="text-[0.72rem] font-medium text-sand-600">Level</p>
-                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-navy-900">
-                  <Layers size={15} className="text-lemma-dark" />{' '}
+                <p className="text-[0.72rem] font-medium text-swdl-muted">Level</p>
+                <p className="mt-1 flex items-center gap-1.5 text-[0.9rem] font-semibold text-swdl-navy">
+                  <Layers size={15} className="text-swdl-goldDark" />{' '}
                   {apartment.floor === 0 ? 'Ground' : `Floor ${apartment.floor}`}
                 </p>
               </div>
             </div>
 
-            <div className="card space-y-4 p-6">
-              <h2 className="font-display text-[1.28rem] font-medium text-navy-900">
+            <div className="swdl-card space-y-4 p-6">
+              <h2 className="font-heading text-[1.28rem] font-extrabold">
                 Inside the apartment
               </h2>
-              <p className="text-[0.9rem] leading-relaxed text-sand-700">{apartment.description}</p>
-              <div className="rounded-lg border border-sand-200 bg-sand-50 px-4 py-3 text-[0.84rem] text-navy-800">
+              <p className="text-[0.9rem] leading-relaxed text-swdl-muted">{apartment.description}</p>
+              <div className="rounded-lg border border-[#DFE3E8] bg-swdl-light px-4 py-3 text-[0.84rem] text-swdl-ink">
                 <strong className="font-semibold">Sleeping arrangement:</strong>{' '}
                 {apartment.bedConfiguration}
               </div>
 
               {apartment.amenities.length > 0 ? (
                 <div className="pt-2">
-                  <h3 className="text-[0.95rem] font-semibold text-navy-900">
+                  <h3 className="text-[0.95rem] font-semibold text-swdl-navy">
                     Included in this unit
                   </h3>
                   <ul className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {apartment.amenities.map((amenity) => (
                       <li
                         key={amenity}
-                        className="flex items-center gap-2 text-[0.85rem] text-navy-800"
+                        className="flex items-center gap-2 text-[0.85rem] text-swdl-ink"
                       >
-                        <CheckCircle2 size={15} className="shrink-0 text-st-available" />
+                        <CheckCircle2 size={15} className="shrink-0 text-swdl-goldDark" />
                         {amenity}
                       </li>
                     ))}
                   </ul>
                 </div>
               ) : (
-                <p className="pt-2 text-[0.83rem] leading-relaxed text-sand-600">
+                <p className="pt-2 text-[0.83rem] leading-relaxed text-swdl-muted">
                   Ask reception if you need a specific appliance or workspace setup for your stay.
                 </p>
               )}
             </div>
 
-            <div className="card space-y-3 p-6">
-              <h2 className="font-display text-[1.22rem] font-medium text-navy-900">
+            <div className="swdl-card space-y-3 p-6">
+              <h2 className="font-heading text-[1.22rem] font-extrabold">
                 Rates &amp; stay rules
               </h2>
-              <div className="grid grid-cols-1 gap-3 text-[0.85rem] text-sand-700 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 text-[0.85rem] text-swdl-muted sm:grid-cols-2">
                 <p>
-                  <strong className="text-navy-900">Weeknight rate:</strong>{' '}
+                  <strong className="text-swdl-navy">Weeknight rate:</strong>{' '}
                   {formatKwacha(apartment.nightlyRate)} / night
                 </p>
                 {apartment.weekendRate ? (
                   <p>
-                    <strong className="text-navy-900">Weekend rate (Fri–Sat):</strong>{' '}
+                    <strong className="text-swdl-navy">Weekend rate (Fri–Sat):</strong>{' '}
                     {formatKwacha(apartment.weekendRate)} / night
                   </p>
                 ) : null}
                 {apartment.extraGuestFee ? (
                   <p>
-                    <strong className="text-navy-900">Extra guest supplement:</strong>{' '}
+                    <strong className="text-swdl-navy">Extra guest supplement:</strong>{' '}
                     {formatKwacha(apartment.extraGuestFee)} / night above{' '}
                     {apartment.includedGuests ?? 2} guests
                   </p>
                 ) : null}
                 <p>
-                  <strong className="text-navy-900">Check-in / Check-out:</strong>{' '}
+                  <strong className="text-swdl-navy">Check-in / Check-out:</strong>{' '}
                   {db.settings.booking.checkInTime} / {db.settings.booking.checkOutTime}
                 </p>
               </div>
-              <p className="border-t border-sand-200 pt-3 text-[0.81rem] leading-relaxed text-sand-600">
+              <p className="border-t border-[#DFE3E8] pt-3 text-[0.81rem] leading-relaxed text-swdl-muted">
                 {db.settings.booking.cancellationText}
               </p>
             </div>

@@ -27,7 +27,7 @@ import {
 import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole, NAV_SECTIONS, permissionsFor } from '@/lib/domain/permissions';
-import { BrandMark } from './brand-mark';
+import { brandMonogram } from './brand-mark';
 
 /**
  * Full-screen site menu.
@@ -163,6 +163,7 @@ export function SiteMenu({
     }
   }
 
+  const monogram = brandMonogram(property.name || 'Lemma Apartments');
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
   const groups: { title: string; links: MenuLink[] }[] = [
     { title: 'Explore', links: PUBLIC_LINKS },
@@ -193,7 +194,7 @@ export function SiteMenu({
         tabIndex={open ? 0 : -1}
         aria-label="Close menu"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full cursor-default bg-charcoal-950/60 backdrop-blur-sm"
+        className="absolute inset-0 h-full w-full cursor-default bg-[#05101b]/70 backdrop-blur-sm"
       />
 
       <div
@@ -202,20 +203,20 @@ export function SiteMenu({
         // `.menu-panel` in globals.css so it is measured against the viewport: `max-h-full`
         // here resolves against the full-height overlay instead, which leaves the panel
         // with no scroll container of its own.
-        className={`menu-panel absolute inset-x-0 top-0 flex flex-col overflow-y-auto bg-sand-50 shadow-pop transition-transform duration-300 ease-smooth sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[27rem] ${
+        className={`menu-panel swdl-menu absolute inset-x-0 top-0 flex flex-col overflow-y-auto shadow-[0_24px_80px_rgba(5,15,26,.45)] transition-transform duration-300 ease-smooth sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[27rem] ${
           open ? 'translate-y-0 sm:translate-x-0' : '-translate-y-3 sm:translate-y-0 sm:translate-x-6'
         }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-sand-200 bg-sand-50/95 px-4 py-3 backdrop-blur-sm sm:px-5">
-          <div className="flex items-center gap-2.5">
-            <BrandMark tone="light" size="sm" />
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-white/10 bg-[#0c2338]/95 px-4 py-3.5 backdrop-blur-sm sm:px-5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-[#c9a15a] to-[#a8823f] font-heading text-[0.82rem] font-extrabold tracking-[0.04em] text-[#0f2b46]">
+              {monogram}
+            </span>
             <div>
-              <p className="font-display text-[0.95rem] font-semibold text-navy-900">
-                {property.name || 'Lemma Apartments'}
-              </p>
-              <p className="text-[0.68rem] text-sand-600">
-                {property.city || 'Lusaka'} · Navigation
+              <p className="menu-brand-name">{property.name || 'Lemma Apartments'}</p>
+              <p className="menu-brand-sub">
+                {property.city || 'Lusaka'} · Menu
               </p>
             </div>
           </div>
@@ -224,7 +225,7 @@ export function SiteMenu({
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-sand-300 bg-white text-navy-700 transition-colors hover:border-navy-900 hover:text-navy-900"
+            className="menu-close"
           >
             <X size={18} />
           </button>
@@ -232,13 +233,13 @@ export function SiteMenu({
 
         <div className="flex-1 px-4 py-4 sm:px-5">
           {session ? (
-            <div className="mb-4 flex items-center gap-3 rounded-lg border border-sand-200 bg-white p-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-navy-900 text-white">
+            <div className="menu-card mb-4 flex items-center gap-3">
+              <span className="menu-avatar">
                 <UserRound size={17} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[0.88rem] font-semibold text-navy-900">{session.user.name}</p>
-                <p className="truncate text-[0.74rem] text-navy-500">
+                <p className="truncate font-heading text-[0.88rem] font-bold text-white">{session.user.name}</p>
+                <p className="truncate text-[0.74rem] text-[#8fa0b0]">
                   {session.user.jobTitle || (role === 'guest' ? 'Registered guest' : role)}
                   {role && role !== 'guest' ? ' · staff account' : ''}
                 </p>
@@ -246,23 +247,23 @@ export function SiteMenu({
               <Link
                 href={dashboardHref}
                 onClick={onClose}
-                className="inline-flex items-center gap-1 rounded-md border border-sand-300 px-2.5 py-1.5 text-[0.74rem] font-medium text-navy-800 hover:border-navy-900"
+                className="inline-flex items-center gap-1 rounded-md border border-white/30 px-2.5 py-1.5 text-[0.74rem] font-semibold text-white transition-colors hover:border-[#c9a15a] hover:text-[#c9a15a]"
               >
                 {role === 'cleaner' ? 'Open' : role === 'guest' ? 'Account' : 'Dashboard'}
                 <ArrowRight size={12} />
               </Link>
             </div>
           ) : (
-            <div className="mb-4 rounded-lg border border-sand-200 bg-white p-3">
-              <p className="text-[0.84rem] font-medium text-navy-900">Sign in to see your bookings</p>
-              <p className="mt-0.5 text-[0.75rem] leading-relaxed text-navy-500">
+            <div className="menu-card mb-4">
+              <p className="menu-card-title">Sign in to see your bookings</p>
+              <p className="menu-card-copy">
                 Receipts, balances and payment status live in your account.
               </p>
-              <div className="mt-2.5 flex gap-2">
-                <Link href="/login" onClick={onClose} className="btn btn-primary flex-1 justify-center py-1.5 text-[0.78rem]">
+              <div className="mt-3 flex gap-2">
+                <Link href="/login" onClick={onClose} className="menu-btn-gold flex-1">
                   <User size={13} /> Sign in
                 </Link>
-                <Link href="/register" onClick={onClose} className="btn btn-secondary flex-1 justify-center py-1.5 text-[0.78rem]">
+                <Link href="/register" onClick={onClose} className="menu-btn-outline flex-1">
                   Create account
                 </Link>
               </div>
@@ -271,45 +272,37 @@ export function SiteMenu({
 
           {groups.map((group) => (
             <nav key={group.title} aria-label={group.title} className="mb-4">
-              <p className="mb-1.5 px-1 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-navy-400">
+              <p className="menu-label mb-2 px-1">
                 {group.title}
               </p>
-              <ul className="overflow-hidden rounded-lg border border-sand-200 bg-white">
-                {group.links.map((link, index) => {
+              <ul className="menu-list">
+                {group.links.map((link) => {
                   const active =
                     link.href === '/' ? activePath === '/' : activePath.startsWith(link.href.split('#')[0]);
                   const Icon = link.icon;
                   const showBadge =
                     unreadCount > 0 && link.label.toLowerCase().includes('notification');
                   return (
-                    <li key={`${link.href}-${link.label}`} className={index ? 'border-t border-sand-100' : ''}>
+                    <li key={`${link.href}-${link.label}`} className="menu-item">
                       <Link
                         href={link.href}
                         onClick={onClose}
                         aria-current={active ? 'page' : undefined}
-                        className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
-                          active ? 'bg-sand-50' : 'hover:bg-sand-50'
-                        }`}
+                        className="menu-link"
                       >
-                        <Icon size={16} className="shrink-0 text-lemma-dark" aria-hidden="true" />
+                        <Icon size={16} className="menu-link-icon" aria-hidden="true" />
                         <span className="min-w-0 flex-1">
-                          <span
-                            className={`block text-[0.88rem] ${
-                              active ? 'font-semibold text-navy-900' : 'text-navy-800'
-                            }`}
-                          >
-                            {link.label}
-                          </span>
+                          <span className="menu-link-label">{link.label}</span>
                           {link.note ? (
-                            <span className="block truncate text-[0.72rem] text-navy-500">{link.note}</span>
+                            <span className="menu-link-note">{link.note}</span>
                           ) : null}
                         </span>
                         {showBadge ? (
-                          <span className="rounded-full bg-lemma-dark px-1.5 py-0.5 text-[0.66rem] font-semibold text-white">
+                          <span className="menu-badge">
                             {unreadCount > 9 ? '9+' : unreadCount}
                           </span>
                         ) : (
-                          <ArrowRight size={13} className="shrink-0 text-navy-300" aria-hidden="true" />
+                          <ArrowRight size={13} className="menu-link-arrow" aria-hidden="true" />
                         )}
                       </Link>
                     </li>
@@ -319,33 +312,33 @@ export function SiteMenu({
             </nav>
           ))}
 
-          <div className="rounded-lg border border-sand-200 bg-white p-3">
-            <p className="text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-navy-400">
+          <div className="menu-card">
+            <p className="menu-label">
               Reception
             </p>
-            <ul className="mt-1.5 space-y-1.5 text-[0.8rem] text-navy-700">
-              <li className="flex items-center gap-2">
-                <Phone size={13} className="shrink-0 text-lemma-dark" />
-                <a href={`tel:${property.phone.replace(/\s/g, '')}`} className="hover:underline">
+            <ul className="mt-2.5 space-y-2">
+              <li className="menu-contact-item">
+                <Phone size={13} className="menu-link-icon" />
+                <a href={`tel:${property.phone.replace(/\s/g, '')}`}>
                   {property.phone}
                 </a>
               </li>
               {waDigits ? (
-                <li className="flex items-center gap-2">
-                  <MessageCircle size={13} className="shrink-0 text-lemma-dark" />
-                  <a href={`https://wa.me/${waDigits}`} target="_blank" rel="noreferrer" className="hover:underline">
+                <li className="menu-contact-item">
+                  <MessageCircle size={13} className="menu-link-icon" />
+                  <a href={`https://wa.me/${waDigits}`} target="_blank" rel="noreferrer">
                     WhatsApp {property.whatsapp}
                   </a>
                 </li>
               ) : null}
-              <li className="flex items-center gap-2">
-                <Mail size={13} className="shrink-0 text-lemma-dark" />
-                <a href={`mailto:${property.email}`} className="truncate hover:underline">
+              <li className="menu-contact-item">
+                <Mail size={13} className="menu-link-icon shrink-0" />
+                <a href={`mailto:${property.email}`} className="truncate">
                   {property.email}
                 </a>
               </li>
-              <li className="flex items-start gap-2">
-                <MapPin size={13} className="mt-0.5 shrink-0 text-lemma-dark" />
+              <li className="menu-contact-item items-start">
+                <MapPin size={13} className="menu-link-icon mt-0.5" />
                 <span>
                   {property.addressLine}
                   {property.city ? `, ${property.city}` : ''}
@@ -358,13 +351,13 @@ export function SiteMenu({
             <form action="/api/auth/logout" method="post" className="mt-3">
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-md border border-sand-300 bg-white px-3 py-2 text-[0.82rem] font-medium text-navy-700 transition-colors hover:border-navy-900 hover:text-navy-900"
+                className="menu-signout"
               >
                 <LogOut size={14} /> Sign out
               </button>
             </form>
           ) : (
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[0.72rem] text-navy-400">
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-[0.72rem] text-[#7d90a1]">
               <ShieldCheck size={12} /> Staff roles are assigned by management
             </p>
           )}

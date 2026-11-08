@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
-import { BrandMark } from '@/components/public/brand-mark';
+import { brandMonogram } from '@/components/public/brand-mark';
 import { Entrance, StaggerGroup } from '@/components/ui/motion';
 
 type FieldKey = 'fullName' | 'email' | 'phoneNumber' | 'password';
@@ -105,17 +105,28 @@ export default function RegisterPage() {
   }
 
   const taken = error?.includes('already exists') ?? false;
+  const monogram = brandMonogram('Lemma Apartments');
 
   return (
-    <main className="grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      <div className="relative hidden flex-col justify-between bg-charcoal-950 px-10 py-10 text-white lg:flex">
-        <Link href="/" className="flex items-center gap-3">
-          <BrandMark tone="dark" size="lg" />
+    <main className="public-shell grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-swdl-navy px-10 py-10 text-white lg:flex">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-swdl-gold/15 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-swdl-navySoft/60 blur-3xl"
+        />
+        <Link href="/" className="relative flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.9rem] font-extrabold tracking-[0.05em] text-swdl-navy">
+            {monogram}
+          </span>
           <div>
-            <p className="font-display text-[1.12rem] font-semibold leading-none text-white">
+            <p className="font-heading text-[1.05rem] font-extrabold uppercase leading-none tracking-[0.14em] text-white">
               Lemma Apartments
             </p>
-            <p className="mt-1 text-[0.74rem] text-sand-300">
+            <p className="mt-1.5 font-heading text-[0.62rem] font-bold uppercase tracking-[0.18em] text-swdl-gold">
               Barlaston Park · Lusaka, Zambia
             </p>
           </div>
@@ -123,59 +134,63 @@ export default function RegisterPage() {
 
         <div className="max-w-md space-y-6">
           <div>
-            <h1 className="font-display text-[2.1rem] font-medium leading-[1.15] tracking-[-0.015em] text-white">
+            <h1 className="font-heading text-[2.05rem] font-extrabold leading-[1.15] tracking-[-0.01em] text-white">
               Keep your Lusaka stays &amp; receipts organised.
             </h1>
-            <p className="mt-3 text-[0.92rem] leading-relaxed text-sand-300">
+            <p className="mt-3 text-[0.92rem] leading-relaxed text-[#B9C5D1]">
               Creating a guest account takes under a minute and prefills your contact details
               whenever you book with us.
             </p>
           </div>
 
-          <ul className="space-y-3 border-t border-white/10 pt-5 text-[0.88rem] text-sand-200">
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Track booking confirmation &amp; deposit verification
+          <ul className="check-gold space-y-1 text-[0.88rem] text-[#D7DEE6]">
+            <li>
+              <CheckCircle2 size={16} className="shrink-0 text-swdl-gold" aria-hidden="true" />
+              <span>Track booking confirmation &amp; deposit verification</span>
             </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Download PDF quotations, invoices and verified ZMW receipts
+            <li>
+              <CheckCircle2 size={16} className="shrink-0 text-swdl-gold" aria-hidden="true" />
+              <span>Download PDF quotations, invoices and verified ZMW receipts</span>
             </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="shrink-0 text-lemma-light" />
-              Request date changes directly with reception
+            <li>
+              <CheckCircle2 size={16} className="shrink-0 text-swdl-gold" aria-hidden="true" />
+              <span>Request date changes directly with reception</span>
             </li>
           </ul>
         </div>
 
-        <p className="flex items-center gap-2 text-[0.75rem] text-sand-400">
+        <p className="relative flex items-center gap-2 text-[0.75rem] text-[#8FA0B0]">
           <Shield size={13} /> Private guest record — visible only to you and authorised staff.
         </p>
       </div>
 
-      <div className="flex flex-col justify-center bg-sand-50 px-5 py-10 sm:px-10">
+      <div className="flex flex-col justify-center bg-swdl-light px-5 py-10 sm:px-10">
         <Entrance variant="up" delay={40} className="mx-auto w-full max-w-[27rem]">
           <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
-            <BrandMark tone="light" size="md" />
+            <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.84rem] font-extrabold tracking-[0.05em] text-swdl-navy">
+              {monogram}
+            </span>
             <div>
-              <span className="block font-display text-[1.05rem] font-semibold text-navy-900">
+              <span className="block font-heading text-[1rem] font-extrabold uppercase tracking-[0.13em] text-swdl-navy">
                 Lemma Apartments
               </span>
-              <span className="block text-[0.7rem] text-sand-600">Lusaka, Zambia</span>
+              <span className="block font-heading text-[0.6rem] font-bold uppercase tracking-[0.18em] text-swdl-goldDark">
+                Lusaka, Zambia
+              </span>
             </div>
           </Link>
 
-          <h2 className="font-display text-[1.65rem] font-medium tracking-[-0.015em] text-navy-900">
+          <h2 className="font-heading text-[1.7rem] font-extrabold tracking-[-0.01em]">
             Create guest account
           </h2>
-          <p className="mt-1 text-[0.85rem] text-sand-700">
+          <p className="mt-1 text-[0.87rem] text-swdl-muted">
             Already registered?{' '}
-            <Link href="/login" className="font-semibold text-navy-900 hover:underline">
+            <Link href="/login" className="font-semibold text-swdl-navy underline decoration-swdl-gold underline-offset-2 hover:text-swdl-goldDark">
               Sign in here
             </Link>
           </p>
 
-          <form onSubmit={submit} noValidate className="card mt-6 space-y-4 p-6">
+          <form onSubmit={submit} noValidate className="swdl-card mt-6 space-y-4 p-6 sm:p-7">
             <StaggerGroup spacing={0.09}>
               <div className={shakeFields.has('fullName') ? 'shake' : ''}>
                 <label className="label mb-1 block" htmlFor="fullName">
@@ -281,7 +296,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setReveal((v) => !v)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-sand-500 hover:bg-sand-100"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-swdl-muted transition-colors hover:bg-swdl-light hover:text-swdl-navy"
                   aria-label={reveal ? 'Hide password' : 'Show password'}
                 >
                   {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -292,7 +307,7 @@ export default function RegisterPage() {
                   {fieldError.password}
                 </p>
               ) : (
-                <p id="password-hint" className="mt-1 text-[0.75rem] text-sand-600">
+                <p id="password-hint" className="mt-1 text-[0.76rem] text-swdl-muted">
                   At least 6 characters.
                 </p>
               )}
@@ -322,14 +337,14 @@ export default function RegisterPage() {
             ) : null}
 
             {submitted ? (
-              <div className="pop-in flex items-center justify-center gap-2 py-2.5 text-[0.84rem] font-medium text-navy-700">
-                <CheckCircle2 size={15} className="text-st-paid" /> Account created
+              <div className="pop-in flex items-center justify-center gap-2 py-2.5 font-heading text-[0.85rem] font-bold text-swdl-navy">
+                <CheckCircle2 size={15} className="text-swdl-goldDark" /> Account created
               </div>
             ) : (
               <button
                 type="submit"
                 disabled={busy}
-                className="btn btn-primary w-full justify-center py-2.5"
+                className="btn btn-gold w-full justify-center py-2.5"
               >
                 {busy ? (
                   <>
@@ -344,9 +359,9 @@ export default function RegisterPage() {
               </button>
             )}
 
-            <p className="text-center text-[0.74rem] leading-relaxed text-sand-600">
+            <p className="text-center text-[0.75rem] leading-relaxed text-swdl-muted">
               By creating an account you agree to our{' '}
-              <Link href="/policies" className="underline underline-offset-2 hover:text-navy-800">
+              <Link href="/policies" className="underline underline-offset-2 transition-colors hover:text-swdl-navy">
                 booking terms
               </Link>
               .

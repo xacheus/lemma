@@ -717,3 +717,682 @@
     scroll-behavior: auto;
   }
 }
+
+/* ================================================================
+   PUBLIC SHELL — reference brand language (navy + brass gold)
+
+   Every guest-facing page wraps itself in `.public-shell`. Inside that
+   scope the site speaks the approved marketing language: deep navy
+   surfaces, warm gold accents, wide-tracked uppercase eyebrows, rounded
+   14px cards with a soft navy shadow, and the reference's motion set
+   (hero cross-fade + slow zoom-out, staggered 26px fade-ups, −8px card
+   lift with 1.08 image zoom, and an infinite photo marquee that pauses
+   on hover). The admin and portal suites are untouched.
+   ================================================================ */
+.public-shell {
+  --swdl-navy: #0F2B46;
+  --swdl-navy-soft: #16436B;
+  --swdl-navy-deep: #0A1E33;
+  --swdl-gold: #C9A15A;
+  --swdl-gold-dark: #A8823F;
+  --swdl-light: #F7F5F0;
+  --swdl-ink: #2B2B2B;
+  --swdl-muted: #6B7280;
+  --swdl-radius: 0.875rem;
+  --swdl-shadow: 0 10px 30px rgba(15, 43, 70, 0.12);
+  --swdl-shadow-lift: 0 18px 40px rgba(15, 43, 70, 0.2);
+
+  background: var(--swdl-light);
+  color: var(--swdl-ink);
+  font-family: 'Public Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.public-shell h1,
+.public-shell h2,
+.public-shell h3,
+.public-shell h4,
+.public-shell h5 {
+  font-family: 'Montserrat', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.005em;
+  line-height: 1.2;
+  color: var(--swdl-navy);
+}
+
+/* ---------------------------------------------------- section headings */
+.public-shell .section-head {
+  margin-bottom: 2.6rem;
+  text-align: center;
+}
+
+.public-shell .section-head > p:last-child {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 36rem;
+}
+
+.public-shell .eyebrow,
+.public-shell .section-head .eyebrow {
+  color: var(--swdl-gold-dark);
+  display: block;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.19em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.public-shell .section-head h2 {
+  font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin-top: 0.4rem;
+}
+
+.public-shell .section-head p {
+  color: var(--swdl-muted);
+  font-size: 0.95rem;
+  margin-top: 0.6rem;
+}
+
+/* On the navy bands the eyebrow and copy flip to light values. */
+.public-shell .on-navy .eyebrow { color: var(--swdl-gold); }
+.public-shell .on-navy h2,
+.public-shell .on-navy h3 { color: #fff; }
+.public-shell .on-navy p { color: #c9d5e1; }
+
+/* ------------------------------------------------------------ buttons */
+.public-shell .btn-gold {
+  background: var(--swdl-gold);
+  border: 2px solid transparent;
+  border-radius: 0.625rem;
+  color: var(--swdl-navy);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.25s ease,
+    box-shadow 0.25s ease,
+    color 0.25s ease;
+}
+
+.public-shell .btn-gold:hover {
+  background: var(--swdl-gold-dark);
+  transform: translateY(-2px);
+}
+
+.public-shell .btn-navy {
+  background: var(--swdl-navy);
+  border: 2px solid transparent;
+  border-radius: 0.625rem;
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.25s ease;
+}
+
+.public-shell .btn-navy:hover {
+  background: var(--swdl-navy-soft);
+  transform: translateY(-2px);
+}
+
+.public-shell .btn-outline-light {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 0.625rem;
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.public-shell .btn-outline-light:hover {
+  background: #fff;
+  border-color: #fff;
+  color: var(--swdl-navy);
+  transform: translateY(-2px);
+}
+
+/* -------------------------------------------------------------- cards */
+.public-shell .swdl-card {
+  background: #fff;
+  border: none;
+  border-radius: var(--swdl-radius);
+  box-shadow: var(--swdl-shadow);
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.public-shell .swdl-card-hover:hover {
+  box-shadow: var(--swdl-shadow-lift);
+  transform: translateY(-8px);
+}
+
+/* The card's photo grows on hover, exactly like the reference listings. */
+.public-shell .swdl-card .img-zoom img,
+.public-shell .swdl-media img {
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.public-shell .swdl-card:hover .img-zoom img,
+.public-shell .swdl-media:hover img {
+  transform: scale(1.08);
+}
+
+/* Service / feature cards gain a gold foot on hover. */
+.public-shell .swdl-service {
+  border-bottom: 4px solid transparent;
+}
+
+.public-shell .swdl-service:hover {
+  border-bottom-color: var(--swdl-gold);
+  box-shadow: var(--swdl-shadow-lift);
+  transform: translateY(-6px);
+}
+
+/* ----------------------------------------------------- pills and tags */
+.public-shell .swdl-pill {
+  background: var(--swdl-gold);
+  border-radius: 999px;
+  color: var(--swdl-navy);
+  display: inline-block;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1.35;
+  padding: 0.45rem 1.1rem;
+  text-transform: uppercase;
+}
+
+.public-shell .swdl-tag {
+  background: var(--swdl-gold);
+  border-radius: 999px;
+  color: var(--swdl-navy);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  padding: 0.35rem 0.85rem;
+  text-transform: uppercase;
+}
+
+.public-shell .swdl-tag-dark {
+  background: var(--swdl-navy);
+  color: #fff;
+}
+
+.public-shell .swdl-tag-open {
+  background: #14532d;
+  color: #dcfce7;
+}
+
+/* ------------------------------------------------------- photo marquee */
+.public-shell .marquee-track {
+  animation: swdl-marquee 35s linear infinite;
+  display: flex;
+  gap: 1.25rem;
+  width: max-content;
+}
+
+.public-shell .marquee:hover .marquee-track,
+.public-shell .marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+
+.public-shell .marquee-item {
+  border-radius: var(--swdl-radius);
+  box-shadow: var(--swdl-shadow);
+  height: 15rem;
+  overflow: hidden;
+  width: 22.5rem;
+}
+
+.public-shell .marquee-item img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+@keyframes swdl-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ---------------------------------------------------------- stats band */
+.public-shell .stats-band {
+  background: var(--swdl-navy);
+}
+
+.public-shell .stat-figure {
+  color: var(--swdl-gold);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(1.9rem, 3vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.public-shell .stat-label {
+  color: #b9c5d1;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------- CTA band */
+.public-shell .cta-band {
+  background: linear-gradient(120deg, var(--swdl-navy) 0%, var(--swdl-navy-soft) 100%);
+  border-radius: var(--swdl-radius);
+  box-shadow: var(--swdl-shadow);
+  color: #fff;
+}
+
+.public-shell .cta-band h2 { color: #fff; }
+.public-shell .cta-band p { color: #c9d5e1; }
+
+/* ----------------------------------------------------------- checklist */
+.public-shell .check-gold li {
+  align-items: flex-start;
+  color: var(--swdl-navy);
+  display: flex;
+  font-weight: 600;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+}
+
+.public-shell .check-gold li > svg {
+  color: var(--swdl-gold-dark);
+  flex: none;
+  margin-top: 0.22rem;
+}
+
+/* ------------------------------------------------------------ forms */
+.public-shell .field {
+  background: #fbfbfa;
+  border: 1.5px solid #dfe3e8;
+  border-radius: 0.625rem;
+  color: var(--swdl-ink);
+  font-family: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.public-shell .field:hover { border-color: #c6ccd4; }
+
+.public-shell .field:focus {
+  border-color: var(--swdl-gold);
+  box-shadow: 0 0 0 3px rgba(201, 161, 90, 0.2);
+  outline: none;
+}
+
+.public-shell .label {
+  color: var(--swdl-navy);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* --------------------------------------------------------- entrance */
+/* Reference stagger: badge, headline, copy and CTAs rise in 150ms steps. */
+.public-shell .swdl-rise > * { animation: lemma-swdl-rise 0.9s ease both; }
+.public-shell .swdl-rise > *:nth-child(1) { animation-delay: 0s; }
+.public-shell .swdl-rise > *:nth-child(2) { animation-delay: 0.15s; }
+.public-shell .swdl-rise > *:nth-child(3) { animation-delay: 0.3s; }
+.public-shell .swdl-rise > *:nth-child(4) { animation-delay: 0.45s; }
+.public-shell .swdl-rise > *:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes lemma-swdl-rise {
+  from { opacity: 0; transform: translate3d(0, 26px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Inner pages open on a full-bleed navy photograph band, like the reference. */
+.public-shell .page-banner {
+  background-color: var(--swdl-navy-deep);
+  background-position: center;
+  background-size: cover;
+  position: relative;
+}
+
+.public-shell .page-banner::after {
+  background: rgba(10, 25, 42, 0.68);
+  content: '';
+  inset: 0;
+  position: absolute;
+}
+
+.public-shell .page-banner > * { position: relative; z-index: 2; }
+
+.public-shell .page-banner h1 {
+  color: #fff;
+  font-size: clamp(1.9rem, 4vw, 2.9rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 640px) {
+  .public-shell .marquee-item {
+    height: 10.5rem;
+    width: 15.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-shell .marquee-track,
+  .public-shell .swdl-rise > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .public-shell .swdl-card-hover:hover,
+  .public-shell .swdl-service:hover,
+  .public-shell .btn-gold:hover,
+  .public-shell .btn-navy:hover,
+  .public-shell .btn-outline-light:hover {
+    transform: none !important;
+  }
+
+  .public-shell .swdl-card:hover .img-zoom img,
+  .public-shell .swdl-media:hover img {
+    transform: none !important;
+  }
+}
+
+/* ================================================================
+   Site menu — the reference's navy overlay column. The panel is
+   portalled outside `.public-shell`, so it carries the tokens itself.
+   ================================================================ */
+.swdl-menu {
+  --menu-navy: #0f2b46;
+  --menu-navy-deep: #0a1e33;
+  --menu-gold: #c9a15a;
+  --menu-gold-dark: #a8823f;
+  background: var(--menu-navy);
+  color: #c9d5e1;
+  font-family: 'Public Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.swdl-menu .menu-brand-name {
+  color: #fff;
+  font-family: 'Montserrat', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.swdl-menu .menu-brand-sub {
+  color: var(--menu-gold);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.swdl-menu .menu-close {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+  color: #fff;
+  display: inline-flex;
+  height: 2.5rem;
+  justify-content: center;
+  transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
+  width: 2.5rem;
+}
+
+.swdl-menu .menu-close:hover {
+  background: var(--menu-gold);
+  border-color: var(--menu-gold);
+  color: var(--menu-navy);
+  transform: rotate(90deg);
+}
+
+.swdl-menu .menu-label {
+  color: #8fa0b0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.swdl-menu .menu-list {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.875rem;
+  overflow: hidden;
+}
+
+.swdl-menu .menu-item + .menu-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.swdl-menu .menu-link {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.swdl-menu .menu-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 3px 0 0 var(--menu-gold);
+}
+
+.swdl-menu .menu-link[aria-current='page'] {
+  background: rgba(201, 161, 90, 0.12);
+  box-shadow: inset 3px 0 0 var(--menu-gold);
+}
+
+.swdl-menu .menu-link-label {
+  color: #eef3f8;
+  display: block;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.swdl-menu .menu-link[aria-current='page'] .menu-link-label {
+  color: #fff;
+  font-weight: 800;
+}
+
+.swdl-menu .menu-link-note {
+  color: #8fa0b0;
+  display: block;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.swdl-menu .menu-link-icon {
+  color: var(--menu-gold);
+  flex-shrink: 0;
+}
+
+.swdl-menu .menu-link-arrow {
+  color: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.swdl-menu .menu-link:hover .menu-link-arrow {
+  color: var(--menu-gold);
+  transform: translateX(3px);
+}
+
+.swdl-menu .menu-badge {
+  background: var(--menu-gold);
+  border-radius: 9999px;
+  color: var(--menu-navy);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.1rem 0.42rem;
+}
+
+.swdl-menu .menu-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.875rem;
+  padding: 0.85rem;
+}
+
+.swdl-menu .menu-card-title {
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.swdl-menu .menu-card-copy {
+  color: #a9b8c6;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  margin-top: 0.15rem;
+}
+
+.swdl-menu .menu-contact-item {
+  align-items: center;
+  color: #c9d5e1;
+  display: flex;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+}
+
+.swdl-menu .menu-contact-item a {
+  transition: color 0.2s ease;
+}
+
+.swdl-menu .menu-contact-item a:hover {
+  color: var(--menu-gold);
+}
+
+.swdl-menu .menu-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, var(--menu-gold), var(--menu-gold-dark));
+  border-radius: 9999px;
+  color: var(--menu-navy);
+  display: grid;
+  flex-shrink: 0;
+  height: 2.4rem;
+  place-items: center;
+  width: 2.4rem;
+}
+
+.swdl-menu .menu-btn-gold {
+  align-items: center;
+  background: var(--menu-gold);
+  border: 2px solid var(--menu-gold);
+  border-radius: 0.625rem;
+  color: var(--menu-navy);
+  display: inline-flex;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 0.35rem;
+  justify-content: center;
+  padding: 0.45rem 0.7rem;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+.swdl-menu .menu-btn-gold:hover {
+  background: var(--menu-gold-dark);
+  border-color: var(--menu-gold-dark);
+  transform: translateY(-2px);
+}
+
+.swdl-menu .menu-btn-outline {
+  align-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 0.625rem;
+  color: #fff;
+  display: inline-flex;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  gap: 0.35rem;
+  justify-content: center;
+  padding: 0.45rem 0.7rem;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.swdl-menu .menu-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fff;
+  transform: translateY(-2px);
+}
+
+.swdl-menu .menu-signout {
+  align-items: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0.625rem;
+  color: #c9d5e1;
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 600;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.55rem;
+  transition: border-color 0.25s ease, color 0.25s ease;
+  width: 100%;
+}
+
+.swdl-menu .menu-signout:hover {
+  border-color: var(--menu-gold);
+  color: var(--menu-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swdl-menu .menu-close:hover,
+  .swdl-menu .menu-btn-gold:hover,
+  .swdl-menu .menu-btn-outline:hover,
+  .swdl-menu .menu-link:hover .menu-link-arrow {
+    transform: none !important;
+  }
+}
+
+/* Outline button inside the reference design (formerly `.btn-secondary`). */
+.public-shell .btn-navy-outline {
+  background: transparent;
+  border: 2px solid var(--swdl-navy);
+  border-radius: 0.625rem;
+  color: var(--swdl-navy);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.public-shell .btn-navy-outline:hover {
+  background: var(--swdl-navy);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-shell .btn-navy-outline:hover {
+    transform: none !important;
+  }
+}

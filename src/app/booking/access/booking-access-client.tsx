@@ -66,17 +66,17 @@ export function BookingAccessClient({ property }: { property: Settings['property
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-12 sm:px-6">
       <div>
-        <p className="text-[0.78rem] font-medium text-lemma-dark">Visitor booking lookup</p>
-        <h1 className="mt-1 font-display text-[1.9rem] font-medium tracking-[-0.015em] text-navy-900">
+        <p className="text-[0.78rem] font-medium text-swdl-goldDark">Visitor booking lookup</p>
+        <h1 className="mt-1 font-heading text-[1.9rem] font-medium tracking-[-0.015em] text-swdl-navy">
           Find a booking by reference
         </h1>
-        <p className="mt-1.5 text-[0.9rem] leading-relaxed text-sand-700">
+        <p className="mt-1.5 text-[0.9rem] leading-relaxed text-swdl-muted">
           Booked without creating an account? Enter your booking reference and email to request a
           one-time access link, or reach reception directly on WhatsApp.
         </p>
       </div>
 
-      <form onSubmit={requestLink} className="card space-y-4 p-6">
+      <form onSubmit={requestLink} className="swdl-card space-y-4 p-6">
         <div>
           <label className="label mb-1 block" htmlFor="reference">
             Booking reference
@@ -105,7 +105,7 @@ export function BookingAccessClient({ property }: { property: Settings['property
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        <button className="btn btn-primary min-h-11 w-full justify-center" disabled={busy}>
+        <button className="btn btn-gold min-h-11 w-full justify-center" disabled={busy}>
           {busy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />}
           {busy ? 'Sending…' : 'Send secure access link'}
         </button>
@@ -116,7 +116,7 @@ export function BookingAccessClient({ property }: { property: Settings['property
             className={`rounded-md border px-3.5 py-2.5 text-[0.82rem] leading-relaxed ${
               isError
                 ? 'border-st-cancelled/30 bg-st-cancelledBg text-st-cancelled'
-                : 'border-sand-200 bg-sand-50 text-navy-800'
+                : 'border-[#DFE3E8] bg-swdl-light text-swdl-ink'
             }`}
           >
             {message}
@@ -124,11 +124,11 @@ export function BookingAccessClient({ property }: { property: Settings['property
         ) : null}
       </form>
 
-      <div className="rounded-xl border border-sand-200 bg-white p-5 text-[0.84rem] text-sand-700">
-        <p className="font-semibold text-navy-900">Booked with an account or need quick help?</p>
+      <div className="rounded-xl border border-[#DFE3E8] bg-white p-5 text-[0.84rem] text-swdl-muted">
+        <p className="font-semibold text-swdl-navy">Booked with an account or need quick help?</p>
         <p className="mt-1 leading-relaxed">
           Registered guests can{' '}
-          <Link className="font-semibold text-navy-900 underline" href="/login">
+          <Link className="font-semibold text-swdl-navy underline" href="/login">
             sign in to their account
           </Link>{' '}
           to view stays and PDF receipts immediately. You can also contact reception with your
@@ -140,7 +140,7 @@ export function BookingAccessClient({ property }: { property: Settings['property
               href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${property.name}, please help me check my booking${reference ? ` (${reference})` : ''}.`)}`}
               target="_blank"
               rel="noreferrer"
-              className="btn btn-secondary btn-sm"
+              className="btn btn-navy-outline btn-sm"
             >
               <MessageCircle size={14} /> WhatsApp reception
             </a>

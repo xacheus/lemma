@@ -77,6 +77,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
+        {/*
+          Public guest pages (`.public-shell`) use the reference brand voice:
+          Montserrat for headings, brand locks and eyebrows; Public Sans for body
+          copy — the closest web-font match to the reference's
+          'Segoe UI' / 'Helvetica Neue' / Arial stack.
+        */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body>{children}</body>
     </html>

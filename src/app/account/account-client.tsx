@@ -56,7 +56,7 @@ function unifiedBookingStatus(r: GuestReservationRow): {
     };
   }
   if (r.status === 'checked_out') {
-    return { label: 'Stay completed', chip: 'bg-sand-200 text-sand-700', step: 4 };
+    return { label: 'Stay completed', chip: 'bg-sand-200 text-swdl-muted', step: 4 };
   }
   if (r.status === 'checked_in') {
     return { label: 'Checked in', chip: 'bg-st-occupiedBg text-st-occupied ring-1 ring-st-occupied/25', step: 4 };
@@ -64,7 +64,7 @@ function unifiedBookingStatus(r: GuestReservationRow): {
   if (r.status === 'inquiry') {
     return {
       label: 'Enquiry sent · awaiting confirmation',
-      chip: 'bg-sand-100 text-navy-800 ring-1 ring-sand-300',
+      chip: 'bg-swdl-light text-swdl-ink ring-1 ring-sand-300',
       step: 1,
     };
   }
@@ -105,7 +105,7 @@ function unifiedBookingStatus(r: GuestReservationRow): {
   }
   return {
     label: 'Request received · awaiting deposit',
-    chip: 'bg-sand-100 text-navy-800 ring-1 ring-sand-300',
+    chip: 'bg-swdl-light text-swdl-ink ring-1 ring-sand-300',
     step: 1,
   };
 }
@@ -248,25 +248,25 @@ export function GuestAccountClient({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="card flex flex-wrap items-center justify-between gap-4 p-6">
+      <div className="swdl-card flex flex-wrap items-center justify-between gap-4 p-6">
         <div>
-          <p className="text-[0.78rem] font-medium text-lemma-dark">{roleLabel}</p>
-          <h1 className="mt-0.5 font-display text-[1.65rem] font-medium text-navy-900">
+          <p className="text-[0.78rem] font-medium text-swdl-goldDark">{roleLabel}</p>
+          <h1 className="mt-0.5 font-heading text-[1.65rem] font-medium text-swdl-navy">
             Welcome, {snapshot.account?.fullName || snapshot.user.name}
           </h1>
-          <p className="text-[0.84rem] text-sand-600">{snapshot.user.email}</p>
+          <p className="text-[0.84rem] text-swdl-muted">{snapshot.user.email}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {snapshot.user.role !== 'guest' ? (
             <Link
               href={snapshot.user.role === 'cleaner' ? '/portal/cleaning' : '/admin'}
-              className="btn btn-primary py-1.5 text-[0.8rem]"
+              className="btn btn-gold py-1.5 text-[0.8rem]"
             >
               Open Staff Workspace
             </Link>
           ) : null}
-          <Link href="/apartments" className="btn btn-secondary py-1.5 text-[0.8rem]">
+          <Link href="/apartments" className="btn btn-navy-outline py-1.5 text-[0.8rem]">
             Book a stay
           </Link>
           {waDigits ? (
@@ -274,7 +274,7 @@ export function GuestAccountClient({
               href={`https://wa.me/${waDigits}`}
               target="_blank"
               rel="noreferrer"
-              className="btn btn-secondary py-1.5 text-[0.8rem]"
+              className="btn btn-navy-outline py-1.5 text-[0.8rem]"
             >
               <MessageCircle size={14} /> WhatsApp reception
             </a>
@@ -293,10 +293,10 @@ export function GuestAccountClient({
         <div className="flex items-start gap-3 rounded-xl border border-st-paid/30 bg-st-paidBg px-4 py-3.5">
           <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-st-paid" />
           <div className="min-w-0">
-            <p className="text-[0.88rem] font-semibold text-navy-900">
+            <p className="text-[0.88rem] font-semibold text-swdl-navy">
               Your guest account is ready.
             </p>
-            <p className="mt-0.5 text-[0.82rem] text-sand-700">
+            <p className="mt-0.5 text-[0.82rem] text-swdl-muted">
               Browse available apartments when you are ready—your bookings, payment references and
               official ZMW receipts will appear here.
             </p>
@@ -304,7 +304,7 @@ export function GuestAccountClient({
           <button
             type="button"
             onClick={() => setShowWelcome(false)}
-            className="ml-auto rounded p-1 text-sand-500 hover:bg-white/60"
+            className="ml-auto rounded p-1 text-swdl-muted hover:bg-white/60"
             aria-label="Dismiss"
           >
             <XCircle size={15} />
@@ -313,19 +313,19 @@ export function GuestAccountClient({
       ) : null}
 
       {owed > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sand-300 bg-white px-5 py-4 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DFE3E8] bg-white px-5 py-4 shadow-swdl">
           <div>
-            <p className="text-[0.9rem] font-semibold text-navy-900">
+            <p className="text-[0.9rem] font-semibold text-swdl-navy">
               {formatKwacha(owed)} balance remaining across your upcoming stays
             </p>
-            <p className="mt-0.5 text-[0.81rem] text-sand-700">
+            <p className="mt-0.5 text-[0.81rem] text-swdl-muted">
               Pay via Airtel Money, MTN Mobile Money, bank transfer or cash, then record the
               reference here for staff verification.
             </p>
           </div>
           <button
             type="button"
-            className="btn btn-primary py-2 text-[0.82rem]"
+            className="btn btn-gold py-2 text-[0.82rem]"
             onClick={() => {
               const target = actionablePayable[0];
               if (target) setPayTarget({ id: target.id, reference: target.reference });
@@ -339,7 +339,7 @@ export function GuestAccountClient({
       {/* Tabs */}
       <div
         id="account-sections"
-        className="flex scroll-mt-24 flex-wrap gap-2 border-b border-sand-200 pb-2"
+        className="flex scroll-mt-24 flex-wrap gap-2 border-b border-[#DFE3E8] pb-2"
       >
         {[
           { id: 'bookings', label: `My Stays (${reservations.length})`, icon: CalendarDays },
@@ -365,8 +365,8 @@ export function GuestAccountClient({
             onClick={() => setTab(t.id as typeof tab)}
             className={`inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[0.83rem] font-medium transition ${
               tab === t.id
-                ? 'bg-navy-900 text-white'
-                : 'text-sand-700 hover:bg-sand-100 hover:text-navy-900'
+                ? 'bg-swdl-navy text-white'
+                : 'text-swdl-muted hover:bg-swdl-light hover:text-swdl-navy'
             }`}
           >
             <t.icon size={15} />
@@ -386,15 +386,15 @@ export function GuestAccountClient({
       {tab === 'bookings' ? (
         <div className="space-y-4">
           {reservations.length === 0 ? (
-            <div className="card p-10 text-center">
-              <p className="font-display text-[1.2rem] font-medium text-navy-900">
+            <div className="swdl-card p-10 text-center">
+              <p className="font-heading text-[1.2rem] font-medium text-swdl-navy">
                 No bookings on your account yet
               </p>
-              <p className="mx-auto mt-1.5 max-w-md text-[0.85rem] leading-relaxed text-sand-700">
+              <p className="mx-auto mt-1.5 max-w-md text-[0.85rem] leading-relaxed text-swdl-muted">
                 Compare available apartments and request dates online—no card payment is asked for
                 on the website.
               </p>
-              <Link href="/apartments" className="btn btn-primary mt-5 inline-flex">
+              <Link href="/apartments" className="btn btn-gold mt-5 inline-flex">
                 Explore apartments
               </Link>
             </div>
@@ -417,21 +417,21 @@ export function GuestAccountClient({
               ].includes(r.status);
 
               return (
-                <div key={r.id} className="card space-y-4 p-5 sm:p-6">
+                <div key={r.id} className="swdl-card space-y-4 p-5 sm:p-6">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[0.82rem] font-bold text-navy-900">
+                        <span className="font-mono text-[0.82rem] font-bold text-swdl-navy">
                           {r.reference}
                         </span>
                         <span className={`chip ${statusBadge.chip}`}>{statusBadge.label}</span>
                       </div>
-                      <h2 className="mt-1.5 font-display text-[1.22rem] font-medium text-navy-900">
+                      <h2 className="mt-1.5 font-heading text-[1.22rem] font-medium text-swdl-navy">
                         {r.apartment
                           ? `Apartment ${r.apartment.number} · ${r.apartment.name}`
                           : 'Assigned Apartment'}
                       </h2>
-                      <p className="mt-0.5 text-[0.85rem] text-sand-700">
+                      <p className="mt-0.5 text-[0.85rem] text-swdl-muted">
                         {formatMediumDate(r.checkIn)} → {formatMediumDate(r.checkOut)} · {r.nights}{' '}
                         {r.nights === 1 ? 'night' : 'nights'}, {r.guestCount}{' '}
                         {r.guestCount === 1 ? 'guest' : 'guests'}
@@ -439,8 +439,8 @@ export function GuestAccountClient({
                     </div>
 
                     <div className="text-left tabular-nums sm:text-right">
-                      <p className="text-[0.73rem] text-sand-600">Stay total</p>
-                      <p className="text-[1.18rem] font-bold text-navy-900">
+                      <p className="text-[0.73rem] text-swdl-muted">Stay total</p>
+                      <p className="text-[1.18rem] font-bold text-swdl-navy">
                         {formatKwacha(r.totalAmount)}
                       </p>
                       {r.verifiedPaid > 0 ? (
@@ -454,7 +454,7 @@ export function GuestAccountClient({
                         </p>
                       ) : null}
                       {r.balanceDue > 0 && !isPendingInquiry ? (
-                        <p className="text-[0.8rem] font-semibold text-navy-800">
+                        <p className="text-[0.8rem] font-semibold text-swdl-ink">
                           Balance remaining: {formatKwacha(r.balanceDue)}
                         </p>
                       ) : null}
@@ -465,7 +465,7 @@ export function GuestAccountClient({
                   {statusBadge.step > 0 ? (
                     <ol
                       aria-label="Booking progress"
-                      className="grid grid-cols-2 gap-1.5 rounded-lg border border-sand-200 bg-sand-50 p-2 text-[0.72rem] sm:grid-cols-4"
+                      className="grid grid-cols-2 gap-1.5 rounded-lg border border-[#DFE3E8] bg-swdl-light p-2 text-[0.72rem] sm:grid-cols-4"
                     >
                       {[
                         { step: 1, label: '1. Requested' },
@@ -482,8 +482,8 @@ export function GuestAccountClient({
                               current
                                 ? 'bg-navy-900 font-semibold text-white'
                                 : done
-                                  ? 'bg-white text-st-available ring-1 ring-sand-200'
-                                  : 'text-sand-500'
+                                  ? 'bg-white text-st-available ring-1 ring-[#DFE3E8]'
+                                  : 'text-swdl-muted'
                             }`}
                           >
                             {item.label}
@@ -494,16 +494,16 @@ export function GuestAccountClient({
                     </ol>
                   ) : null}
 
-                  <div className="rounded-lg border border-sand-200 bg-sand-50/70 px-3.5 py-2.5 text-[0.81rem] leading-relaxed text-sand-700">
+                  <div className="rounded-lg border border-[#DFE3E8] bg-swdl-light/70 px-3.5 py-2.5 text-[0.81rem] leading-relaxed text-swdl-muted">
                     <p>
                       {isPendingInquiry
                         ? 'Enquiry received — reception will confirm dates and open deposit instructions shortly.'
                         : STAGE_NOTE[r.paymentStage] ?? ''}
                     </p>
                     {r.latestClaim ? (
-                      <p className="mt-1 text-[0.76rem] text-sand-600">
+                      <p className="mt-1 text-[0.76rem] text-swdl-muted">
                         Last submission:{' '}
-                        <strong className="text-navy-800">
+                        <strong className="text-swdl-ink">
                           {r.latestClaim.status === 'rejected' ? 'Declined' : 'Submitted'}{' '}
                           {formatKwacha(r.latestClaim.amount)}
                         </strong>{' '}
@@ -517,7 +517,7 @@ export function GuestAccountClient({
                           <Link
                             key={rc.id}
                             href={`/receipt/${rc.id}`}
-                            className="inline-flex items-center gap-1 rounded border border-sand-300 bg-white px-2.5 py-1 text-[0.74rem] font-medium text-navy-900 hover:border-navy-900"
+                            className="inline-flex items-center gap-1 rounded border border-[#DFE3E8] bg-white px-2.5 py-1 text-[0.74rem] font-medium text-swdl-navy hover:border-navy-900"
                           >
                             <Receipt size={12} /> {rc.receiptNumber} · {formatKwacha(rc.amount)}
                           </Link>
@@ -526,13 +526,13 @@ export function GuestAccountClient({
                     ) : null}
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-200 pt-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#DFE3E8] pt-3.5">
                     <div className="flex flex-wrap items-center gap-2">
                       {canSubmitPayment ? (
                         <button
                           type="button"
                           onClick={() => setPayTarget({ id: r.id, reference: r.reference })}
-                          className="btn btn-primary py-1.5 text-[0.79rem]"
+                          className="btn btn-gold py-1.5 text-[0.79rem]"
                         >
                           <CreditCard size={13} />
                           {r.verifiedPaid > 0 ? 'Pay remaining balance' : 'Pay deposit / submit ref'}
@@ -546,7 +546,7 @@ export function GuestAccountClient({
                       {!isPendingInquiry ? (
                         <a
                           href={`/api/documents/confirmation/${r.id}/pdf?download=1`}
-                          className="btn btn-secondary py-1.5 text-[0.78rem]"
+                          className="btn btn-navy-outline py-1.5 text-[0.78rem]"
                         >
                           <Download size={13} /> Booking PDF
                         </a>
@@ -554,7 +554,7 @@ export function GuestAccountClient({
                       {r.quotationId ? (
                         <a
                           href={`/api/documents/quotation/${r.quotationId}/pdf?download=1`}
-                          className="btn btn-secondary py-1.5 text-[0.78rem]"
+                          className="btn btn-navy-outline py-1.5 text-[0.78rem]"
                         >
                           <Download size={13} /> Quotation PDF
                         </a>
@@ -562,7 +562,7 @@ export function GuestAccountClient({
                       {r.invoiceId ? (
                         <a
                           href={`/api/documents/invoice/${r.invoiceId}/pdf?download=1`}
-                          className="btn btn-secondary py-1.5 text-[0.78rem]"
+                          className="btn btn-navy-outline py-1.5 text-[0.78rem]"
                         >
                           <Download size={13} /> Invoice PDF
                         </a>
@@ -577,7 +577,7 @@ export function GuestAccountClient({
                           setCancelReason('');
                           setCancelErr(null);
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-sand-300 px-3 py-1.5 text-[0.78rem] font-medium text-st-cancelled hover:bg-st-cancelledBg"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-[#DFE3E8] px-3 py-1.5 text-[0.78rem] font-medium text-st-cancelled hover:bg-st-cancelledBg"
                       >
                         <XCircle size={13} /> Request cancellation
                       </button>
@@ -593,27 +593,27 @@ export function GuestAccountClient({
       {/* Tab 2: Quotations, Invoices & Verified Receipts */}
       {tab === 'documents' ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="card space-y-3 p-5">
-            <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
-              <FileText size={16} className="text-lemma-dark" /> Quotations ({quotations.length})
+          <div className="swdl-card space-y-3 p-5">
+            <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-swdl-navy">
+              <FileText size={16} className="text-swdl-goldDark" /> Quotations ({quotations.length})
             </h2>
             {quotations.length === 0 ? (
-              <p className="text-[0.82rem] text-sand-600">No quotations on your account.</p>
+              <p className="text-[0.82rem] text-swdl-muted">No quotations on your account.</p>
             ) : (
               quotations.map((q) => (
                 <div
                   key={q.id}
-                  className="flex items-center justify-between rounded-md border border-sand-200 p-3 text-[0.8rem]"
+                  className="flex items-center justify-between rounded-md border border-[#DFE3E8] p-3 text-[0.8rem]"
                 >
                   <div>
-                    <p className="font-semibold text-navy-900">{q.quotationNumber}</p>
-                    <p className="text-sand-600">
+                    <p className="font-semibold text-swdl-navy">{q.quotationNumber}</p>
+                    <p className="text-swdl-muted">
                       {q.apartmentName} · {formatKwacha(q.totalAmount)}
                     </p>
                   </div>
                   <a
                     href={`/api/documents/quotation/${q.id}/pdf?download=1`}
-                    className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
+                    className="btn btn-navy-outline px-2.5 py-1 text-[0.75rem]"
                   >
                     <Download size={12} /> PDF
                   </a>
@@ -622,27 +622,27 @@ export function GuestAccountClient({
             )}
           </div>
 
-          <div className="card space-y-3 p-5">
-            <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
-              <FileText size={16} className="text-lemma-dark" /> Invoices ({invoices.length})
+          <div className="swdl-card space-y-3 p-5">
+            <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-swdl-navy">
+              <FileText size={16} className="text-swdl-goldDark" /> Invoices ({invoices.length})
             </h2>
             {invoices.length === 0 ? (
-              <p className="text-[0.82rem] text-sand-600">No invoices issued yet.</p>
+              <p className="text-[0.82rem] text-swdl-muted">No invoices issued yet.</p>
             ) : (
               invoices.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center justify-between rounded-md border border-sand-200 p-3 text-[0.8rem]"
+                  className="flex items-center justify-between rounded-md border border-[#DFE3E8] p-3 text-[0.8rem]"
                 >
                   <div>
-                    <p className="font-semibold text-navy-900">{inv.invoiceNumber}</p>
-                    <p className="text-sand-600">
+                    <p className="font-semibold text-swdl-navy">{inv.invoiceNumber}</p>
+                    <p className="text-swdl-muted">
                       Total {formatKwacha(inv.totalAmount)} · Due {formatKwacha(inv.balanceDue)}
                     </p>
                   </div>
                   <a
                     href={`/api/documents/invoice/${inv.id}/pdf?download=1`}
-                    className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
+                    className="btn btn-navy-outline px-2.5 py-1 text-[0.75rem]"
                   >
                     <Download size={12} /> PDF
                   </a>
@@ -651,22 +651,22 @@ export function GuestAccountClient({
             )}
           </div>
 
-          <div className="card space-y-3 p-5">
-            <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-navy-900">
-              <Receipt size={16} className="text-lemma-dark" /> Official Receipts ({receipts.length})
+          <div className="swdl-card space-y-3 p-5">
+            <h2 className="flex items-center gap-2 text-[0.98rem] font-semibold text-swdl-navy">
+              <Receipt size={16} className="text-swdl-goldDark" /> Official Receipts ({receipts.length})
             </h2>
             {receipts.length === 0 ? (
-              <p className="text-[0.82rem] text-sand-600">
+              <p className="text-[0.82rem] text-swdl-muted">
                 Official receipts appear automatically once payments are verified.
               </p>
             ) : (
               receipts.map((rc) => (
                 <div
                   key={rc.id}
-                  className="flex items-center justify-between rounded-md border border-sand-200 p-3 text-[0.8rem]"
+                  className="flex items-center justify-between rounded-md border border-[#DFE3E8] p-3 text-[0.8rem]"
                 >
                   <div>
-                    <p className="font-semibold text-navy-900">{rc.receiptNumber}</p>
+                    <p className="font-semibold text-swdl-navy">{rc.receiptNumber}</p>
                     <p className="font-medium text-st-available">
                       Verified {formatKwacha(rc.amount)} ({formatMediumDate(rc.paidAt)})
                     </p>
@@ -674,7 +674,7 @@ export function GuestAccountClient({
                   <div className="flex gap-1.5">
                     <Link
                       href={`/receipt/${rc.id}`}
-                      className="btn btn-secondary px-2.5 py-1 text-[0.75rem]"
+                      className="btn btn-navy-outline px-2.5 py-1 text-[0.75rem]"
                       title="View or print receipt"
                     >
                       <Receipt size={12} /> View
@@ -696,8 +696,8 @@ export function GuestAccountClient({
 
       {/* Tab 3: Profile & Password */}
       {tab === 'profile' ? (
-        <form onSubmit={saveProfile} className="card max-w-xl space-y-4 p-6">
-          <h2 className="font-display text-[1.2rem] font-medium text-navy-900">
+        <form onSubmit={saveProfile} className="swdl-card max-w-xl space-y-4 p-6">
+          <h2 className="font-heading text-[1.2rem] font-medium text-swdl-navy">
             Contact details &amp; password
           </h2>
           <div>
@@ -725,8 +725,8 @@ export function GuestAccountClient({
             />
           </div>
 
-          <div className="space-y-3 border-t border-sand-200 pt-4">
-            <p className="text-[0.82rem] font-semibold text-navy-800">
+          <div className="space-y-3 border-t border-[#DFE3E8] pt-4">
+            <p className="text-[0.82rem] font-semibold text-swdl-ink">
               Change password (leave blank to keep current password)
             </p>
             <div>
@@ -767,7 +767,7 @@ export function GuestAccountClient({
             </p>
           ) : null}
 
-          <button type="submit" disabled={profileBusy} className="btn btn-primary">
+          <button type="submit" disabled={profileBusy} className="btn btn-gold">
             {profileBusy ? 'Saving…' : 'Save changes'}
           </button>
         </form>
@@ -786,12 +786,12 @@ export function GuestAccountClient({
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-950/50 p-4">
           <form
             onSubmit={submitCancelRequest}
-            className="card my-auto w-full max-w-md space-y-4 p-5 sm:p-6"
+            className="swdl-card my-auto w-full max-w-md space-y-4 p-5 sm:p-6"
           >
-            <h3 className="font-display text-[1.2rem] font-medium text-navy-900">
+            <h3 className="font-heading text-[1.2rem] font-medium text-swdl-navy">
               Request booking cancellation
             </h3>
-            <p className="text-[0.83rem] leading-relaxed text-sand-700">
+            <p className="text-[0.83rem] leading-relaxed text-swdl-muted">
               Your cancellation request is sent directly to reception for review in line with our
               booking terms.
             </p>
@@ -814,11 +814,11 @@ export function GuestAccountClient({
               <button
                 type="button"
                 onClick={() => setCancelTargetId(null)}
-                className="btn btn-secondary"
+                className="btn btn-navy-outline"
               >
                 Keep booking
               </button>
-              <button type="submit" disabled={cancelBusy} className="btn btn-primary">
+              <button type="submit" disabled={cancelBusy} className="btn btn-gold">
                 {cancelBusy ? 'Submitting…' : 'Send request'}
               </button>
             </div>

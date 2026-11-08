@@ -1,6 +1,25 @@
 import React from 'react';
 
 /**
+ * Two-letter monogram for the brass logo tile in the public header and footer.
+ *
+ * The reference brand lock pairs a gold gradient tile carrying the initials with
+ * a wide-tracked wordmark, so the public chrome derives its initials from the
+ * property name set in Admin → Settings ("Lemma Apartments" → "LA") instead of
+ * hardcoding them. Falls back to the first two characters for single-word names.
+ */
+export function brandMonogram(name: string): string {
+  const words = (name || '')
+    .trim()
+    .split(/[\s\-–—.,]+/)
+    .filter(Boolean);
+
+  if (words.length === 0) return 'LA';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+/**
  * Vector architectural emblem from the Lemma brand mark (skyline + twin gables),
  * rendered without the tiny embedded wordmark so it stays razor-sharp at 36–48px
  * on both warm-light and dark surfaces.
