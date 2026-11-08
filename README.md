@@ -1,6 +1,6 @@
-# Lemma Apartments
+# Lemma Heights Apartments
 
-Apartment booking and property administration for Lemma Apartments in Lusaka:
+Apartment booking and property administration for Lemma Heights Apartments in Lusaka:
 public availability enquiries, a guest account, reservations, payment claims,
 receipts, housekeeping and staff operations in one application.
 

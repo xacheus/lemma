@@ -32,7 +32,7 @@ import { NAV_SECTIONS } from '@/lib/domain/permissions';
 import { formatLongDate } from '@/lib/domain/dates';
 import { ROLE_META } from '@/lib/domain/status';
 import { ReservationFormDialog } from '@/components/admin/reservation-form';
-import { BrandMark } from '@/components/public/brand-mark';
+import { BrandLogo } from '@/components/public/brand-logo';
 import type { BookingSource } from '@/lib/domain/types';
 
 /* --------------------------------------------------------------------- shell context */
@@ -144,10 +144,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const sidebarHeader = (
     <Link href="/admin" className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
-      <BrandMark tone="dark" size="sm" />
+      <BrandLogo size="sm" />
       <span className="min-w-0">
         <span className="block truncate font-display text-[0.98rem] font-medium leading-tight text-white">
-          {snapshot.settings.property.name || 'Lemma Apartments'}
+          {snapshot.settings.property.name || 'Lemma Heights Apartments'}
         </span>
         <span className="mt-0.5 block truncate text-[0.68rem] text-navy-300">Property workspace</span>
       </span>

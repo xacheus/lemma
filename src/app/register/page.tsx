@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
-import { brandMonogram } from '@/components/public/brand-mark';
+import { BrandLogo } from '@/components/public/brand-logo';
 import { Entrance, StaggerGroup } from '@/components/ui/motion';
 
 type FieldKey = 'fullName' | 'email' | 'phoneNumber' | 'password';
@@ -105,7 +105,6 @@ export default function RegisterPage() {
   }
 
   const taken = error?.includes('already exists') ?? false;
-  const monogram = brandMonogram('Lemma Apartments');
 
   return (
     <main className="public-shell grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
@@ -119,12 +118,10 @@ export default function RegisterPage() {
           className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-swdl-navySoft/60 blur-3xl"
         />
         <Link href="/" className="relative flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.9rem] font-extrabold tracking-[0.05em] text-swdl-navy">
-            {monogram}
-          </span>
+          <BrandLogo size="md" />
           <div>
             <p className="font-heading text-[1.05rem] font-extrabold uppercase leading-none tracking-[0.14em] text-white">
-              Lemma Apartments
+              Lemma Heights Apartments
             </p>
             <p className="mt-1.5 font-heading text-[0.62rem] font-bold uppercase tracking-[0.18em] text-swdl-gold">
               Barlaston Park · Lusaka, Zambia
@@ -167,12 +164,10 @@ export default function RegisterPage() {
       <div className="flex flex-col justify-center bg-swdl-light px-5 py-10 sm:px-10">
         <Entrance variant="up" delay={40} className="mx-auto w-full max-w-[27rem]">
           <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
-            <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.84rem] font-extrabold tracking-[0.05em] text-swdl-navy">
-              {monogram}
-            </span>
+            <BrandLogo size="md" />
             <div>
               <span className="block font-heading text-[1rem] font-extrabold uppercase tracking-[0.13em] text-swdl-navy">
-                Lemma Apartments
+                Lemma Heights Apartments
               </span>
               <span className="block font-heading text-[0.6rem] font-bold uppercase tracking-[0.18em] text-swdl-goldDark">
                 Lusaka, Zambia

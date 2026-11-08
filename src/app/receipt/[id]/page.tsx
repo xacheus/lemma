@@ -7,7 +7,7 @@ import { ensureCloudFirestoreHydrated, getDb } from '@/lib/db/store';
 import { formatKwacha } from '@/lib/domain/money';
 import { formatMediumDate } from '@/lib/domain/dates';
 import { PAYMENT_METHOD_META } from '@/lib/domain/status';
-import { BrandMark } from '@/components/public/brand-mark';
+import { BrandLogo } from '@/components/public/brand-logo';
 import { PrintTrigger } from './print-trigger';
 
 export const dynamic = 'force-dynamic';
@@ -84,7 +84,7 @@ export default async function GuestReceiptPage({ params }: { params: Promise<{ i
         <article className="rounded-lg border border-sand-200 bg-white p-6 shadow-card sm:p-9 print:rounded-none print:border-0 print:p-0 print:shadow-none">
           <header className="flex flex-wrap items-start justify-between gap-4 border-b border-sand-200 pb-5">
             <div className="flex items-center gap-3">
-              <BrandMark tone="light" size="lg" />
+              <BrandLogo size="lg" />
               <div>
                 <p className="font-display text-[1.12rem] font-semibold text-navy-900">
                   {property.name}

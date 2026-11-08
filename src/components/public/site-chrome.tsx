@@ -17,7 +17,7 @@ import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole } from '@/lib/domain/permissions';
 import { useScrolled } from '@/components/ui/motion';
-import { brandMonogram } from './brand-mark';
+import { BrandLogo } from './brand-logo';
 import { SiteMenu } from './site-menu';
 
 export function PublicHeader({
@@ -46,12 +46,10 @@ export function PublicHeader({
     setMenuOpen(false);
   }, [activePath]);
 
-  const brandTitle = property.name || 'Lemma Apartments';
+  const brandTitle = property.name || 'Lemma Heights Apartments';
   const subline = [property.addressLine || property.city, property.city && property.addressLine ? property.city : property.country]
     .filter(Boolean)
     .join(', ');
-
-  const monogram = brandMonogram(brandTitle);
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-swdl-navy shadow-swdl-nav">
@@ -61,11 +59,9 @@ export function PublicHeader({
         }`}
       >
         <Link href="/" className="group flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.8rem] font-extrabold tracking-[0.06em] text-swdl-navy shadow-[0_4px_14px_rgba(201,161,90,0.28)] transition-transform duration-300 ease-smooth group-hover:-translate-y-0.5">
-            {monogram}
-          </span>
+          <BrandLogo size="md" className="shadow-[0_4px_14px_rgba(20,40,60,0.35)] transition-transform duration-300 ease-smooth group-hover:-translate-y-0.5" />
           <div className="min-w-0">
-            <span className="block truncate font-heading text-[1.15rem] font-extrabold uppercase tracking-[0.15em] text-white">
+            <span className="block truncate font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.13em] text-white">
               {brandTitle}
             </span>
             <span className="block truncate font-heading text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-swdl-gold">
@@ -178,18 +174,16 @@ export function PublicHeader({
 
 export function PublicFooter({ property }: { property: Settings['property'] }) {
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
-  const brandTitle = property.name || 'Lemma Apartments';
+  const brandTitle = property.name || 'Lemma Heights Apartments';
 
   return (
     <footer className="border-t border-white/10 bg-swdl-navyDeep text-[#B9C5D1]">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-14 sm:px-6 md:grid-cols-12 lg:px-8">
         <div className="md:col-span-5">
           <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.8rem] font-extrabold tracking-[0.06em] text-swdl-navy">
-              {brandMonogram(brandTitle)}
-            </span>
+            <BrandLogo size="md" />
             <div>
-              <p className="font-heading text-[1.15rem] font-extrabold uppercase tracking-[0.15em] text-white">
+              <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.13em] text-white">
                 {brandTitle}
               </p>
               <p className="font-heading text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-swdl-gold">

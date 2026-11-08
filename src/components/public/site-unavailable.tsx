@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { MessageCircle, Phone, RotateCcw } from 'lucide-react';
-import { brandMonogram } from './brand-mark';
+import { BrandLogo } from './brand-logo';
 
 /** Error-boundary fallback with direct reception contact details and retry action. */
 export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
@@ -22,11 +22,9 @@ export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
       <header className="border-b border-white/10 bg-swdl-navy">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-4 sm:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.82rem] font-extrabold tracking-[0.05em] text-swdl-navy">
-              {brandMonogram('Lemma Apartments')}
-            </span>
+            <BrandLogo size="md" />
             <span className="font-heading text-[1rem] font-extrabold uppercase tracking-[0.14em] text-white">
-              Lemma Apartments
+              Lemma Heights Apartments
             </span>
           </Link>
         </div>
@@ -35,7 +33,7 @@ export function SiteUnavailable({ onRetry }: { onRetry?: () => void }) {
       <main className="mx-auto flex w-full max-w-6xl flex-1 items-center px-5 py-16 sm:px-8">
         <div className="max-w-xl">
           <p className="font-heading text-[0.72rem] font-extrabold uppercase tracking-[0.19em] text-swdl-goldDark">
-            Lemma Apartments · Lusaka
+            Lemma Heights Apartments · Lusaka
           </p>
           <h1 className="mt-3 font-heading text-[2rem] font-extrabold tracking-[-0.01em] sm:text-[2.5rem]">
             Something went wrong loading this page.

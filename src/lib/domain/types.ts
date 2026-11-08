@@ -1,5 +1,5 @@
 /**
- * Lemma Apartments — Production Domain Types
+ * Lemma Heights Apartments — Production Domain Types
  *
  * Maps directly to the Firestore collection architecture:
  *   users/{uid}

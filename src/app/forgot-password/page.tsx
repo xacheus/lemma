@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
-import { brandMonogram } from '@/components/public/brand-mark';
+import { BrandLogo } from '@/components/public/brand-logo';
 
 function ForgotPasswordInner() {
   const searchParams = useSearchParams();
@@ -68,12 +68,10 @@ function ForgotPasswordInner() {
     <main className="public-shell flex min-h-screen flex-col items-center justify-center px-5 py-12">
       <div className="w-full max-w-[26rem]">
         <Link href="/" className="mb-6 flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.84rem] font-extrabold tracking-[0.05em] text-swdl-navy">
-            {brandMonogram('Lemma Apartments')}
-          </span>
+          <BrandLogo size="md" />
           <div>
             <p className="font-heading text-[1rem] font-extrabold uppercase tracking-[0.13em] text-swdl-navy">
-              Lemma Apartments
+              Lemma Heights Apartments
             </p>
             <p className="font-heading text-[0.6rem] font-bold uppercase tracking-[0.18em] text-swdl-goldDark">
               Account Security

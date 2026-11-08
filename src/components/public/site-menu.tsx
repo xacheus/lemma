@@ -27,7 +27,7 @@ import {
 import type { Settings } from '@/lib/domain/types';
 import type { Session } from '@/lib/auth/session';
 import { defaultDashboardForRole, NAV_SECTIONS, permissionsFor } from '@/lib/domain/permissions';
-import { brandMonogram } from './brand-mark';
+import { BrandLogo } from './brand-logo';
 
 /**
  * Full-screen site menu.
@@ -163,7 +163,6 @@ export function SiteMenu({
     }
   }
 
-  const monogram = brandMonogram(property.name || 'Lemma Apartments');
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
   const groups: { title: string; links: MenuLink[] }[] = [
     { title: 'Explore', links: PUBLIC_LINKS },
@@ -210,11 +209,9 @@ export function SiteMenu({
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-white/10 bg-[#0c2338]/95 px-4 py-3.5 backdrop-blur-sm sm:px-5">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-[#c9a15a] to-[#a8823f] font-heading text-[0.82rem] font-extrabold tracking-[0.04em] text-[#0f2b46]">
-              {monogram}
-            </span>
+            <BrandLogo size="sm" />
             <div>
-              <p className="menu-brand-name">{property.name || 'Lemma Apartments'}</p>
+              <p className="menu-brand-name">{property.name || 'Lemma Heights Apartments'}</p>
               <p className="menu-brand-sub">
                 {property.city || 'Lusaka'} · Menu
               </p>

@@ -1,11 +1,34 @@
 import { ImageResponse } from 'next/og';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export const runtime = 'nodejs';
-export const alt = 'Lemma Apartments — Furnished Self-Catering Apartments in Lusaka, Zambia';
+export const alt = 'Lemma Heights Apartments — Furnished Self-Catering Apartments in Lusaka, Zambia';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
+const AMENITIES = [
+  'Backup power during outages',
+  'Work-ready Wi-Fi in every unit',
+  'Self-catering kitchen',
+  'Fresh linen & housekeeping',
+  'Gated compound parking',
+  'Check-in from 14:00',
+];
+
+function logoDataUri(): string | null {
+  try {
+    const file = path.join(process.cwd(), 'public', 'brand', 'logo.png');
+    const bytes = fs.readFileSync(file);
+    return `data:image/png;base64,${bytes.toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
 export default function OpenGraphImage() {
+  const logo = logoDataUri();
+
   return new ImageResponse(
     (
       <div
@@ -15,15 +38,15 @@ export default function OpenGraphImage() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: '64px 72px',
-          backgroundColor: '#12171F',
+          padding: '40px 52px',
+          backgroundColor: '#0A1E33',
           backgroundImage:
-            'radial-gradient(circle at 82% 20%, rgba(196, 154, 69, 0.24), transparent 48%), linear-gradient(135deg, #10151C 0%, #18222F 58%, #0E1218 100%)',
+            'linear-gradient(140deg, #081A2B 0%, #11304F 55%, #0A1E33 100%)',
           color: '#FBF9F5',
           fontFamily: 'Georgia, serif',
         }}
       >
-        {/* Top brand bar */}
+        {/* Brand bar: original supplied logo + name */}
         <div
           style={{
             display: 'flex',
@@ -31,58 +54,49 @@ export default function OpenGraphImage() {
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-            {/* Geometric Brand Emblem */}
-            <div
-              style={{
-                width: '58px',
-                height: '58px',
-                borderRadius: '12px',
-                border: '1.5px solid rgba(224, 190, 115, 0.45)',
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="42" height="28" viewBox="0 12 128 84" fill="none">
-                <path d="M18 82A48 48 0 0 1 52 36.5L48 44A40 40 0 0 0 22 82H18Z" fill="#E0BE73" />
-                <path d="M110 82A48 48 0 0 0 76 36.5L80 44A40 40 0 0 1 106 82H110Z" fill="#E0BE73" />
-                <path d="M48 68V42L64 20V60L48 68Z" fill="#E0BE73" />
-                <rect x="66" y="23" width="4" height="36" fill="#E0BE73" />
-                <rect x="72" y="28" width="4" height="33" fill="#E0BE73" />
-                <rect x="78" y="34" width="4" height="30" fill="#E0BE73" />
-                <path d="M31 76V55L35 52V73L31 76ZM37 72V51L41 48V70L37 72Z" fill="#E0BE73" />
-                <path d="M85 65V51L101 60V74L85 65Z" fill="#E0BE73" />
-                <path d="M20 88L51 69L81 88H70L51 76L31 88H20Z" fill="#E0BE73" />
-                <path d="M56 71L72 61L112 88H100L72 69L63 75L56 71Z" fill="#E0BE73" />
-                <rect x="47" y="80" width="3.5" height="3.5" fill="#E0BE73" />
-                <rect x="52" y="80" width="3.5" height="3.5" fill="#E0BE73" />
-                <rect x="47" y="85" width="3.5" height="3.5" fill="#E0BE73" />
-                <rect x="52" y="85" width="3.5" height="3.5" fill="#E0BE73" />
-                <rect x="69" y="74" width="3.5" height="3.5" fill="#E0BE73" />
-                <rect x="74" y="74" width="3.5" height="3.5" fill="#E0BE73" />
-                <rect x="69" y="79" width="3.5" height="3.5" fill="#E0BE73" />
-                <rect x="74" y="79" width="3.5" height="3.5" fill="#E0BE73" />
-              </svg>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {logo ? (
+              <div
+                style={{
+                  display: 'flex',
+                  width: '84px',
+                  height: '84px',
+                  borderRadius: '14px',
+                  backgroundColor: '#FFFFFF',
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={logo}
+                  alt="Lemma Heights Apartments"
+                  width={84}
+                  height={84}
+                  style={{ objectFit: 'contain' }}
+                />
+              </div>
+            ) : null}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span
                 style={{
-                  fontSize: '26px',
+                  fontSize: '22px',
                   fontWeight: 600,
-                  letterSpacing: '0.02em',
+                  letterSpacing: '0.09em',
+                  textTransform: 'uppercase',
                   color: '#FFFFFF',
                 }}
               >
-                Lemma Apartments
+                Lemma Heights Apartments
               </span>
               <span
                 style={{
-                  fontSize: '15px',
+                  marginTop: '6px',
+                  fontSize: '12px',
                   fontFamily: 'sans-serif',
-                  color: '#D5CBB8',
-                  letterSpacing: '0.08em',
+                  color: '#D9C48F',
+                  letterSpacing: '0.2em',
                   textTransform: 'uppercase',
                 }}
               >
@@ -93,58 +107,90 @@ export default function OpenGraphImage() {
 
           <div
             style={{
-              padding: '10px 18px',
+              padding: '8px 16px',
               borderRadius: '999px',
-              border: '1px solid rgba(224, 190, 115, 0.45)',
-              backgroundColor: 'rgba(196, 154, 69, 0.12)',
-              color: '#E8CB88',
-              fontSize: '15px',
+              border: '1px solid rgba(217, 196, 143, 0.5)',
+              backgroundColor: 'rgba(201, 161, 90, 0.14)',
+              color: '#E4CD96',
+              fontSize: '12.5px',
               fontFamily: 'sans-serif',
               fontWeight: 600,
+              letterSpacing: '0.02em',
             }}
           >
-            Direct Front-Desk Rates (ZMW)
+            Book direct · ZMW rates
           </div>
         </div>
 
-        {/* Center headline */}
-        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '880px' }}>
+        {/* Headline — deliberately compact so the amenity list stays legible */}
+        <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center' }}>
           <div
             style={{
-              fontSize: '58px',
-              lineHeight: 1.1,
+              fontSize: '36px',
+              lineHeight: 1.18,
               fontWeight: 600,
               color: '#FFFFFF',
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.015em',
+              maxWidth: '900px',
             }}
           >
-            Furnished apartments in Lusaka, set up for a night or a month.
+            Furnished apartments in Lusaka, for a night or a month.
           </div>
+
+          {/* The six guest-facing promises — always visible */}
           <div
             style={{
-              marginTop: '22px',
-              fontSize: '23px',
-              lineHeight: 1.45,
-              fontFamily: 'sans-serif',
-              color: '#D6D0C4',
+              marginTop: '20px',
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: '8px 10px',
+              maxWidth: '1000px',
             }}
           >
-            Private kitchens, backup power, work-ready Wi-Fi and secure compound parking—booked
-            directly with reception.
+            {AMENITIES.map((label) => (
+              <div
+                key={label}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '7px 12px',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(232, 237, 244, 0.22)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  fontFamily: 'sans-serif',
+                  fontSize: '12.5px',
+                  fontWeight: 500,
+                  color: '#EDEFF3',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '999px',
+                    backgroundColor: '#C9A15A',
+                  }}
+                />
+                {label}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Bottom strip */}
+        {/* Footer strip */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingTop: '24px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.14)',
+            paddingTop: '16px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.16)',
             fontFamily: 'sans-serif',
-            fontSize: '17px',
-            color: '#C7BFB0',
+            fontSize: '13px',
+            color: '#B9C5D1',
           }}
         >
           <span>Check-in 14:00 · Check-out 10:00</span>

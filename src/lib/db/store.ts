@@ -18,7 +18,8 @@ import { computeDashboardSummary } from './summary';
  * persist into the user interface. Operator-entered values are never overwritten.
  */
 const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string; from: string; to: string }[] = [
-  { section: 'property', field: 'name', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.property.name },
+  { section: 'property', field: 'name', from: 'Lemma Apartments', to: DEFAULT_SETTINGS.property.name },
+  { section: 'property', field: 'legalName', from: 'Lemma Apartments', to: DEFAULT_SETTINGS.property.legalName },
   { section: 'property', field: 'legalName', from: 'Lemma Heights (Private) Limited', to: DEFAULT_SETTINGS.property.legalName },
   { section: 'property', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.property.addressLine },
   { section: 'property', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.property.phone },
@@ -39,7 +40,7 @@ const RENAMED_DEFAULTS: { section: 'property' | 'googleBusiness'; field: string;
     from: 'Daily, 07:00 – 21:00. Late check-in by arrangement on WhatsApp.',
     to: DEFAULT_SETTINGS.property.receptionHours,
   },
-  { section: 'googleBusiness', field: 'businessName', from: 'Lemma Heights Apartments', to: DEFAULT_SETTINGS.googleBusiness!.businessName },
+  { section: 'googleBusiness', field: 'businessName', from: 'Lemma Apartments', to: DEFAULT_SETTINGS.googleBusiness!.businessName },
   { section: 'googleBusiness', field: 'addressLine', from: 'Plot 2144B, Chainama Lands, Great East Road', to: DEFAULT_SETTINGS.googleBusiness!.addressLine },
   { section: 'googleBusiness', field: 'phone', from: '+260 211 470 662', to: DEFAULT_SETTINGS.googleBusiness!.phone },
   { section: 'googleBusiness', field: 'phone', from: '+260 574556207', to: DEFAULT_SETTINGS.googleBusiness!.phone },
@@ -64,6 +65,8 @@ function upgradeRenamedDefaults(db: Database) {
       [
         'Lemma Apartments — account details are confirmed by reception before any transfer is made',
         'Lemma Apartments. Account details are confirmed by reception before any transfer is made',
+        'Lemma Heights Apartments — account details are confirmed by reception before any transfer is made',
+        'Lemma Heights Apartments. Account details are confirmed by reception before any transfer is made',
       ].includes(method.accountNumber)
     ) {
       method.accountNumber = '';

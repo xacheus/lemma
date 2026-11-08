@@ -7,7 +7,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, 
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { Role } from '@/lib/domain/types';
 import { getFirebaseClientAuth, isFirebaseClientConfigured } from '@/lib/firebase/client';
-import { brandMonogram } from '@/components/public/brand-mark';
+import { BrandLogo } from '@/components/public/brand-logo';
 import { Entrance, Reveal, StaggerGroup } from '@/components/ui/motion';
 
 function destinationForRole(role: Role, nextPath: string | null): string {
@@ -100,8 +100,7 @@ export function LoginPage({
     }
   }
 
-  const brandTitle = propertyName || 'Lemma Apartments';
-  const monogram = brandMonogram(brandTitle);
+  const brandTitle = propertyName || 'Lemma Heights Apartments';
 
   return (
     <main className="public-shell grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
@@ -115,9 +114,7 @@ export function LoginPage({
           className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-swdl-navySoft/60 blur-3xl"
         />
         <Link href="/" className="relative flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.9rem] font-extrabold tracking-[0.05em] text-swdl-navy">
-            {monogram}
-          </span>
+          <BrandLogo size="md" />
           <div>
             <p className="font-heading text-[1.05rem] font-extrabold uppercase leading-none tracking-[0.14em] text-white">
               {brandTitle}
@@ -167,9 +164,7 @@ export function LoginPage({
       <div className="flex flex-col justify-center bg-swdl-light px-5 py-10 sm:px-10">
         <Entrance variant="up" delay={40} className="mx-auto w-full max-w-[27rem]">
           <Link href="/" className="mb-7 flex items-center gap-3 lg:hidden">
-            <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.84rem] font-extrabold tracking-[0.05em] text-swdl-navy">
-              {monogram}
-            </span>
+            <BrandLogo size="md" />
             <div>
               <p className="font-heading text-[1rem] font-extrabold uppercase tracking-[0.13em] text-swdl-navy">
                 {brandTitle}

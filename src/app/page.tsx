@@ -231,7 +231,7 @@ export default async function HomePage({
                     {property.addressLine} · {property.city}, {property.country}
                   </span>
                 </p>
-                <h1 className="mt-5 font-heading text-[2rem] font-extrabold leading-[1.15] tracking-[-0.01em] text-white sm:text-[2.9rem] lg:text-[3.4rem]">
+                <h1 className="mt-5 font-heading text-[1.8rem] font-extrabold leading-[1.18] tracking-[-0.01em] text-white sm:text-[2.45rem] lg:text-[2.85rem]">
                   Furnished apartments in Lusaka,{' '}
                   <span className="text-swdl-gold">booked directly with our front desk.</span>
                 </h1>
@@ -567,7 +567,7 @@ export default async function HomePage({
           <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:px-8">
             <div className="on-navy">
               <span className="eyebrow">Practical Comforts</span>
-              <h2 className="mt-1.5 font-heading text-[1.75rem] font-extrabold leading-tight sm:text-[2.1rem]">
+              <h2 className="mt-1.5 font-heading text-[1.5rem] font-extrabold leading-tight sm:text-[1.8rem]">
                 Equipped for working weeks, not just overnight stops
               </h2>
               <p className="mt-3 max-w-xl text-[0.95rem] leading-relaxed">
@@ -742,7 +742,7 @@ export default async function HomePage({
         {/* CTA band */}
         <Reveal as="section" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
           <div className="cta-band px-7 py-14 text-center sm:px-12">
-            <h2 className="font-heading text-[1.55rem] font-extrabold sm:text-[2.1rem]">
+            <h2 className="font-heading text-[1.4rem] font-extrabold sm:text-[1.8rem]">
               Ready to book your stay in Lusaka?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-[0.95rem]">
