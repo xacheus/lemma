@@ -1069,13 +1069,30 @@
 }
 
 .public-shell .page-banner::after {
+  /* The overlay only tints a photograph; without a photo the band keeps its
+     own gradient so the headline still sits on a rich navy surface. */
   background: rgba(10, 25, 42, 0.68);
   content: '';
   inset: 0;
+  pointer-events: none;
   position: absolute;
+  z-index: 1;
 }
 
 .public-shell .page-banner > * { position: relative; z-index: 2; }
+
+.public-shell .page-banner[style*='url('] {
+  background-color: var(--swdl-navy-deep);
+}
+
+.public-shell .page-banner:not([style*='url(']) {
+  background-image: radial-gradient(
+      circle at 78% 18%,
+      rgba(201, 161, 90, 0.28),
+      transparent 52%
+    ),
+    linear-gradient(135deg, #0a1e33 0%, #16436b 58%, #0a192a 100%);
+}
 
 .public-shell .page-banner h1 {
   color: #fff;
@@ -1394,5 +1411,35 @@
 @media (prefers-reduced-motion: reduce) {
   .public-shell .btn-navy-outline:hover {
     transform: none !important;
+  }
+}
+
+
+/* ------------------------------------------------------------- showcase */
+/* `.swdl-showcase` is the full-bleed light band between sections. It keeps
+   the reference's generous 72px vertical rhythm (which the guest pages get
+   from utility classes) without repeating the padding on every section. */
+.public-shell .swdl-showcase {
+  padding-bottom: clamp(3.5rem, 6vw, 4.5rem);
+  padding-top: clamp(3.5rem, 6vw, 4.5rem);
+}
+
+.public-shell .swdl-shell {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1180px;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  position: relative;
+  width: 100%;
+}
+
+/* Page titles are sized per page; the shared heading rule above already
+   supplies the Montserrat face, weight and navy colour. */
+
+@media (prefers-reduced-motion: reduce) {
+  .public-shell .swdl-showcase {
+    padding-bottom: 3.5rem;
+    padding-top: 3.5rem;
   }
 }

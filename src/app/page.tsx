@@ -505,11 +505,11 @@ export default async function HomePage({
             <div className="marquee">
               <div className="marquee-track">
                 {[...featuredPhotos.slice(0, 8), ...featuredPhotos.slice(0, 8)].map((photo, i) => (
-                  <div className="marquee-item swdl-media" key={`${photo}-${i}`} aria-hidden={i >= featuredPhotos.length ? true : undefined}>
+                  <div className="marquee-item swdl-media" key={`${photo}-${i}`} aria-hidden={i >= Math.min(featuredPhotos.length, 8) ? true : undefined}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={photo}
-                      alt={i < featuredPhotos.length ? `${property.name} apartment photograph` : ''}
+                      alt={i < Math.min(featuredPhotos.length, 8) ? `${property.name} apartment photograph` : ''}
                       loading="lazy"
                       decoding="async"
                     />

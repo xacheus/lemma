@@ -22,6 +22,11 @@ export default async function ContactPage() {
   const fullAddress = [property.addressLine, property.city, property.country]
     .filter(Boolean)
     .join(', ');
+  const bannerPhoto =
+    db.apartments
+      .flatMap((a) => [a.coverPhoto, ...(a.gallery?.map((g) => g.url) ?? a.photos)])
+      .find(Boolean) ?? null;
+
   const mapsQueryUrl =
     db.settings.googleBusiness?.mapsProfileUrl?.trim() ||
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.name} ${fullAddress}`)}`;
@@ -35,20 +40,27 @@ export default async function ContactPage() {
         unreadCount={unreadForSession(db, session)}
       />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-10 px-4 py-14 sm:px-6 lg:px-8">
-        <div className="animate-fade-up section-head">
-          <span className="eyebrow">Contact Us</span>
-          <h1 className="mt-1 font-heading text-[2rem] font-extrabold tracking-[-0.01em] sm:text-[2.5rem]">
-            Location &amp; front desk contact
-          </h1>
-          <p className="mx-auto mt-2 max-w-2xl text-[0.95rem] leading-relaxed text-swdl-muted">
-            Reach our Lusaka reception desk directly for date enquiries, corporate or monthly stay
-            quotations, late-evening check-ins, or driving directions to the gate.
-          </p>
-          <p className="mt-3 font-heading text-[0.78rem] font-bold uppercase tracking-[0.16em] text-swdl-goldDark">
+      <main className="flex-1">
+        <section
+          className="page-banner"
+          style={bannerPhoto ? { backgroundImage: `url("${bannerPhoto}")` } : undefined}
+        >
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-center px-4 py-16 text-center sm:px-6 lg:px-8 lg:py-20">
+            <span className="eyebrow">Contact Us</span>
+            <h1 className="mt-2 max-w-3xl font-heading text-[2rem] font-extrabold tracking-[-0.01em] text-white sm:text-[2.6rem]">
+              Location &amp; front desk contact
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-[0.98rem] leading-relaxed text-[#D7DEE6]">
+              Reach our Lusaka reception desk directly for date enquiries, corporate or monthly stay
+              quotations, late-evening check-ins, or driving directions to the gate.
+            </p>
+          </div>
+        </section>
+
+        <div className="mx-auto w-full max-w-7xl space-y-10 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+          <p className="text-center font-heading text-[0.78rem] font-extrabold uppercase tracking-[0.16em] text-swdl-goldDark">
             {property.addressLine} · {property.city}
           </p>
-        </div>
 
         <div className="stagger grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
           <div className="space-y-6">
@@ -242,6 +254,7 @@ export default async function ContactPage() {
               </p>
             </div>
           </div>
+        </div>
         </div>
       </main>
 

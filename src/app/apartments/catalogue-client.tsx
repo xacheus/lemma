@@ -77,26 +77,32 @@ export function ApartmentsCatalogueClient({
 
   return (
     <div className="space-y-7">
-      <div id="availability" className="animate-fade-up scroll-mt-24 text-center">
-        <span className="eyebrow">Properties in Lusaka</span>
-        <h1 className="mt-1.5 font-heading text-[2rem] font-extrabold tracking-[-0.01em] sm:text-[2.5rem]">
-          Apartments &amp; availability
-        </h1>
-        {publishedTotal > 0 ? (
-          <p className="mx-auto mt-2 max-w-2xl text-[0.95rem] text-swdl-muted">
-            Showing {formatMediumDate(initialCheckIn)} to {formatMediumDate(initialCheckOut)} ·{' '}
-            <strong className="font-semibold text-swdl-navy">
-              {availableCount} of {filtered.length}
-            </strong>{' '}
-            {filtered.length === 1 ? 'apartment' : 'apartments'} open for {initialGuests}{' '}
-            {initialGuests === 1 ? 'guest' : 'guests'}.
+      <div id="availability" className="animate-fade-up scroll-mt-28">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b border-[#E4E7EB] pb-4">
+          <p className="font-heading text-[0.78rem] font-extrabold uppercase tracking-[0.16em] text-swdl-goldDark">
+            {publishedTotal > 0 ? 'Check availability' : 'Listings updating'}
           </p>
-        ) : (
-          <p className="mx-auto mt-2 max-w-2xl text-[0.95rem] text-swdl-muted">
-            Online apartment listings are currently being updated. Call reception to check
-            availability and receive a written ZMW quotation for your dates.
-          </p>
-        )}
+          {publishedTotal > 0 ? (
+            <p className="text-[0.92rem] text-swdl-muted">
+              <span className="font-heading font-bold text-swdl-navy">
+                {formatMediumDate(initialCheckIn)}
+              </span>{' '}
+              to{' '}
+              <span className="font-heading font-bold text-swdl-navy">
+                {formatMediumDate(initialCheckOut)}
+              </span>{' '}
+              · {initialGuests} {initialGuests === 1 ? 'guest' : 'guests'} ·{' '}
+              <span className="font-heading font-bold text-swdl-navy">
+                {availableCount} of {filtered.length}
+              </span>{' '}
+              {filtered.length === 1 ? 'apartment' : 'apartments'} open
+            </p>
+          ) : (
+            <p className="text-[0.92rem] text-swdl-muted">
+              Call reception to check availability and receive a written ZMW quotation.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Filter & Availability Bar */}

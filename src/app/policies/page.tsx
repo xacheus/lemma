@@ -22,6 +22,11 @@ export const metadata = {
 export default async function PoliciesPage() {
   const { db, session } = await readPublicSiteData();
   const { property, booking, payments } = db.settings;
+  const bannerPhoto =
+    db.apartments
+      .flatMap((a) => [a.coverPhoto, ...(a.gallery?.map((g) => g.url) ?? a.photos)])
+      .find(Boolean) ?? null;
+
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
 
   const terms = [
@@ -109,17 +114,24 @@ export default async function PoliciesPage() {
     <div className="public-shell flex min-h-screen flex-col">
       <PublicHeader property={property} session={session} activePath="/policies" unreadCount={unreadForSession(db, session)} />
 
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-14 sm:px-6 lg:px-8">
-        <div className="section-head">
-        <span className="eyebrow">Booking Info</span>
-        <h1 className="mt-1.5 font-heading text-[2rem] font-extrabold tracking-[-0.01em] sm:text-[2.4rem]">
-          Booking terms, cancellation &amp; privacy
-        </h1>
-        <p className="mx-auto mt-2 max-w-2xl text-[0.95rem] leading-relaxed text-swdl-muted">
-          Clear house and payment rules before you commit to dates. If anything needs clarification
-          for your stay, reach reception directly before sending a deposit.
-        </p>
-        </div>
+      <main className="flex-1">
+        <section
+          className="page-banner"
+          style={bannerPhoto ? { backgroundImage: `url("${bannerPhoto}")` } : undefined}
+        >
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-center px-4 py-16 text-center sm:px-6 lg:px-8 lg:py-20">
+            <span className="eyebrow">Booking Info</span>
+            <h1 className="mt-2 max-w-3xl font-heading text-[2rem] font-extrabold tracking-[-0.01em] text-white sm:text-[2.6rem]">
+              Booking terms, cancellation &amp; privacy
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-[0.98rem] leading-relaxed text-[#D7DEE6]">
+              Clear house and payment rules before you commit to dates. If anything needs
+              clarification for your stay, reach reception directly before sending a deposit.
+            </p>
+          </div>
+        </section>
+
+        <div className="mx-auto w-full max-w-4xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
 
         <div className="swdl-card mt-2 p-6 sm:p-7">
           <h2 className="font-heading text-[1.15rem] font-extrabold">At a glance</h2>
@@ -230,6 +242,7 @@ export default async function PoliciesPage() {
           </Link>
           .
         </p>
+        </div>
       </main>
 
       <PublicFooter property={property} />
