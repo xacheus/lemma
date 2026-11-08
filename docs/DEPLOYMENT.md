@@ -1,4 +1,4 @@
-# Deploying Lemma Apartments
+# Deploying Lemma Heights Apartments
 
 This repository cannot configure a Firebase or Vercel project on its own. Set the
 secrets in **Vercel → Project → Settings → Environment Variables**, for the intended

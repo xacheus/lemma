@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Booking terms, cancellation and privacy',
   description:
-    'How bookings, deposits, cancellations and guest information work at Lemma Apartments in Lusaka.',
+    'How bookings, deposits, cancellations and guest information work at Lemma Heights Apartments in Lusaka.',
 };
 
 /**
@@ -218,7 +218,7 @@ export default async function PoliciesPage() {
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             {waDigits ? (
               <a
-                href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments, I have a question about a booking.')}`}
+                href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Heights Apartments, I have a question about a booking.')}`}
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn-gold px-5 py-2.5 text-[0.84rem]"

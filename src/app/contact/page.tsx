@@ -142,7 +142,7 @@ export default async function ContactPage() {
                 </Link>
                 {waDigits ? (
                   <a
-                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments, I would like to request a stay quotation.')}`}
+                    href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Heights Apartments, I would like to request a stay quotation.')}`}
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-navy px-6 py-2.5"

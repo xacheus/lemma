@@ -2,14 +2,14 @@ import { isBrevoEmailConfigured } from '../notifications/email-config';
 import type { Settings } from '../domain/types';
 
 /**
- * Default property configuration for Lemma Apartments.
+ * Default property configuration for Lemma Heights Apartments.
  * Every field is editable in `/admin/settings` and stored in `settings/business`
  * & `settings/google_business` — never hardcoded inside individual pages.
  */
 export const DEFAULT_SETTINGS: Settings = {
   property: {
-    name: 'Lemma Apartments',
-    legalName: 'Lemma Apartments',
+    name: 'Lemma Heights Apartments',
+    legalName: 'Lemma Heights Apartments',
     logoUrl: '/brand/logo.jpg',
     tagline: 'Furnished apartments at Barlaston Park, Lusaka. Booked night by night.',
     addressLine: 'Barlaston Park',
@@ -38,7 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
       'A 50% deposit is required to confirm a reservation and hold apartment dates. Balance is payable prior to or upon check-in. Free cancellation up to 48 hours before scheduled check-in time (14:00 CAT). Quotations do not hold apartment availability until converted into a confirmed reservation.',
   },
   googleBusiness: {
-    businessName: 'Lemma Apartments',
+    businessName: 'Lemma Heights Apartments',
     primaryCategory: 'Serviced accommodation',
     secondaryCategories: ['Apartment complex', 'Extended stay hotel'],
     addressLine: 'Barlaston Park',
@@ -151,7 +151,7 @@ export const DEFAULT_SETTINGS: Settings = {
     sendCancellationNotice: true,
     sendCleaningReminders: true,
     sendBalanceReminders: true,
-    senderName: 'Lemma Apartments Reservations',
+    senderName: 'Lemma Heights Apartments Reservations',
   },
   housekeeping: {
     turnaroundMinutes: 90,

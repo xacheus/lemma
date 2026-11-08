@@ -8,7 +8,7 @@ export function getBrevoEmailConfig(): { apiKey: string; sender: { email: string
   const named = from.match(/^([^<>]+)\s*<([^<>]+)>$/);
   const email = (named ? named[2] : from).trim();
   if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return null;
-  const name = (process.env.EMAIL_FROM_NAME?.trim() || named?.[1]?.trim().replace(/^"|"$/g, '') || 'Lemma Apartments');
+  const name = (process.env.EMAIL_FROM_NAME?.trim() || named?.[1]?.trim().replace(/^"|"$/g, '') || 'Lemma Heights Apartments');
   if (/[\r\n]/.test(name)) return null;
   return { apiKey, sender: { email, name } };
 }

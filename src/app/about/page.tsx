@@ -15,7 +15,7 @@ import { readPublicSiteData } from '@/lib/public/read-site-data';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { PhotoFrame } from '@/components/ui/photo';
 import { Reveal } from '@/components/ui/motion';
-import { BrandMark } from '@/components/public/brand-mark';
+import { BrandLogo } from '@/components/public/brand-logo';
 import { unreadForSession } from '@/lib/domain/inbox';
 
 export const dynamic = 'force-dynamic';
@@ -130,7 +130,7 @@ export default async function AboutPage() {
           ) : (
             <div className="swdl-card space-y-5 p-7 sm:p-9">
               <div className="flex items-center gap-3">
-                <BrandMark tone="light" size="lg" />
+                <BrandLogo size="lg" />
                 <div>
                   <p className="font-heading text-[0.72rem] font-bold uppercase tracking-[0.14em] text-swdl-goldDark">
                     Property overview

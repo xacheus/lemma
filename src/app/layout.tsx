@@ -24,31 +24,31 @@ function siteOrigin(): string {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
-  applicationName: 'Lemma Apartments',
+  applicationName: 'Lemma Heights Apartments',
   title: {
-    default: 'Lemma Apartments — Apartments in Lusaka, Zambia',
-    template: '%s · Lemma Apartments',
+    default: 'Lemma Heights Apartments — Apartments in Lusaka, Zambia',
+    template: '%s · Lemma Heights Apartments',
   },
   description:
     'Self-catering furnished apartments at Barlaston Park, Lusaka. Check dates in Zambian Kwacha (ZMW) and book directly with reception.',
   keywords: [
-    'Lemma Apartments',
+    'Lemma Heights Apartments',
     'Barlaston Park Lusaka',
     'Furnished apartments Lusaka',
     'Serviced apartments Lusaka Zambia',
   ],
   manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'Lemma Apartments — Furnished Apartments in Lusaka',
+    title: 'Lemma Heights Apartments — Furnished Apartments in Lusaka',
     description:
       'Self-catering apartments at Barlaston Park, Lusaka, priced per night in Zambian Kwacha.',
     type: 'website',
     locale: 'en_ZM',
-    siteName: 'Lemma Apartments',
+    siteName: 'Lemma Heights Apartments',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Lemma Apartments — Furnished Apartments in Lusaka',
+    title: 'Lemma Heights Apartments — Furnished Apartments in Lusaka',
     description:
       'Self-catering apartments at Barlaston Park, Lusaka, priced per night in Zambian Kwacha.',
   },

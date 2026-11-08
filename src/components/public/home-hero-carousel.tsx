@@ -187,7 +187,7 @@ export function HomeHeroCarousel({
               </span>
             </p>
 
-            <h1 className="mt-5 font-heading text-[2rem] font-extrabold leading-[1.15] tracking-[-0.01em] text-white sm:text-[2.9rem] lg:text-[3.5rem]">
+            <h1 className="mt-5 font-heading text-[1.8rem] font-extrabold leading-[1.18] tracking-[-0.01em] text-white sm:text-[2.45rem] lg:text-[2.85rem]">
               Furnished apartments in Lusaka,{' '}
               <span className="text-swdl-gold">set up for a night or a month.</span>
             </h1>

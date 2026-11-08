@@ -1004,9 +1004,12 @@
 .public-shell .cta-band p { color: #c9d5e1; }
 
 /* ----------------------------------------------------------- checklist */
+/* Colour inherits from the surrounding list so the same class works on light
+   panels, navy panels and auth screens (the navy ink disappeared into the
+   Practical Comforts background when it was hardcoded here). */
 .public-shell .check-gold li {
   align-items: flex-start;
-  color: var(--swdl-navy);
+  color: inherit;
   display: flex;
   font-weight: 600;
   gap: 0.6rem;
@@ -1017,6 +1020,19 @@
   color: var(--swdl-gold-dark);
   flex: none;
   margin-top: 0.22rem;
+}
+
+/* On the navy "Practical Comforts" panel the default navy checklist ink would
+   disappear into the background — give it a light, legible ink instead. */
+.public-shell .on-navy .check-gold li {
+  color: #e8edf4;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+}
+
+.public-shell .on-navy .check-gold li > svg {
+  color: var(--swdl-gold);
+  margin-top: 0.1rem;
 }
 
 /* ------------------------------------------------------------ forms */

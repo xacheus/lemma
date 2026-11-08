@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Lemma Apartments — Hospitality & Operations Design System
+ * Lemma Heights Apartments — Hospitality & Operations Design System
  *
  * Balances the architectural slate of the Lemma emblem (#707E91 / #4A586B)
  * with warm stone/linen surfaces (`sand`) and restrained warm brass (`gold`),

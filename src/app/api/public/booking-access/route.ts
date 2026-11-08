@@ -92,10 +92,10 @@ export async function POST(req: NextRequest) {
       const textBody = `Use this one-time link to open booking ${match.reference}. It expires in 30 minutes.\n\n${link}\n\nIf you did not request it, ignore this email.`;
       await sendEmailNotification({
         to: match.email,
-        subject: 'Your Lemma Apartments booking link',
+        subject: 'Your Lemma Heights Apartments booking link',
         textBody,
         htmlBody: buildBrandedEmailHtml({
-          subject: 'Your Lemma Apartments booking link',
+          subject: 'Your Lemma Heights Apartments booking link',
           body: textBody,
           ctaLabel: 'Open booking',
           ctaUrl: link,

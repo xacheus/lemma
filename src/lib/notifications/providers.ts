@@ -206,7 +206,7 @@ export function buildBrandedEmailHtml(opts: {
   ctaLabel?: string;
   ctaUrl?: string;
 }): string {
-  const businessName = opts.businessName || opts.propertyName || 'Lemma Apartments';
+  const businessName = opts.businessName || opts.propertyName || 'Lemma Heights Apartments';
   const subjectText = opts.subject || opts.heading || businessName;
   const bodyContent = opts.body || (opts.bodyLines ?? []).join('\n');
   const address = opts.address || 'Barlaston Park, Lusaka, Zambia';
