@@ -78,36 +78,36 @@ export function GuestBookingClient({
   if (error) {
     return (
       <div className="mx-auto max-w-xl px-4 py-14 sm:px-6">
-        <div role="alert" className="card space-y-4 p-6 sm:p-8">
+        <div role="alert" className="swdl-card space-y-4 p-6 sm:p-8">
           <div className="flex items-start gap-3">
             <AlertCircle size={20} className="mt-0.5 shrink-0 text-st-cleaning" />
             <div>
-              <h1 className="font-display text-[1.45rem] font-medium text-navy-900">
+              <h1 className="font-heading text-[1.45rem] font-medium text-swdl-navy">
                 Verify access to view this booking
               </h1>
-              <p className="mt-1 text-[0.88rem] leading-relaxed text-sand-700">{error}</p>
+              <p className="mt-1 text-[0.88rem] leading-relaxed text-swdl-muted">{error}</p>
             </div>
           </div>
-          <p className="text-[0.84rem] leading-relaxed text-sand-700">
+          <p className="text-[0.84rem] leading-relaxed text-swdl-muted">
             For guest privacy, visitor booking pages open only in the browser where the request was
             made or via a fresh access link.
           </p>
           <div className="flex flex-wrap gap-2.5 pt-1">
-            <Link href="/booking/access" className="btn btn-primary">
+            <Link href="/booking/access" className="btn btn-gold">
               Request access link by reference
             </Link>
-            <Link href="/login" className="btn btn-secondary">
+            <Link href="/login" className="btn btn-navy-outline">
               Sign in to account
             </Link>
           </div>
           {waDigits ? (
-            <p className="border-t border-sand-200 pt-4 text-[0.8rem] text-sand-600">
+            <p className="border-t border-[#DFE3E8] pt-4 text-[0.8rem] text-swdl-muted">
               Need help right away?{' '}
               <a
                 href={`https://wa.me/${waDigits}`}
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-navy-900 underline"
+                className="font-medium text-swdl-navy underline"
               >
                 Message reception on WhatsApp ({property.whatsapp})
               </a>
@@ -121,8 +121,8 @@ export function GuestBookingClient({
 
   if (!booking) {
     return (
-      <div className="mx-auto flex max-w-xl items-center justify-center gap-2.5 px-4 py-20 text-[0.9rem] text-sand-700">
-        <Loader2 size={18} className="animate-spin text-lemma-dark" /> Loading your booking…
+      <div className="mx-auto flex max-w-xl items-center justify-center gap-2.5 px-4 py-20 text-[0.9rem] text-swdl-muted">
+        <Loader2 size={18} className="animate-spin text-swdl-goldDark" /> Loading your booking…
       </div>
     );
   }
@@ -137,31 +137,31 @@ export function GuestBookingClient({
     ? { label: 'Payment under review', chip: 'bg-st-cleaningBg text-st-cleaning' }
     : booking.paymentStatus === 'fully_paid'
       ? { label: 'Confirmed & paid in full', chip: 'bg-st-availableBg text-st-available' }
-      : { label: statusMeta?.label ?? booking.status, chip: statusMeta?.chip ?? 'bg-sand-100 text-navy-800' };
+      : { label: statusMeta?.label ?? booking.status, chip: statusMeta?.chip ?? 'bg-swdl-light text-swdl-ink' };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-12 sm:px-6">
       <div>
-        <p className="text-[0.78rem] font-medium text-lemma-dark">Visitor booking summary</p>
-        <h1 className="mt-1 font-display text-[1.95rem] font-medium tracking-[-0.015em] text-navy-900">
+        <p className="text-[0.78rem] font-medium text-swdl-goldDark">Visitor booking summary</p>
+        <h1 className="mt-1 font-heading text-[1.95rem] font-medium tracking-[-0.015em] text-swdl-navy">
           Booking {booking.reference}
         </h1>
       </div>
 
-      <div className="card space-y-5 p-6 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-sand-200 pb-4">
+      <div className="swdl-card space-y-5 p-6 sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#DFE3E8] pb-4">
           <div>
-            <h2 className="font-display text-[1.3rem] font-medium text-navy-900">
+            <h2 className="font-heading text-[1.3rem] font-medium text-swdl-navy">
               {booking.apartment}
             </h2>
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-sand-700">
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-swdl-muted">
               <span className="inline-flex items-center gap-1.5">
-                <CalendarDays size={14} className="text-lemma-dark" />
+                <CalendarDays size={14} className="text-swdl-goldDark" />
                 {formatMediumDate(booking.checkIn)} → {formatMediumDate(booking.checkOut)}
                 {booking.nights ? ` (${booking.nights} ${booking.nights === 1 ? 'night' : 'nights'})` : ''}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Users size={14} className="text-lemma-dark" />
+                <Users size={14} className="text-swdl-goldDark" />
                 {booking.guests} {booking.guests === 1 ? 'guest' : 'guests'}
               </span>
             </p>
@@ -170,36 +170,36 @@ export function GuestBookingClient({
         </div>
 
         {/* Financial breakdown */}
-        <dl className="grid grid-cols-1 gap-3 rounded-lg border border-sand-200 bg-sand-50 p-4 text-[0.85rem] tabular-nums sm:grid-cols-3">
+        <dl className="grid grid-cols-1 gap-3 rounded-lg border border-[#DFE3E8] bg-swdl-light p-4 text-[0.85rem] tabular-nums sm:grid-cols-3">
           <div>
-            <dt className="text-[0.74rem] text-sand-600">Stay total</dt>
-            <dd className="mt-0.5 text-[1.05rem] font-bold text-navy-900">
+            <dt className="text-[0.74rem] text-swdl-muted">Stay total</dt>
+            <dd className="mt-0.5 text-[1.05rem] font-bold text-swdl-navy">
               {formatKwacha(booking.totalAmount)}
             </dd>
           </div>
           <div>
-            <dt className="text-[0.74rem] text-sand-600">Verified paid</dt>
+            <dt className="text-[0.74rem] text-swdl-muted">Verified paid</dt>
             <dd className="mt-0.5 text-[1.05rem] font-semibold text-st-available">
               {formatKwacha(booking.verifiedPaid)}
             </dd>
           </div>
           <div>
-            <dt className="text-[0.74rem] text-sand-600">Remaining balance</dt>
-            <dd className="mt-0.5 text-[1.05rem] font-bold text-navy-900">
+            <dt className="text-[0.74rem] text-swdl-muted">Remaining balance</dt>
+            <dd className="mt-0.5 text-[1.05rem] font-bold text-swdl-navy">
               {formatKwacha(booking.balanceDue)}
             </dd>
           </div>
         </dl>
 
         {booking.hasOpenClaim ? (
-          <div className="flex items-start gap-2.5 rounded-lg border border-st-cleaning/30 bg-st-cleaningBg/60 p-4 text-[0.84rem] leading-relaxed text-navy-900">
+          <div className="flex items-start gap-2.5 rounded-lg border border-st-cleaning/30 bg-st-cleaningBg/60 p-4 text-[0.84rem] leading-relaxed text-swdl-navy">
             <Clock size={17} className="mt-0.5 shrink-0 text-st-cleaning" />
             <div>
               <p className="font-semibold">
                 Payment reference received
                 {booking.pendingAmount ? ` (${formatKwacha(booking.pendingAmount)})` : ''}
               </p>
-              <p className="mt-0.5 text-[0.8rem] text-sand-700">
+              <p className="mt-0.5 text-[0.8rem] text-swdl-muted">
                 Reception is checking your payment against our statement. Once verified, your
                 balance updates automatically.
               </p>
@@ -215,7 +215,7 @@ export function GuestBookingClient({
           {canPay ? (
             <button
               type="button"
-              className="btn btn-primary min-h-11"
+              className="btn btn-gold min-h-11"
               onClick={() => setPaying(true)}
             >
               <CreditCard size={15} /> Pay deposit or submit proof
@@ -226,7 +226,7 @@ export function GuestBookingClient({
               href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello ${property.name}, I am following up on booking ${booking.reference}.`)}`}
               target="_blank"
               rel="noreferrer"
-              className="btn btn-secondary min-h-11"
+              className="btn btn-navy-outline min-h-11"
             >
               <MessageCircle size={15} /> WhatsApp reception
             </a>
@@ -236,14 +236,14 @@ export function GuestBookingClient({
           </a>
         </div>
 
-        <div className="border-t border-sand-200 pt-4 text-[0.8rem] leading-relaxed text-sand-600">
+        <div className="border-t border-[#DFE3E8] pt-4 text-[0.8rem] leading-relaxed text-swdl-muted">
           <p>
-            <strong className="text-navy-800">Arrival &amp; departure:</strong> Check-in from{' '}
+            <strong className="text-swdl-ink">Arrival &amp; departure:</strong> Check-in from{' '}
             {checkInTime}, check-out by {checkOutTime} at {property.addressLine}, {property.city}.
           </p>
           <p className="mt-1">
             Want downloadable PDF receipts in one place?{' '}
-            <Link href="/register" className="font-semibold text-navy-900 underline">
+            <Link href="/register" className="font-semibold text-swdl-navy underline">
               Create a guest account
             </Link>{' '}
             with the same email address.

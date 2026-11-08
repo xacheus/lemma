@@ -51,10 +51,10 @@ export function GuestNotifications({
 
   if (rows.length === 0) {
     return (
-      <div className="card p-8 text-center">
-        <Bell size={20} className="mx-auto text-navy-400" />
-        <p className="mt-2 text-[0.92rem] font-medium text-navy-800">No notifications yet.</p>
-        <p className="mt-1 text-[0.83rem] leading-relaxed text-navy-500">
+      <div className="swdl-card p-8 text-center">
+        <Bell size={20} className="mx-auto text-swdl-muted" />
+        <p className="mt-2 text-[0.92rem] font-medium text-swdl-ink">No notifications yet.</p>
+        <p className="mt-1 text-[0.83rem] leading-relaxed text-swdl-muted">
           Confirmations, payment updates and arrival reminders for your bookings will appear here.
         </p>
       </div>
@@ -64,10 +64,10 @@ export function GuestNotifications({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[0.84rem] text-navy-600">
+        <p className="text-[0.84rem] text-swdl-muted">
           {unread > 0 ? (
             <>
-              <span className="font-semibold text-navy-900">{unread}</span> unread
+              <span className="font-semibold text-swdl-navy">{unread}</span> unread
             </>
           ) : (
             'All caught up'
@@ -76,7 +76,7 @@ export function GuestNotifications({
         {unread > 0 ? (
           <button
             type="button"
-            className="btn btn-secondary py-1.5 text-[0.78rem]"
+            className="btn btn-navy-outline py-1.5 text-[0.78rem]"
             disabled={busy !== null}
             onClick={() => void setRead(rows.map((n) => n.id), true)}
           >
@@ -86,7 +86,7 @@ export function GuestNotifications({
       </div>
 
       {error ? <p role="alert" className="text-sm text-st-cancelled">{error}</p> : null}
-      <ul className="divide-y divide-sand-200 overflow-hidden rounded-lg border border-sand-200 bg-white">
+      <ul className="divide-y divide-sand-200 overflow-hidden rounded-lg border border-[#DFE3E8] bg-white">
         {rows
           .slice()
           .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
@@ -97,12 +97,12 @@ export function GuestNotifications({
             >
               <span
                 aria-hidden="true"
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.readAt ? 'bg-sand-300' : 'bg-lemma-dark'}`}
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.readAt ? 'bg-sand-300' : 'bg-swdl-goldDark'}`}
               />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                  <p className="text-[0.87rem] font-semibold text-navy-900">{n.title}</p>
-                  <time className="text-[0.72rem] text-navy-400" dateTime={n.createdAt}>
+                  <p className="text-[0.87rem] font-semibold text-swdl-navy">{n.title}</p>
+                  <time className="text-[0.72rem] text-swdl-muted" dateTime={n.createdAt}>
                     {new Date(n.createdAt).toLocaleString('en-GB', {
                       day: 'numeric',
                       month: 'short',
@@ -111,14 +111,14 @@ export function GuestNotifications({
                     })}
                   </time>
                 </div>
-                <p className="mt-0.5 whitespace-pre-line text-[0.83rem] leading-relaxed text-navy-600">
+                <p className="mt-0.5 whitespace-pre-line text-[0.83rem] leading-relaxed text-swdl-muted">
                   {n.body}
                 </p>
                 <div className="mt-1 flex flex-wrap gap-4">
-                  <button type="button" disabled={busy !== null} onClick={() => void setRead([n.id], !n.readAt)} className="text-[0.75rem] font-medium text-lemma-dark hover:underline">
+                  <button type="button" disabled={busy !== null} onClick={() => void setRead([n.id], !n.readAt)} className="text-[0.75rem] font-medium text-swdl-goldDark hover:underline">
                     {n.readAt ? 'Mark as unread' : 'Mark as read'}
                   </button>
-                  {n.href?.startsWith('/') && !n.href.startsWith('//') ? <Link className="text-[0.75rem] font-medium text-lemma-dark hover:underline" href={n.href}>View details</Link> : null}
+                  {n.href?.startsWith('/') && !n.href.startsWith('//') ? <Link className="text-[0.75rem] font-medium text-swdl-goldDark hover:underline" href={n.href}>View details</Link> : null}
                 </div>
               </div>
             </li>

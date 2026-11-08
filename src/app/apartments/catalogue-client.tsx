@@ -77,31 +77,38 @@ export function ApartmentsCatalogueClient({
 
   return (
     <div className="space-y-7">
-      <div id="availability" className="animate-fade-up scroll-mt-24">
-        <h1 className="font-display text-[2rem] font-medium tracking-[-0.015em] text-navy-900 sm:text-[2.3rem]">
-          Apartments &amp; availability
-        </h1>
-        {publishedTotal > 0 ? (
-          <p className="mt-1.5 text-[0.92rem] text-sand-700">
-            Showing {formatMediumDate(initialCheckIn)} to {formatMediumDate(initialCheckOut)} ·{' '}
-            <strong className="font-semibold text-navy-900">
-              {availableCount} of {filtered.length}
-            </strong>{' '}
-            {filtered.length === 1 ? 'apartment' : 'apartments'} open for {initialGuests}{' '}
-            {initialGuests === 1 ? 'guest' : 'guests'}.
+      <div id="availability" className="animate-fade-up scroll-mt-28">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-b border-[#E4E7EB] pb-4">
+          <p className="font-heading text-[0.78rem] font-extrabold uppercase tracking-[0.16em] text-swdl-goldDark">
+            {publishedTotal > 0 ? 'Check availability' : 'Listings updating'}
           </p>
-        ) : (
-          <p className="mt-1.5 text-[0.92rem] text-sand-700">
-            Online apartment listings are currently being updated. Call reception to check
-            availability and receive a written ZMW quotation for your dates.
-          </p>
-        )}
+          {publishedTotal > 0 ? (
+            <p className="text-[0.92rem] text-swdl-muted">
+              <span className="font-heading font-bold text-swdl-navy">
+                {formatMediumDate(initialCheckIn)}
+              </span>{' '}
+              to{' '}
+              <span className="font-heading font-bold text-swdl-navy">
+                {formatMediumDate(initialCheckOut)}
+              </span>{' '}
+              · {initialGuests} {initialGuests === 1 ? 'guest' : 'guests'} ·{' '}
+              <span className="font-heading font-bold text-swdl-navy">
+                {availableCount} of {filtered.length}
+              </span>{' '}
+              {filtered.length === 1 ? 'apartment' : 'apartments'} open
+            </p>
+          ) : (
+            <p className="text-[0.92rem] text-swdl-muted">
+              Call reception to check availability and receive a written ZMW quotation.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Filter & Availability Bar */}
       <form
         onSubmit={applySearch}
-        className="card grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6"
+        className="swdl-card grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 lg:grid-cols-6"
       >
         <div>
           <label className="label mb-1 block" htmlFor="cat-in">
@@ -171,18 +178,18 @@ export function ApartmentsCatalogueClient({
           </select>
         </div>
         <div className="flex items-end">
-          <label className="flex h-[38px] w-full cursor-pointer items-center gap-2 rounded-md border border-sand-300 bg-sand-50 px-3 text-[0.8rem] font-medium text-navy-800">
+          <label className="flex h-[42px] w-full cursor-pointer items-center gap-2 rounded-[10px] border-[1.5px] border-[#DFE3E8] bg-swdl-card px-3.5 font-heading text-[0.8rem] font-semibold text-swdl-navy transition-colors hover:border-swdl-gold">
             <input
               type="checkbox"
               checked={onlyAvailable}
               onChange={(e) => setOnlyAvailable(e.target.checked)}
-              className="rounded border-sand-400"
+              className="rounded border-[#DFE3E8] accent-[#A8823F]"
             />
             Available only
           </label>
         </div>
         <div className="flex items-end">
-          <button type="submit" className="btn btn-primary h-[38px] w-full justify-center">
+          <button type="submit" className="btn btn-navy h-[42px] w-full justify-center">
             <Search size={14} /> Update search
           </button>
         </div>
@@ -190,26 +197,26 @@ export function ApartmentsCatalogueClient({
 
       {/* Apartment Cards */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-sand-200 bg-white px-6 py-14 text-center shadow-card">
-          <Building2 size={24} className="mx-auto text-lemma-dark" />
-          <h2 className="mt-3 font-display text-[1.25rem] font-medium text-navy-900">
+        <div className="swdl-card px-6 py-14 text-center">
+          <Building2 size={24} className="mx-auto text-swdl-goldDark" />
+          <h2 className="mt-3 font-heading text-[1.3rem] font-bold">
             {publishedTotal === 0
               ? 'Online apartment listings are being updated'
               : 'No apartment matches your selected dates or filters'}
           </h2>
-          <p className="mx-auto mt-2 max-w-xl text-[0.88rem] leading-relaxed text-sand-700">
+          <p className="mx-auto mt-2 max-w-xl text-[0.9rem] leading-relaxed text-swdl-muted">
             {publishedTotal === 0
               ? 'Call reception directly and our front desk will confirm availability for your dates and send a quotation.'
               : 'Try adjusting your arrival dates or party size, or call reception to check upcoming departures.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-            <a href={`tel:${phone.replace(/\s/g, '')}`} className="btn btn-primary">
+            <a href={`tel:${phone.replace(/\s/g, '')}`} className="btn btn-gold px-6 py-2.5">
               <Phone size={14} /> Call reception ({phone})
             </a>
             {publishedTotal > 0 ? (
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-navy px-6 py-2.5"
                 onClick={() => {
                   setOnlyAvailable(false);
                   setTier('all');
@@ -229,7 +236,7 @@ export function ApartmentsCatalogueClient({
             return (
               <article
                 key={apt.id}
-                className="group flex flex-col overflow-hidden rounded-xl border border-sand-200 bg-white shadow-card transition-all duration-300 hover:border-sand-300 hover:shadow-pop"
+                className="swdl-card swdl-card-hover group flex flex-col overflow-hidden"
               >
                 <Link href={detailHref} className="img-zoom relative block overflow-hidden">
                   <PhotoFrame
@@ -239,10 +246,8 @@ export function ApartmentsCatalogueClient({
                     variant="card"
                   />
                   <span
-                    className={`absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-semibold ${
-                      item.isAvailable
-                        ? 'bg-[#124230]/90 text-[#b4f0cf]'
-                        : 'bg-charcoal-950/80 text-white/85'
+                    className={`swdl-tag absolute left-3.5 top-3.5 inline-flex items-center gap-1 ${
+                      item.isAvailable ? 'swdl-tag-open' : 'swdl-tag-dark'
                     }`}
                   >
                     {item.isAvailable ? (
@@ -261,51 +266,51 @@ export function ApartmentsCatalogueClient({
                   </span>
                 </Link>
 
-                <div className="flex flex-1 flex-col p-5">
-                  <div className="flex items-center justify-between gap-2 text-[0.74rem] text-sand-600">
-                    <span className="font-medium text-lemma-dark">
+                <div className="flex flex-1 flex-col p-6">
+                  <div className="flex items-center justify-between gap-2 text-[0.74rem] text-swdl-muted">
+                    <span className="font-heading font-bold uppercase tracking-[0.12em] text-swdl-goldDark">
                       {APARTMENT_TIER_LABELS[apt.tier] || apt.tier} · {apt.code}
                     </span>
-                    <span className="text-sand-600">
+                    <span>
                       {apt.floor === 0 ? 'Ground floor' : `Floor ${apt.floor}`}
                     </span>
                   </div>
 
                   <Link href={detailHref}>
-                    <h2 className="mt-1.5 font-display text-[1.2rem] font-medium text-navy-900 group-hover:text-lemma-dark">
+                    <h2 className="mt-1.5 font-heading text-[1.18rem] font-bold transition-colors duration-200 group-hover:text-swdl-goldDark">
                       {apt.name}
                     </h2>
                   </Link>
-                  <p className="mt-1.5 line-clamp-2 text-[0.84rem] leading-relaxed text-sand-700">
+                  <p className="mt-2 line-clamp-2 text-[0.88rem] leading-relaxed text-swdl-muted">
                     {apt.tagline || apt.description}
                   </p>
 
-                  <div className="mt-4 flex flex-wrap gap-x-3.5 gap-y-1.5 border-t border-sand-200/80 pt-3.5 text-[0.78rem] text-sand-700">
+                  <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-[#EEE] pt-3.5 text-[0.82rem] text-swdl-muted">
                     <span className="inline-flex items-center gap-1">
-                      <Users size={13} className="text-lemma-dark" /> Up to {apt.maxGuests}
+                      <Users size={14} className="text-swdl-goldDark" /> Up to {apt.maxGuests}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <BedDouble size={13} className="text-lemma-dark" />{' '}
+                      <BedDouble size={14} className="text-swdl-goldDark" />{' '}
                       {apt.bedrooms === 0 ? 'Studio' : `${apt.bedrooms} bed`}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Bath size={13} className="text-lemma-dark" /> {apt.bathrooms} bath
+                      <Bath size={14} className="text-swdl-goldDark" /> {apt.bathrooms} bath
                     </span>
                     {apt.sizeSqm ? (
                       <span className="inline-flex items-center gap-1">
-                        <Maximize2 size={13} className="text-lemma-dark" /> {apt.sizeSqm} m²
+                        <Maximize2 size={14} className="text-swdl-goldDark" /> {apt.sizeSqm} m²
                       </span>
                     ) : null}
                   </div>
 
                   <div className="mt-auto pt-4">
-                    <div className="flex items-end justify-between gap-3 border-t border-sand-200/80 pt-3.5">
+                    <div className="flex items-end justify-between gap-3 border-t border-[#EEE] pt-3.5">
                       <div>
-                        <div className="text-[1.15rem] font-bold tabular-nums text-navy-900">
+                        <div className="font-heading text-[1.2rem] font-extrabold tabular-nums text-swdl-goldDark">
                           {formatKwacha(item.effectiveRate)}
-                          <span className="text-[0.76rem] font-normal text-sand-600"> / night</span>
+                          <span className="font-body text-[0.78rem] font-normal text-swdl-muted"> / night</span>
                         </div>
-                        <p className="text-[0.75rem] tabular-nums text-sand-600">
+                        <p className="text-[0.78rem] tabular-nums text-swdl-muted">
                           {item.nights} {item.nights === 1 ? 'night' : 'nights'}:{' '}
                           {formatKwacha(item.stayTotal)} total
                         </p>
@@ -313,8 +318,8 @@ export function ApartmentsCatalogueClient({
 
                       <Link
                         href={item.isAvailable ? `${detailHref}#book` : detailHref}
-                        className={`btn py-2 text-[0.8rem] ${
-                          item.isAvailable ? 'btn-primary' : 'btn-secondary'
+                        className={`btn px-4 py-2 text-[0.8rem] ${
+                          item.isAvailable ? 'btn-gold' : 'btn-navy'
                         }`}
                       >
                         {item.isAvailable ? 'Request dates' : 'View details'}

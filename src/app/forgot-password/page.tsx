@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
-import { BrandMark } from '@/components/public/brand-mark';
+import { brandMonogram } from '@/components/public/brand-mark';
 
 function ForgotPasswordInner() {
   const searchParams = useSearchParams();
@@ -65,24 +65,28 @@ function ForgotPasswordInner() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-sand-50 px-5 py-12">
+    <main className="public-shell flex min-h-screen flex-col items-center justify-center px-5 py-12">
       <div className="w-full max-w-[26rem]">
         <Link href="/" className="mb-6 flex items-center gap-3">
-          <BrandMark tone="light" size="md" />
+          <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-gradient-to-br from-swdl-gold to-swdl-goldDark font-heading text-[0.84rem] font-extrabold tracking-[0.05em] text-swdl-navy">
+            {brandMonogram('Lemma Apartments')}
+          </span>
           <div>
-            <p className="font-display text-[1.05rem] font-semibold text-navy-900">
+            <p className="font-heading text-[1rem] font-extrabold uppercase tracking-[0.13em] text-swdl-navy">
               Lemma Apartments
             </p>
-            <p className="text-[0.7rem] text-sand-600">
+            <p className="font-heading text-[0.6rem] font-bold uppercase tracking-[0.18em] text-swdl-goldDark">
               Account Security
             </p>
           </div>
         </Link>
 
-        <div className="card p-6">
-          <div className="flex items-center gap-2 text-navy-900">
-            <KeyRound size={18} className="text-lemma-dark" />
-            <h1 className="text-[1.2rem] font-semibold">
+        <div className="swdl-card p-6 sm:p-7">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-swdl-light text-swdl-goldDark ring-1 ring-swdl-gold/30">
+              <KeyRound size={17} />
+            </span>
+            <h1 className="font-heading text-[1.22rem] font-extrabold">
               {token ? 'Choose a new password' : 'Reset your password'}
             </h1>
           </div>
@@ -108,13 +112,13 @@ function ForgotPasswordInner() {
                   <AlertCircle size={15} className="mt-0.5 shrink-0" /> {error}
                 </p>
               ) : null}
-              <button type="submit" disabled={busy} className="btn btn-primary w-full justify-center">
-                {busy ? 'Updating...' : 'Save new password'}
+              <button type="submit" disabled={busy} className="btn btn-gold w-full justify-center py-2.5">
+                {busy ? 'Updating…' : 'Save new password'}
               </button>
             </form>
           ) : (
             <form onSubmit={requestReset} className="mt-4 space-y-4">
-              <p className="text-[0.83rem] text-navy-600">
+              <p className="text-[0.86rem] text-swdl-muted">
                 Enter the email address registered on your account to initiate a password reset.
               </p>
               <div>
@@ -143,16 +147,16 @@ function ForgotPasswordInner() {
                 </p>
               ) : null}
 
-              <button type="submit" disabled={busy} className="btn btn-primary w-full justify-center">
-                {busy ? 'Sending...' : 'Request password reset'}
+              <button type="submit" disabled={busy} className="btn btn-gold w-full justify-center py-2.5">
+                {busy ? 'Sending…' : 'Request password reset'}
               </button>
             </form>
           )}
 
-          <div className="mt-5 border-t border-sand-200 pt-4">
+          <div className="mt-5 border-t border-[#DFE3E8] pt-4">
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 text-[0.8rem] font-medium text-navy-600 hover:text-navy-900"
+              className="inline-flex items-center gap-1.5 text-[0.82rem] font-semibold text-swdl-muted transition-colors hover:text-swdl-navy"
             >
               <ArrowLeft size={14} /> Back to sign in
             </Link>
@@ -165,7 +169,7 @@ function ForgotPasswordInner() {
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-sand-50" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#F7F5F0]" />}>
       <ForgotPasswordInner />
     </Suspense>
   );

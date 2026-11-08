@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Mail, MessageCircle, Phone } from 'lucide-react';
+import { Check, Mail, MessageCircle, Phone } from 'lucide-react';
 import { readPublicSiteData } from '@/lib/public/read-site-data';
 import { PublicFooter, PublicHeader } from '@/components/public/site-chrome';
 import { unreadForSession } from '@/lib/domain/inbox';
@@ -22,6 +22,11 @@ export const metadata = {
 export default async function PoliciesPage() {
   const { db, session } = await readPublicSiteData();
   const { property, booking, payments } = db.settings;
+  const bannerPhoto =
+    db.apartments
+      .flatMap((a) => [a.coverPhoto, ...(a.gallery?.map((g) => g.url) ?? a.photos)])
+      .find(Boolean) ?? null;
+
   const waDigits = property.whatsapp.replace(/[^0-9]/g, '');
 
   const terms = [
@@ -106,52 +111,69 @@ export default async function PoliciesPage() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-sand-50 text-navy-900">
+    <div className="public-shell flex min-h-screen flex-col">
       <PublicHeader property={property} session={session} activePath="/policies" unreadCount={unreadForSession(db, session)} />
 
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-12 sm:px-6 lg:px-8">
-        <p className="text-[0.8rem] font-medium text-lemma-dark">
-          {property.name} · {property.addressLine}
-        </p>
-        <h1 className="mt-1.5 font-display text-[2.05rem] font-medium tracking-[-0.015em] text-navy-900 sm:text-[2.3rem]">
-          Booking terms, cancellation &amp; privacy
-        </h1>
-        <p className="mt-2 max-w-2xl text-[0.92rem] leading-relaxed text-sand-700">
-          Clear house and payment rules before you commit to dates. If anything needs clarification
-          for your stay, reach reception directly before sending a deposit.
-        </p>
+      <main className="flex-1">
+        <section
+          className="page-banner"
+          style={bannerPhoto ? { backgroundImage: `url("${bannerPhoto}")` } : undefined}
+        >
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-center px-4 py-16 text-center sm:px-6 lg:px-8 lg:py-20">
+            <span className="eyebrow">Booking Info</span>
+            <h1 className="mt-2 max-w-3xl font-heading text-[2rem] font-extrabold tracking-[-0.01em] text-white sm:text-[2.6rem]">
+              Booking terms, cancellation &amp; privacy
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-[0.98rem] leading-relaxed text-[#D7DEE6]">
+              Clear house and payment rules before you commit to dates. If anything needs
+              clarification for your stay, reach reception directly before sending a deposit.
+            </p>
+          </div>
+        </section>
 
-        <div className="mt-8 rounded-xl border border-sand-200 bg-white p-5 shadow-card sm:p-6">
-          <h2 className="font-display text-[1.15rem] font-medium text-navy-900">At a glance</h2>
-          <ul className="mt-2.5 space-y-1.5 text-[0.86rem] leading-relaxed text-navy-700">
+        <div className="mx-auto w-full max-w-4xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+
+        <div className="swdl-card mt-2 p-6 sm:p-7">
+          <h2 className="font-heading text-[1.15rem] font-extrabold">At a glance</h2>
+          <ul className="check-gold mt-3 space-y-1 text-[0.88rem] leading-relaxed text-swdl-ink">
             <li>
-              {booking.depositPercent}% deposit confirms your dates; the rest is due by arrival.
+              <Check size={16} aria-hidden="true" />
+              <span>{booking.depositPercent}% deposit confirms your dates; the rest is due by arrival.</span>
             </li>
             <li>
-              Free cancellation up to {booking.cancellationPolicyHours} hours before check-in
-              {booking.cancellationPolicyHours > 0 ? ', deposit refunded at management’s discretion.' : '.'}
+              <Check size={16} aria-hidden="true" />
+              <span>
+                Free cancellation up to {booking.cancellationPolicyHours} hours before check-in
+                {booking.cancellationPolicyHours > 0 ? ', deposit refunded at management’s discretion.' : '.'}
+              </span>
             </li>
-            <li>Check-in {booking.checkInTime}, check-out {booking.checkOutTime}.</li>
-            <li>Proof of payment is checked by a person before your balance changes.</li>
+            <li>
+              <Check size={16} aria-hidden="true" />
+              <span>Check-in {booking.checkInTime}, check-out {booking.checkOutTime}.</span>
+            </li>
+            <li>
+              <Check size={16} aria-hidden="true" />
+              <span>Proof of payment is checked by a person before your balance changes.</span>
+            </li>
           </ul>
         </div>
 
         <section aria-labelledby="terms" className="mt-10">
-          <h2 id="terms" className="text-[1.3rem] font-semibold text-navy-900">
+          <h2 id="terms" className="font-heading text-[1.35rem] font-extrabold">
             Booking terms
           </h2>
           {property.bookingTerms?.trim() ? (
-            <p className="mt-3 whitespace-pre-line text-[0.9rem] leading-relaxed text-navy-700">
+            <p className="mt-3 whitespace-pre-line text-[0.92rem] leading-relaxed text-swdl-ink">
               {property.bookingTerms}
             </p>
           ) : (
             <div className="mt-3 space-y-6">
               {terms.map((block) => (
                 <div key={block.heading}>
-                  <h3 className="text-[0.95rem] font-semibold text-navy-900">{block.heading}</h3>
-                  <ul className="mt-1.5 space-y-2 text-[0.88rem] leading-relaxed text-navy-600">
+                  <h3 className="font-heading text-[0.98rem] font-bold">{block.heading}</h3>
+                  <ul className="mt-1.5 space-y-2 text-[0.9rem] leading-relaxed text-swdl-muted">
                     {block.body.map((line, i) => (
-                      <li key={i} className="border-l-2 border-sand-200 pl-3">
+                      <li key={i} className="border-l-2 border-swdl-gold/45 pl-3.5">
                         {line}
                       </li>
                     ))}
@@ -162,22 +184,22 @@ export default async function PoliciesPage() {
           )}
         </section>
 
-        <section aria-labelledby="privacy" className="mt-10 border-t border-sand-200 pt-8">
-          <h2 id="privacy" className="text-[1.3rem] font-semibold text-navy-900">
+        <section aria-labelledby="privacy" className="mt-10 border-t border-[#DFE3E8] pt-9">
+          <h2 id="privacy" className="font-heading text-[1.35rem] font-extrabold">
             Privacy
           </h2>
           {property.privacyPolicy?.trim() ? (
-            <p className="mt-3 whitespace-pre-line text-[0.9rem] leading-relaxed text-navy-700">
+            <p className="mt-3 whitespace-pre-line text-[0.92rem] leading-relaxed text-swdl-ink">
               {property.privacyPolicy}
             </p>
           ) : (
             <div className="mt-3 space-y-6">
               {privacy.map((block) => (
                 <div key={block.heading}>
-                  <h3 className="text-[0.95rem] font-semibold text-navy-900">{block.heading}</h3>
-                  <ul className="mt-1.5 space-y-2 text-[0.88rem] leading-relaxed text-navy-600">
+                  <h3 className="font-heading text-[0.98rem] font-bold">{block.heading}</h3>
+                  <ul className="mt-1.5 space-y-2 text-[0.9rem] leading-relaxed text-swdl-muted">
                     {block.body.map((line, i) => (
-                      <li key={i} className="border-l-2 border-sand-200 pl-3">
+                      <li key={i} className="border-l-2 border-swdl-gold/45 pl-3.5">
                         {line}
                       </li>
                     ))}
@@ -188,38 +210,39 @@ export default async function PoliciesPage() {
           )}
         </section>
 
-        <section className="mt-10 rounded-xl border border-sand-200 bg-white p-6 shadow-card">
-          <h2 className="font-display text-[1.15rem] font-medium text-navy-900">Questions before you book?</h2>
-          <p className="mt-1.5 text-[0.86rem] leading-relaxed text-sand-700">
+        <section className="cta-band mt-10 p-7 text-center sm:p-9">
+          <h2 className="font-heading text-[1.3rem] font-extrabold text-white sm:text-[1.5rem]">Questions before you book?</h2>
+          <p className="mx-auto mt-2 max-w-xl text-[0.9rem] leading-relaxed">
             Reach the {property.name} front desk directly by WhatsApp, phone or email.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2.5">
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
             {waDigits ? (
               <a
                 href={`https://wa.me/${waDigits}?text=${encodeURIComponent('Hello Lemma Apartments, I have a question about a booking.')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="btn btn-primary py-2 text-[0.82rem]"
+                className="btn btn-gold px-5 py-2.5 text-[0.84rem]"
               >
                 <MessageCircle size={14} /> WhatsApp {property.whatsapp}
               </a>
             ) : null}
-            <a href={`tel:${property.phone.replace(/\s/g, '')}`} className="btn btn-secondary py-2 text-[0.82rem]">
+            <a href={`tel:${property.phone.replace(/\s/g, '')}`} className="btn btn-outline-light px-5 py-2.5 text-[0.84rem]">
               <Phone size={14} /> {property.phone}
             </a>
-            <a href={`mailto:${property.email}`} className="btn btn-secondary py-2 text-[0.82rem]">
+            <a href={`mailto:${property.email}`} className="btn btn-outline-light px-5 py-2.5 text-[0.84rem]">
               <Mail size={14} /> {property.email}
             </a>
           </div>
         </section>
 
-        <p className="mt-8 text-[0.8rem] text-navy-500">
+        <p className="mt-8 text-center text-[0.85rem] text-swdl-muted">
           Looking for a room instead?{' '}
-          <Link href="/apartments" className="font-semibold text-navy-900 underline">
+          <Link href="/apartments" className="font-semibold text-swdl-navy underline decoration-swdl-gold underline-offset-2 transition-colors hover:text-swdl-goldDark">
             See the apartments and live rates
           </Link>
           .
         </p>
+        </div>
       </main>
 
       <PublicFooter property={property} />

@@ -181,27 +181,27 @@ export function GuestPaymentPanel({
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-xl bg-white p-5 shadow-pop sm:rounded-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-lemma-dark">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-swdl-goldDark">
               Pay for your stay
             </p>
-            <h2 className="mt-0.5 text-[1.1rem] font-semibold text-navy-900">{reference}</h2>
+            <h2 className="mt-0.5 text-[1.1rem] font-semibold text-swdl-navy">{reference}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-navy-500 hover:bg-sand-100">
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-swdl-muted hover:bg-swdl-light">
             <X size={18} />
           </button>
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 py-10 text-[0.86rem] text-navy-600">
+          <div className="flex items-center gap-2 py-10 text-[0.86rem] text-swdl-muted">
             <Loader2 size={16} className="animate-spin" /> Loading what is outstanding…
           </div>
         ) : done ? (
           <div className="mt-5 space-y-3">
             <div className="flex items-center gap-2 text-st-available">
               <CheckCircle2 size={18} />
-              <p className="text-[0.95rem] font-semibold text-navy-900">Payment submitted</p>
+              <p className="text-[0.95rem] font-semibold text-swdl-navy">Payment submitted</p>
             </div>
-            <div className="rounded-lg border border-sand-200 bg-sand-50 p-4 text-[0.85rem] leading-relaxed text-navy-700">
+            <div className="rounded-lg border border-[#DFE3E8] bg-swdl-light p-4 text-[0.85rem] leading-relaxed text-swdl-ink">
               <p>
                 We have your {chosen?.label ?? 'payment'} reference{' '}
                 <strong>{done.reference}</strong> for <strong>{formatKwacha(done.amount)}</strong>.
@@ -212,59 +212,59 @@ export function GuestPaymentPanel({
                 moment it is confirmed.
               </p>
             </div>
-            <button type="button" className="btn btn-primary w-full justify-center" onClick={onClose}>
+            <button type="button" className="btn btn-gold w-full justify-center" onClick={onClose}>
               Done
             </button>
           </div>
         ) : !quote ? (
           <div className="mt-5">
-            <p className="rounded-md border border-st-cancelled/30 bg-st-cancelled/5 p-3 text-[0.85rem] text-navy-700">
+            <p className="rounded-md border border-st-cancelled/30 bg-st-cancelled/5 p-3 text-[0.85rem] text-swdl-ink">
               {error ?? 'This booking could not be loaded.'}
             </p>
-            <button type="button" className="btn btn-secondary mt-3 w-full justify-center" onClick={onClose}>
+            <button type="button" className="btn btn-navy-outline mt-3 w-full justify-center" onClick={onClose}>
               Close
             </button>
           </div>
         ) : quote.openClaim ? (
           <div className="mt-5 space-y-3">
             <div className="rounded-lg border border-st-cleaning/40 bg-st-cleaningBg/50 p-4">
-              <p className="text-[0.88rem] font-semibold text-navy-900">Already submitted — in the queue</p>
-              <p className="mt-1 text-[0.84rem] leading-relaxed text-navy-700">
+              <p className="text-[0.88rem] font-semibold text-swdl-navy">Already submitted — in the queue</p>
+              <p className="mt-1 text-[0.84rem] leading-relaxed text-swdl-ink">
                 You told us about {formatKwacha(quote.openClaim.amount)} by{' '}
                 {quote.methods.find((m) => m.id === quote.openClaim?.method)?.label ?? quote.openClaim.method},
                 reference <strong>{quote.openClaim.reference}</strong>. Reception is checking it.
               </p>
             </div>
-            <button type="button" className="btn btn-secondary w-full justify-center" onClick={onClose}>
+            <button type="button" className="btn btn-navy-outline w-full justify-center" onClick={onClose}>
               Close
             </button>
           </div>
         ) : quote.balanceDue <= 0 ? (
           <div className="mt-5 space-y-3">
-            <p className="rounded-md border border-st-available/40 bg-st-availableBg/50 p-3 text-[0.86rem] text-navy-800">
+            <p className="rounded-md border border-st-available/40 bg-st-availableBg/50 p-3 text-[0.86rem] text-swdl-ink">
               This stay is fully paid — nothing further is due. Your receipts are in the documents tab.
             </p>
-            <button type="button" className="btn btn-secondary w-full justify-center" onClick={onClose}>
+            <button type="button" className="btn btn-navy-outline w-full justify-center" onClick={onClose}>
               Close
             </button>
           </div>
         ) : (
           <form onSubmit={submit} className="mt-4 space-y-4">
-            <div className="grid grid-cols-1 gap-px overflow-hidden sm:grid-cols-3 rounded-lg border border-sand-200 bg-sand-200 text-center">
+            <div className="grid grid-cols-1 gap-px overflow-hidden sm:grid-cols-3 rounded-lg border border-[#DFE3E8] bg-sand-200 text-center">
               {[
                 { label: 'Stay total', value: formatKwacha(quote.totalAmount) },
                 { label: 'Verified', value: formatKwacha(quote.verifiedPaid) },
                 { label: 'Outstanding', value: formatKwacha(quote.balanceDue) },
               ].map((cell) => (
                 <div key={cell.label} className="bg-white px-2 py-2.5">
-                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-navy-400">{cell.label}</p>
-                  <p className="mt-0.5 text-[0.88rem] font-semibold tabular-nums text-navy-900">{cell.value}</p>
+                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-swdl-muted">{cell.label}</p>
+                  <p className="mt-0.5 text-[0.88rem] font-semibold tabular-nums text-swdl-navy">{cell.value}</p>
                 </div>
               ))}
             </div>
 
             {error ? (
-              <p className="flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelled/5 p-2.5 text-[0.82rem] text-navy-800">
+              <p className="flex items-start gap-2 rounded-md border border-st-cancelled/30 bg-st-cancelled/5 p-2.5 text-[0.82rem] text-swdl-ink">
                 <AlertCircle size={14} className="mt-0.5 shrink-0 text-st-cancelled" /> {error}
               </p>
             ) : null}
@@ -286,14 +286,14 @@ export function GuestPaymentPanel({
                       aria-pressed={active}
                       className={`flex items-start gap-2.5 rounded-lg border p-3 text-left transition ${
                         active
-                          ? 'border-navy-900 bg-sand-50 ring-1 ring-navy-900'
-                          : 'border-sand-300 hover:border-brand-400'
+                          ? 'border-navy-900 bg-swdl-light ring-1 ring-navy-900'
+                          : 'border-[#DFE3E8] hover:border-brand-400'
                       } ${quote.guestChoosesMethod ? '' : 'cursor-default opacity-60 last:opacity-100'}`}
                     >
-                      <Icon size={16} className="mt-0.5 shrink-0 text-lemma-dark" />
+                      <Icon size={16} className="mt-0.5 shrink-0 text-swdl-goldDark" />
                       <span>
-                        <span className="block text-[0.86rem] font-semibold text-navy-900">{m.label}</span>
-                        <span className="mt-0.5 block text-[0.74rem] leading-snug text-navy-500">
+                        <span className="block text-[0.86rem] font-semibold text-swdl-navy">{m.label}</span>
+                        <span className="mt-0.5 block text-[0.74rem] leading-snug text-swdl-muted">
                           {m.accountLabel}
                           {m.accountNumber ? `: ${m.accountNumber}` : ''}
                         </span>
@@ -303,15 +303,15 @@ export function GuestPaymentPanel({
                 })}
               </div>
               {chosen ? (
-                <div className="mt-2 rounded-md border border-sand-200 bg-sand-50 p-3 text-[0.8rem] leading-relaxed text-navy-700">
+                <div className="mt-2 rounded-md border border-[#DFE3E8] bg-swdl-light p-3 text-[0.8rem] leading-relaxed text-swdl-ink">
                   <PaymentDetails method={chosen} />
                   <CopyDetail label="booking reference" value={quote.reference} />
                   {quote.guestChoosesMethod ? (
-                    <p className="mt-2 text-[0.75rem] text-navy-500">
+                    <p className="mt-2 text-[0.75rem] text-swdl-muted">
                       Send the money first, then record it below. Nothing is charged on this page.
                     </p>
                   ) : (
-                    <p className="mt-2 text-[0.75rem] text-navy-500">
+                    <p className="mt-2 text-[0.75rem] text-swdl-muted">
                       Reception has set the payment channel for this booking.
                     </p>
                   )}
@@ -336,16 +336,16 @@ export function GuestPaymentPanel({
                 onChange={(e) => setAmount(e.target.value)}
                 required
               />
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[0.74rem] text-navy-500">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[0.74rem] text-swdl-muted">
                 <span>
                   {quote.verifiedPaid === 0
                     ? `${quote.depositPercent}% deposit is ${formatKwacha(Math.round((quote.totalAmount * quote.depositPercent) / 100))}`
                     : 'The outstanding balance is the full amount.'}
                 </span>
                 {quote.allowPartial ? (
-                  <span className="text-navy-400">Part payments are accepted.</span>
+                  <span className="text-swdl-muted">Part payments are accepted.</span>
                 ) : (
-                  <span className="text-navy-400">This booking expects one payment.</span>
+                  <span className="text-swdl-muted">This booking expects one payment.</span>
                 )}
               </div>
             </div>
@@ -406,11 +406,11 @@ export function GuestPaymentPanel({
                   onChange={(e) => void pickProof(e.target.files?.[0] ?? null)}
                 />
                 {proof ? (
-                  <div className="flex items-center justify-between gap-2 rounded-md border border-sand-200 bg-sand-50 px-3 py-2 text-[0.8rem]">
-                    <span className="truncate text-navy-700">{proof.fileName}</span>
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-[#DFE3E8] bg-swdl-light px-3 py-2 text-[0.8rem]">
+                    <span className="truncate text-swdl-ink">{proof.fileName}</span>
                     <button
                       type="button"
-                      className="text-[0.76rem] font-medium text-navy-500 hover:underline"
+                      className="text-[0.76rem] font-medium text-swdl-muted hover:underline"
                       onClick={() => setProof(null)}
                     >
                       Remove
@@ -420,7 +420,7 @@ export function GuestPaymentPanel({
                   <button
                     type="button"
                     disabled={preparingProof}
-                    className="btn btn-secondary w-full justify-center py-2 text-[0.8rem]"
+                    className="btn btn-navy-outline w-full justify-center py-2 text-[0.8rem]"
                     onClick={() => fileRef.current?.click()}
                   >
                     {preparingProof ? (
@@ -435,7 +435,7 @@ export function GuestPaymentPanel({
               </div>
             ) : null}
 
-            <p className="rounded-md border border-sand-200 bg-sand-50 p-2.5 text-[0.76rem] leading-relaxed text-navy-600">
+            <p className="rounded-md border border-[#DFE3E8] bg-swdl-light p-2.5 text-[0.76rem] leading-relaxed text-swdl-muted">
               Submitting this tells reception you have paid. It does not confirm the payment — a
               member of staff checks it and issues your receipt. Your balance only changes then.
             </p>
@@ -444,7 +444,7 @@ export function GuestPaymentPanel({
               <button type="button" className="btn btn-ghost flex-1 justify-center" onClick={onClose}>
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary flex-[2] justify-center" disabled={busy}>
+              <button type="submit" className="btn btn-gold flex-[2] justify-center" disabled={busy}>
                 {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                 {busy ? 'Submitting…' : 'Submit payment for verification'}
               </button>

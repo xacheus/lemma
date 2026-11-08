@@ -228,20 +228,20 @@ export function ApartmentBookingWidget({
   const locked = Boolean(settings.payments.lockMethodToAdmin);
 
   return (
-    <form onSubmit={submitBooking} className="card sticky top-24 space-y-4 p-5 sm:p-6">
-      <div className="flex items-baseline justify-between gap-2 border-b border-sand-200 pb-4">
+    <form onSubmit={submitBooking} className="swdl-card sticky top-24 space-y-4 p-5 sm:p-6">
+      <div className="flex items-baseline justify-between gap-2 border-b border-[#DFE3E8] pb-4">
         <div>
-          <span className="text-[1.45rem] font-bold tabular-nums text-navy-900">
+          <span className="text-[1.45rem] font-bold tabular-nums text-swdl-navy">
             {formatKwacha(pricing.effectiveAverageRate)}
           </span>
-          <span className="text-[0.82rem] text-sand-600"> / night</span>
+          <span className="text-[0.82rem] text-swdl-muted"> / night</span>
         </div>
         <span
           className={`rounded-full px-2.5 py-1 text-[0.72rem] font-semibold ${
             availState === 'available'
-              ? 'bg-st-availableBg text-st-available'
+              ? 'bg-st-availableBg text-swdl-goldDark'
               : availState === 'checking'
-                ? 'bg-sand-100 text-sand-700'
+                ? 'bg-swdl-light text-swdl-muted'
                 : 'bg-st-cancelledBg text-st-cancelled'
           }`}
         >
@@ -308,16 +308,16 @@ export function ApartmentBookingWidget({
       </div>
 
       {apartment.optionalServices && apartment.optionalServices.filter((s) => s.active).length > 0 ? (
-        <div className="space-y-1.5 border-t border-sand-200 pt-3">
+        <div className="space-y-1.5 border-t border-[#DFE3E8] pt-3">
           <p className="label">Optional extras</p>
           {apartment.optionalServices
             .filter((s) => s.active)
             .map((svc) => (
               <label
                 key={svc.id}
-                className="flex cursor-pointer items-center justify-between rounded-md border border-sand-200 px-3 py-2 text-[0.8rem] hover:bg-sand-50"
+                className="flex cursor-pointer items-center justify-between rounded-md border border-[#DFE3E8] px-3 py-2 text-[0.8rem] hover:bg-swdl-light"
               >
-                <span className="flex items-center gap-2 text-navy-800">
+                <span className="flex items-center gap-2 text-swdl-ink">
                   <input
                     type="checkbox"
                     checked={selectedServiceIds.includes(svc.id)}
@@ -325,7 +325,7 @@ export function ApartmentBookingWidget({
                   />
                   {svc.name}
                 </span>
-                <span className="font-semibold tabular-nums text-navy-900">
+                <span className="font-semibold tabular-nums text-swdl-navy">
                   {formatKwacha(svc.price)} {svc.priceType === 'per_night' ? '/ night' : ''}
                 </span>
               </label>
@@ -335,53 +335,53 @@ export function ApartmentBookingWidget({
 
       {/* Stay Pricing Summary */}
       {pricing.nights > 0 ? (
-        <div className="space-y-1.5 rounded-lg border border-sand-200 bg-sand-50 p-3.5 text-[0.82rem] tabular-nums">
-          <div className="flex justify-between text-sand-700">
+        <div className="space-y-1.5 rounded-lg border border-[#DFE3E8] bg-swdl-light p-3.5 text-[0.82rem] tabular-nums">
+          <div className="flex justify-between text-swdl-muted">
             <span>
               Accommodation ({pricing.nights} {pricing.nights === 1 ? 'night' : 'nights'})
             </span>
             <span>{formatKwacha(pricing.roomSubtotal)}</span>
           </div>
           {pricing.extraGuestTotal > 0 ? (
-            <div className="flex justify-between text-sand-700">
+            <div className="flex justify-between text-swdl-muted">
               <span>Extra guest supplement</span>
               <span>{formatKwacha(pricing.extraGuestTotal)}</span>
             </div>
           ) : null}
           {pricing.servicesTotal > 0 ? (
-            <div className="flex justify-between text-sand-700">
+            <div className="flex justify-between text-swdl-muted">
               <span>Selected extras</span>
               <span>{formatKwacha(pricing.servicesTotal)}</span>
             </div>
           ) : null}
           {pricing.totalDiscount > 0 ? (
-            <div className="flex justify-between text-st-available">
+            <div className="flex justify-between text-swdl-goldDark">
               <span>Stay discount</span>
               <span>− {formatKwacha(pricing.totalDiscount)}</span>
             </div>
           ) : null}
           {pricing.taxRatePercent > 0 ? (
-            <div className="flex justify-between text-sand-700">
+            <div className="flex justify-between text-swdl-muted">
               <span>
                 {pricing.taxName} ({pricing.taxRatePercent}% {pricing.taxInclusive ? 'incl.' : 'excl.'})
               </span>
               <span>{formatKwacha(pricing.taxAmount)}</span>
             </div>
           ) : null}
-          <div className="flex justify-between border-t border-sand-200 pt-2 text-[0.94rem] font-bold text-navy-900">
+          <div className="flex justify-between border-t border-[#DFE3E8] pt-2 text-[0.94rem] font-bold text-swdl-navy">
             <span>Stay total (ZMW)</span>
             <span>{formatKwacha(pricing.totalAmount)}</span>
           </div>
-          <div className="flex justify-between text-[0.77rem] text-sand-600">
+          <div className="flex justify-between text-[0.77rem] text-swdl-muted">
             <span>Deposit to hold dates ({pricing.depositPercent}%)</span>
-            <span className="font-medium text-navy-800">{formatKwacha(pricing.depositRequired)}</span>
+            <span className="font-medium text-swdl-ink">{formatKwacha(pricing.depositRequired)}</span>
           </div>
         </div>
       ) : null}
 
       {/* Guest Contact Fields */}
-      <div className="space-y-3 border-t border-sand-200 pt-3.5">
-        <p className="text-[0.84rem] font-semibold text-navy-900">Your contact details</p>
+      <div className="space-y-3 border-t border-[#DFE3E8] pt-3.5">
+        <p className="text-[0.84rem] font-semibold text-swdl-navy">Your contact details</p>
         <div>
           <label className="label mb-1 block" htmlFor="bw-name">
             Full name <span className="text-st-cancelled">*</span>
@@ -444,15 +444,15 @@ export function ApartmentBookingWidget({
         </div>
 
         {/* Optional fast-track arrival details */}
-        <details className="group rounded-lg border border-sand-200 bg-sand-50/60 px-3.5 py-2.5">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[0.8rem] font-medium text-navy-800">
+        <details className="group rounded-lg border border-[#DFE3E8] bg-swdl-light/60 px-3.5 py-2.5">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[0.8rem] font-medium text-swdl-ink">
             <span>Add arrival time or check-in ID now (optional)</span>
             <ChevronDown
               size={15}
-              className="shrink-0 text-sand-600 transition-transform group-open:rotate-180"
+              className="shrink-0 text-swdl-muted transition-transform group-open:rotate-180"
             />
           </summary>
-          <p className="mt-1.5 text-[0.74rem] leading-relaxed text-sand-600">
+          <p className="mt-1.5 text-[0.74rem] leading-relaxed text-swdl-muted">
             You can skip this now and present your NRC or passport at reception on arrival.
           </p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -568,7 +568,7 @@ export function ApartmentBookingWidget({
 
       {/* Payment Channel Selection */}
       {methods.length > 0 ? (
-        <fieldset className="border-t border-sand-200 pt-3.5">
+        <fieldset className="border-t border-[#DFE3E8] pt-3.5">
           <legend className="label mb-1.5 block">
             {locked ? 'Payment channel' : 'Preferred deposit channel'}
           </legend>
@@ -585,11 +585,11 @@ export function ApartmentBookingWidget({
                   onClick={() => setMethod(m.id)}
                   className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-left text-[0.8rem] transition-colors ${
                     active
-                      ? 'border-navy-900 bg-sand-100 font-semibold text-navy-900 ring-1 ring-navy-900'
-                      : 'border-sand-300 bg-white text-navy-700 hover:border-brand-400'
+                      ? 'border-swdl-gold bg-swdl-light font-semibold text-swdl-navy ring-1 ring-swdl-gold'
+                      : 'border-[#DFE3E8] bg-white text-swdl-ink hover:border-brand-400'
                   } ${locked && !active ? 'opacity-50' : ''}`}
                 >
-                  <Icon size={14} className="shrink-0 text-lemma-dark" aria-hidden="true" />
+                  <Icon size={14} className="shrink-0 text-swdl-goldDark" aria-hidden="true" />
                   <span className="truncate">{m.label}</span>
                 </button>
               );
@@ -597,18 +597,18 @@ export function ApartmentBookingWidget({
           </div>
 
           {chosen ? (
-            <div className="mt-2.5 rounded-lg border border-sand-200 bg-sand-50/70 p-3 text-[0.79rem] leading-relaxed text-navy-800">
+            <div className="mt-2.5 rounded-lg border border-[#DFE3E8] bg-swdl-card p-3 text-[0.79rem] leading-relaxed text-swdl-ink">
               <PaymentDetails method={chosen} />
             </div>
           ) : null}
         </fieldset>
       ) : (
-        <p className="rounded-lg border border-st-cleaning/40 bg-st-cleaningBg/40 p-3 text-[0.79rem] text-navy-800">
+        <p className="rounded-lg border border-st-cleaning/40 bg-st-cleaningBg/40 p-3 text-[0.79rem] text-swdl-ink">
           Online deposit instructions are being updated. Call or WhatsApp reception to book directly.
         </p>
       )}
 
-      <label className="flex items-start gap-2 border-t border-sand-200 pt-3 text-[0.78rem] leading-relaxed text-sand-700">
+      <label className="flex items-start gap-2 border-t border-[#DFE3E8] pt-3 text-[0.78rem] leading-relaxed text-swdl-muted">
         <input
           type="checkbox"
           checked={agreedPolicy}
@@ -618,7 +618,7 @@ export function ApartmentBookingWidget({
         />
         <span>
           I agree to the{' '}
-          <Link href="/policies" target="_blank" className="font-medium text-navy-900 underline">
+          <Link href="/policies" target="_blank" className="font-medium text-swdl-navy underline">
             check-in, deposit and cancellation terms
           </Link>
           .
@@ -634,14 +634,14 @@ export function ApartmentBookingWidget({
       <button
         type="submit"
         disabled={busy || availState !== 'available' || !method}
-        className="btn btn-primary w-full justify-center py-2.5 text-[0.88rem]"
+        className="btn btn-gold w-full justify-center py-2.5 text-[0.88rem]"
       >
         {busy
           ? 'Sending request…'
           : `Request to book${pricing.totalAmount > 0 ? ` · ${formatKwacha(pricing.totalAmount)}` : ''}`}
       </button>
 
-      <p className="text-center text-[0.73rem] leading-relaxed text-sand-600">
+      <p className="text-center text-[0.73rem] leading-relaxed text-swdl-muted">
         No money is charged on this form. Next, you receive your booking reference and deposit
         upload instructions.
       </p>
@@ -793,37 +793,37 @@ function BookingConfirmation({
   const shown = instructions ?? booking.payment;
 
   return (
-    <div className="card sticky top-24 space-y-4 p-5 sm:p-6">
+    <div className="swdl-card sticky top-24 space-y-4 p-5 sm:p-6">
       <div className="flex items-start gap-2.5">
-        <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-st-available" />
+        <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-swdl-goldDark" />
         <div>
-          <h2 className="font-display text-[1.22rem] font-medium text-navy-900">
+          <h2 className="font-heading text-[1.22rem] font-extrabold">
             {submitted ? 'Payment sent for review' : 'Booking request recorded'}
           </h2>
-          <p className="mt-0.5 text-[0.82rem] text-sand-700">
-            Ref <strong className="font-mono text-navy-900">{booking.reference}</strong> · Apt{' '}
+          <p className="mt-0.5 text-[0.82rem] text-swdl-muted">
+            Ref <strong className="font-mono text-swdl-navy">{booking.reference}</strong> · Apt{' '}
             {booking.apartmentNumber} · {booking.nights} night{booking.nights === 1 ? '' : 's'}
           </p>
         </div>
       </div>
 
       {/* Clear 3-step visual progress */}
-      <ol className="grid grid-cols-3 gap-1.5 rounded-lg border border-sand-200 bg-sand-50 p-2 text-center text-[0.7rem]">
-        <li className="rounded bg-white px-1.5 py-1.5 font-semibold text-st-available ring-1 ring-sand-200">
+      <ol className="grid grid-cols-3 gap-1.5 rounded-lg border border-[#DFE3E8] bg-swdl-light p-2 text-center text-[0.7rem]">
+        <li className="rounded bg-white px-1.5 py-1.5 font-semibold text-swdl-goldDark ring-1 ring-[#DFE3E8]">
           1. Requested ✓
         </li>
         <li
           className={`rounded px-1.5 py-1.5 font-semibold ${
             submitted
-              ? 'bg-white text-st-available ring-1 ring-sand-200'
-              : 'bg-navy-900 text-white'
+              ? 'bg-white text-swdl-goldDark ring-1 ring-[#DFE3E8]'
+              : 'bg-swdl-navy text-white'
           }`}
         >
           2. {submitted ? 'Proof sent ✓' : 'Send deposit'}
         </li>
         <li
           className={`rounded px-1.5 py-1.5 font-medium ${
-            submitted ? 'bg-st-cleaningBg text-st-cleaning' : 'text-sand-600'
+            submitted ? 'bg-st-cleaningBg text-st-cleaning' : 'text-swdl-muted'
           }`}
         >
           3. Staff verify
@@ -831,7 +831,7 @@ function BookingConfirmation({
       </ol>
 
       {!accountSaved ? (
-        <p className="text-[0.8rem] text-sand-700">
+        <p className="text-[0.8rem] text-swdl-muted">
           <Link className="link font-medium" href={`/booking/${encodeURIComponent(booking.id)}`}>
             Open booking page
           </Link>{' '}
@@ -844,18 +844,18 @@ function BookingConfirmation({
 
       {submitted ? (
         <div className="space-y-3">
-          <div className="rounded-lg border border-st-available/35 bg-st-availableBg/60 p-3.5 text-[0.84rem] leading-relaxed text-navy-800">
-            <p className="font-semibold text-navy-900">
+          <div className="rounded-lg border border-st-available/35 bg-st-availableBg/60 p-3.5 text-[0.84rem] leading-relaxed text-swdl-ink">
+            <p className="font-semibold text-swdl-navy">
               {formatKwacha(submitted.amount)} reference recorded ({submitted.reference}).
             </p>
-            <p className="mt-1 text-[0.8rem] text-sand-700">
+            <p className="mt-1 text-[0.8rem] text-swdl-muted">
               Reception will match this against our mobile-money or bank statement, confirm your
               reservation, and issue your official PDF receipt.
             </p>
           </div>
           <div className="flex flex-col gap-2">
             {accountSaved ? (
-              <Link href="/account" className="btn btn-primary justify-center">
+              <Link href="/account" className="btn btn-gold justify-center">
                 Track status in my account
               </Link>
             ) : null}
@@ -864,7 +864,7 @@ function BookingConfirmation({
                 href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello, I have paid for booking ${booking.reference} (ref: ${submitted.reference}).`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="btn btn-secondary justify-center"
+                className="btn btn-navy-outline justify-center"
               >
                 <MessageCircle size={15} /> Notify reception on WhatsApp
               </a>
@@ -873,27 +873,27 @@ function BookingConfirmation({
         </div>
       ) : (
         <>
-          <div className="space-y-2 rounded-lg border border-sand-200 bg-sand-50 p-3.5 text-[0.83rem]">
+          <div className="space-y-2 rounded-lg border border-[#DFE3E8] bg-swdl-light p-3.5 text-[0.83rem]">
             <div className="flex justify-between">
-              <span className="text-sand-600">Stay total</span>
-              <span className="font-semibold tabular-nums text-navy-900">
+              <span className="text-swdl-muted">Stay total</span>
+              <span className="font-semibold tabular-nums text-swdl-navy">
                 {formatKwacha(shown?.totalAmount ?? booking.totalAmount)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sand-600">
+              <span className="text-swdl-muted">
                 Deposit to hold dates ({shown?.depositPercent ?? booking.depositPercent}%)
               </span>
-              <span className="font-bold tabular-nums text-navy-900">
+              <span className="font-bold tabular-nums text-swdl-navy">
                 {formatKwacha(booking.depositDue)}
               </span>
             </div>
-            <div className="border-t border-sand-200 pt-2">
+            <div className="border-t border-[#DFE3E8] pt-2">
               <CopyDetail label="Quote reference" value={booking.reference} />
             </div>
             {shown ? (
-              <div className="border-t border-sand-200 pt-2">
-                <p className="mb-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-sand-600">
+              <div className="border-t border-[#DFE3E8] pt-2">
+                <p className="mb-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-swdl-muted">
                   {shown.label} details
                 </p>
                 <PaymentDetails method={shown} />
@@ -915,8 +915,8 @@ function BookingConfirmation({
                       aria-pressed={m.id === method}
                       className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[0.78rem] transition-colors ${
                         m.id === method
-                          ? 'border-navy-900 bg-sand-100 font-semibold text-navy-900'
-                          : 'border-sand-300 bg-white text-navy-700'
+                          ? 'border-swdl-gold bg-swdl-light font-semibold text-swdl-navy'
+                          : 'border-[#DFE3E8] bg-white text-swdl-ink'
                       }`}
                     >
                       <Icon size={13} /> {m.label}
@@ -925,15 +925,15 @@ function BookingConfirmation({
                 })}
               </div>
               {loadingInstructions ? (
-                <p className="mt-1 flex items-center gap-1.5 text-[0.74rem] text-sand-600">
+                <p className="mt-1 flex items-center gap-1.5 text-[0.74rem] text-swdl-muted">
                   <Loader2 size={12} className="animate-spin" /> Loading channel details…
                 </p>
               ) : null}
             </div>
           ) : null}
 
-          <form onSubmit={submitProof} className="space-y-3 border-t border-sand-200 pt-3.5">
-            <p className="text-[0.85rem] font-semibold text-navy-900">
+          <form onSubmit={submitProof} className="space-y-3 border-t border-[#DFE3E8] pt-3.5">
+            <p className="text-[0.85rem] font-semibold text-swdl-navy">
               Already sent the payment? Submit your reference below
             </p>
 
@@ -1003,11 +1003,11 @@ function BookingConfirmation({
                 onChange={(e) => void pickProof(e.target.files?.[0] ?? null)}
               />
               {proof ? (
-                <div className="flex items-center justify-between gap-2 rounded-md border border-sand-200 bg-sand-50 px-3 py-2 text-[0.8rem]">
-                  <span className="truncate text-navy-800">{proof.fileName}</span>
+                <div className="flex items-center justify-between gap-2 rounded-md border border-[#DFE3E8] bg-swdl-light px-3 py-2 text-[0.8rem]">
+                  <span className="truncate text-swdl-ink">{proof.fileName}</span>
                   <button
                     type="button"
-                    className="text-[0.76rem] font-medium text-sand-700 hover:underline"
+                    className="text-[0.76rem] font-medium text-swdl-muted hover:underline"
                     onClick={() => setProof(null)}
                   >
                     Remove
@@ -1017,7 +1017,7 @@ function BookingConfirmation({
                 <button
                   type="button"
                   disabled={preparingProof}
-                  className="btn btn-secondary w-full justify-center py-2 text-[0.8rem]"
+                  className="btn btn-navy-outline w-full justify-center py-2 text-[0.8rem]"
                   onClick={() => fileRef.current?.click()}
                 >
                   {preparingProof ? (
@@ -1033,33 +1033,33 @@ function BookingConfirmation({
               ) : null}
             </div>
 
-            <p className="flex items-start gap-1.5 rounded-md bg-sand-50 p-2.5 text-[0.75rem] leading-relaxed text-sand-700">
-              <ShieldCheck size={13} className="mt-0.5 shrink-0 text-lemma-dark" />
+            <p className="flex items-start gap-1.5 rounded-md bg-swdl-light p-2.5 text-[0.75rem] leading-relaxed text-swdl-muted">
+              <ShieldCheck size={13} className="mt-0.5 shrink-0 text-swdl-goldDark" />
               Reception verifies every transfer before updating your balance and issuing a receipt.
             </p>
 
             <button
               type="submit"
               disabled={busy}
-              className="btn btn-primary w-full justify-center py-2.5"
+              className="btn btn-gold w-full justify-center py-2.5"
             >
               {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
               {busy ? 'Submitting…' : 'Submit payment reference'}
             </button>
           </form>
 
-          <div className="border-t border-sand-200 pt-3 text-[0.78rem] leading-relaxed text-sand-600">
+          <div className="border-t border-[#DFE3E8] pt-3 text-[0.78rem] leading-relaxed text-swdl-muted">
             <p className="flex items-start gap-1.5">
               <Clock size={13} className="mt-0.5 shrink-0" />
               Paying later or in cash at the desk? Keep{' '}
-              <strong className="font-mono text-navy-900">{booking.reference}</strong> handy.
+              <strong className="font-mono text-swdl-navy">{booking.reference}</strong> handy.
             </p>
             {waDigits ? (
               <a
                 href={`https://wa.me/${waDigits}?text=${encodeURIComponent(`Hello, I have submitted booking request ${booking.reference} for ${booking.checkIn} to ${booking.checkOut}.`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-1.5 font-medium text-navy-900 hover:text-lemma-dark"
+                className="mt-2 inline-flex items-center gap-1.5 font-medium text-swdl-navy hover:text-swdl-goldDark"
               >
                 <MessageCircle size={13} /> Send reference to reception on WhatsApp
               </a>
@@ -1133,14 +1133,14 @@ function PostBookingAccountCard({
 
   if (saved) {
     return (
-      <div className="rounded-lg border border-st-available/30 bg-st-availableBg/50 p-3.5 text-[0.8rem] leading-relaxed text-navy-900">
+      <div className="rounded-lg border border-st-available/30 bg-st-availableBg/50 p-3.5 text-[0.8rem] leading-relaxed text-swdl-navy">
         <p className="font-semibold">Guest account saved ({guestContact.email}).</p>
-        <p className="mt-1 text-[0.76rem] text-sand-700">
+        <p className="mt-1 text-[0.76rem] text-swdl-muted">
           {emailSent
             ? 'Check your inbox to confirm your email address so all bookings under this email appear in your account.'
             : 'Your guest account is ready. Open your account to manage your profile and bookings.'}
         </p>
-        <Link href="/account" className="btn btn-secondary mt-2.5 w-full justify-center py-1.5 text-[0.78rem]">
+        <Link href="/account" className="btn btn-navy-outline mt-2.5 w-full justify-center py-1.5 text-[0.78rem]">
           Open my account
         </Link>
       </div>
@@ -1150,14 +1150,14 @@ function PostBookingAccountCard({
   return (
     <form
       onSubmit={saveAccount}
-      className="space-y-2.5 rounded-lg border border-sand-200 bg-sand-50/70 p-3.5 text-[0.8rem]"
+      className="space-y-2.5 rounded-lg border border-[#DFE3E8] bg-swdl-card p-3.5 text-[0.8rem]"
     >
       <div className="flex items-start gap-2">
-        <KeyRound size={15} className="mt-0.5 shrink-0 text-lemma-dark" />
+        <KeyRound size={15} className="mt-0.5 shrink-0 text-swdl-goldDark" />
         <div>
-          <p className="font-semibold text-navy-900">Save this booking to a guest account</p>
-          <p className="mt-0.5 text-[0.75rem] leading-relaxed text-sand-700">
-            Set a password for <strong className="text-navy-800">{guestContact.email}</strong> to
+          <p className="font-semibold text-swdl-navy">Save this booking to a guest account</p>
+          <p className="mt-0.5 text-[0.75rem] leading-relaxed text-swdl-muted">
+            Set a password for <strong className="text-swdl-ink">{guestContact.email}</strong> to
             track verification and download official PDF receipts anytime.
           </p>
         </div>
@@ -1187,7 +1187,7 @@ function PostBookingAccountCard({
         <button
           type="submit"
           disabled={busy}
-          className="btn btn-secondary shrink-0 justify-center px-3.5 py-2 text-[0.78rem]"
+          className="btn btn-navy-outline shrink-0 justify-center px-3.5 py-2 text-[0.78rem]"
         >
           {busy ? <Loader2 size={13} className="animate-spin" /> : null}
           {busy ? 'Saving…' : 'Save account'}
